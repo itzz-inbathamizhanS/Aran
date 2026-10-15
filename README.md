@@ -78,7 +78,7 @@ Weak spots, stated plainly: mobiles with no cue word (68% recall), English OTPs 
 
 ```
 docs/
-  research/        Research document, AI and immune layers report
+  research/        Research document, AI and immune layers report, roadmap
   learning/        Seven beginner learning docs (Markdown, open in Obsidian or GitHub)
 artifacts/
   learning/        PDF copies of the seven learning docs, for printing or offline reading
@@ -123,6 +123,7 @@ Step-by-step Windows setup, with fixes for common errors, is in [Learn 1](docs/l
 
 - [Research document](docs/research/aran-research.md): problem analysis, baseline, literature survey, research gaps, novel design with theorems, critical review, results, plan and sources.
 - [AI and immune layers](docs/research/ai-and-immune-layers.md): NER, OTP/UPI classifier, calibrated detector, artificial immune system and firewall wiring, with results on real data and the weak spots.
+- [Roadmap: what to research and build next](docs/research/aran-roadmap.md): what is designed but not yet built, and a prioritised list of 13 additions with effort, owners and the learning docs to read first.
 
 ### Learning path for the team
 
