@@ -52,6 +52,9 @@ Exact leakage left by common masks:
 ## Repository layout
 
 ```
+docs/
+  research/        Research document
+  learning/        Seven beginner learning docs
 research/
   aran_core.py     Verhoeff, Luhn, NIST SP 800-38G FF1, checksum-complement tokens, min-entropy counting
   test_core.py     Tests, including the NIST FF1 sample vectors
@@ -74,21 +77,19 @@ python experiment.py                                # about 3 minutes
 
 ## Documents
 
-The research document and the seven learning docs are kept in the team's shared working folder (`D:\Aran\artifacts`).
-
-- **Research document:** problem analysis, baseline, literature survey, research gaps, novel design with theorems, critical review, results, plan and sources.
+- [Research document](docs/research/aran-research.md): problem analysis, baseline, literature survey, research gaps, novel design with theorems, critical review, results, plan and sources.
 
 Learning docs, in reading order:
 
 | # | Doc | For |
 | --- | --- | --- |
-| 1 | Python and Tools | Everyone, first |
-| 2 | Indian Identifiers and Check Digits | Everyone |
-| 3 | Cryptography Basics | Inbathamizhan, Aasif (everyone reads section 2) |
-| 4 | Probability for Detection | Everyone |
-| 5 | AI and NLP for Detection | Bharadhwaj, Arun |
-| 6 | Artificial Immune Systems | Inbathamizhan, Aasif |
-| 7 | Data-Protection Law Basics | Everyone |
+| 1 | [Python and Tools](docs/learning/01-python-and-tools.md) | Everyone, first |
+| 2 | [Indian Identifiers and Check Digits](docs/learning/02-identifiers-and-check-digits.md) | Everyone |
+| 3 | [Cryptography Basics](docs/learning/03-cryptography-basics.md) | Inbathamizhan, Aasif (everyone reads section 2) |
+| 4 | [Probability for Detection](docs/learning/04-probability-for-detection.md) | Everyone |
+| 5 | [AI and NLP for Detection](docs/learning/05-ai-and-nlp.md) | Bharadhwaj, Arun |
+| 6 | [Artificial Immune Systems](docs/learning/06-artificial-immune-systems.md) | Inbathamizhan, Aasif |
+| 7 | [Data-Protection Law Basics](docs/learning/07-data-protection-law.md) | Everyone |
 
 ## Artifacts
 
