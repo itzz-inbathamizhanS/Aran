@@ -90,6 +90,10 @@ Learning docs, in reading order:
 | 6 | Artificial Immune Systems | Inbathamizhan, Aasif |
 | 7 | Data-Protection Law Basics | Everyone |
 
+## Artifacts
+
+- [Website design-system prompt for Claude Design](artifacts/website/Aran-Website-Design-System-Prompt.md): brand, colours, typography, components and page content for the Aran website.
+
 ## Regulations addressed
 
 DPDP Act 2023 and DPDP Rules 2025 (safeguards, 72-hour breach report, erasure), CERT-In Directions 2022 (6-hour reporting, 180-day logs), UIDAI Aadhaar Data Vault, RBI payment data and card tokenisation rules, and PCI DSS. Treating crypto-shredding as DPDP erasure still needs legal confirmation.
