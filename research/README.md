@@ -12,3 +12,26 @@ python3 experiment.py    # writes results.json (about 3 minutes)
 - `experiment.py`: E1 false alarms on real logs, E2 token separability, E3 leak attribution, E4 leakage of masking formats.
 
 No real person's identifier is used anywhere. Identifiers in E2 and E3 are generated with valid checksums.
+
+## AI and immune layers
+
+```
+./fetch_ai_data.sh       # CoNLL-2003, HiNER (Hindi), Hinglish NER tweets, UCI SMS, labelled BGL logs
+pip install scikit-learn sklearn-crfsuite
+python3 experiment_ai.py # writes results_ai.json (about 20 minutes on a laptop CPU)
+python3 -m pytest test_ai.py
+```
+
+| File | Owner pair | What it is |
+| --- | --- | --- |
+| `synth.py` | all | Generated test identifiers (checksum-valid, belong to no one) and bank-style log lines in English, Hindi and Hinglish, with disjoint train and test templates and names |
+| `ai/ner.py` | Bharadhwaj, Arun | CRF named-entity model for names and addresses in log text |
+| `ai/context_clf.py` | Bharadhwaj, Arun | Context classifier that tells OTPs and UPI IDs from look-alike numbers and user@host strings |
+| `ai/detector.py` | Bharadhwaj, Arun | Calibrated detector: fuses checksum, context and NER evidence into one probability per finding |
+| `immune/ais.py` | Inbathamizhan, Aasif | Artificial immune system: V-detector negative selection, immune memory, self-tolerance |
+| `immune/flows.py` | Inbathamizhan, Aasif | Simulated bank data-flow telemetry with six labelled exfiltration scenarios |
+| `firewall/aran_firewall.py` | Inbathamizhan, Aasif | The wired firewall: detect, tokenise or destroy, count flows, hand them to the immune layer |
+| `experiment_ai.py` | all | Experiments E5 to E9 |
+| `results_ai.json` | all | Results of the last run |
+
+Results are written up in [docs/research/ai-and-immune-layers.md](../docs/research/ai-and-immune-layers.md).
