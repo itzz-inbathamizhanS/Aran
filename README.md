@@ -93,7 +93,7 @@ Learning docs, in reading order:
 
 ## Artifacts
 
-- [Website design-system prompt for Claude Design](artifacts/website/Aran-Website-Design-System-Prompt.md): brand, colours, typography, components and page content for the Aran website.
+- [Website design-system prompt for the website design tool](artifacts/website/Aran-Website-Design-System-Prompt.md): brand, colours, typography, components and page content for the Aran website.
 
 ## Regulations addressed
 
