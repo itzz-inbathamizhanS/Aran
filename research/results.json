@@ -1,0 +1,260 @@
+{
+ "e1_per_system": {
+  "Android": {
+   "lines": 2000,
+   "aadhaar_regex": 0,
+   "aadhaar_verhoeff": 0,
+   "card_regex": 1,
+   "card_luhn": 0,
+   "card_luhn_iin": 0,
+   "otp_regex": 5133,
+   "otp_context": 0,
+   "mobile_regex": 0,
+   "pan_regex": 0
+  },
+  "Apache": {
+   "lines": 2000,
+   "aadhaar_regex": 0,
+   "aadhaar_verhoeff": 0,
+   "card_regex": 0,
+   "card_luhn": 0,
+   "card_luhn_iin": 0,
+   "otp_regex": 2826,
+   "otp_context": 0,
+   "mobile_regex": 0,
+   "pan_regex": 0
+  },
+  "BGL": {
+   "lines": 2000,
+   "aadhaar_regex": 0,
+   "aadhaar_verhoeff": 0,
+   "card_regex": 10,
+   "card_luhn": 0,
+   "card_luhn_iin": 0,
+   "otp_regex": 3045,
+   "otp_context": 0,
+   "mobile_regex": 0,
+   "pan_regex": 0
+  },
+  "HDFS": {
+   "lines": 2000,
+   "aadhaar_regex": 115,
+   "aadhaar_verhoeff": 0,
+   "card_regex": 4469,
+   "card_luhn": 456,
+   "card_luhn_iin": 81,
+   "otp_regex": 7175,
+   "otp_context": 0,
+   "mobile_regex": 0,
+   "pan_regex": 0
+  },
+  "HPC": {
+   "lines": 2000,
+   "aadhaar_regex": 100,
+   "aadhaar_verhoeff": 2,
+   "card_regex": 11,
+   "card_luhn": 0,
+   "card_luhn_iin": 0,
+   "otp_regex": 2678,
+   "otp_context": 0,
+   "mobile_regex": 0,
+   "pan_regex": 0
+  },
+  "Hadoop": {
+   "lines": 2000,
+   "aadhaar_regex": 0,
+   "aadhaar_verhoeff": 0,
+   "card_regex": 552,
+   "card_luhn": 0,
+   "card_luhn_iin": 0,
+   "otp_regex": 5217,
+   "otp_context": 0,
+   "mobile_regex": 0,
+   "pan_regex": 0
+  },
+  "HealthApp": {
+   "lines": 2000,
+   "aadhaar_regex": 0,
+   "aadhaar_verhoeff": 0,
+   "card_regex": 909,
+   "card_luhn": 57,
+   "card_luhn_iin": 0,
+   "otp_regex": 7320,
+   "otp_context": 0,
+   "mobile_regex": 0,
+   "pan_regex": 0
+  },
+  "Linux": {
+   "lines": 2000,
+   "aadhaar_regex": 0,
+   "aadhaar_verhoeff": 0,
+   "card_regex": 5,
+   "card_luhn": 1,
+   "card_luhn_iin": 0,
+   "otp_regex": 2805,
+   "otp_context": 0,
+   "mobile_regex": 0,
+   "pan_regex": 0
+  },
+  "Mac": {
+   "lines": 2000,
+   "aadhaar_regex": 5,
+   "aadhaar_verhoeff": 0,
+   "card_regex": 49,
+   "card_luhn": 0,
+   "card_luhn_iin": 0,
+   "otp_regex": 2090,
+   "otp_context": 3,
+   "mobile_regex": 14,
+   "pan_regex": 0
+  },
+  "OpenSSH": {
+   "lines": 2000,
+   "aadhaar_regex": 0,
+   "aadhaar_verhoeff": 0,
+   "card_regex": 0,
+   "card_luhn": 0,
+   "card_luhn_iin": 0,
+   "otp_regex": 2540,
+   "otp_context": 0,
+   "mobile_regex": 0,
+   "pan_regex": 0
+  },
+  "OpenStack": {
+   "lines": 2000,
+   "aadhaar_regex": 56,
+   "aadhaar_verhoeff": 2,
+   "card_regex": 78,
+   "card_luhn": 3,
+   "card_luhn_iin": 0,
+   "otp_regex": 12607,
+   "otp_context": 0,
+   "mobile_regex": 1,
+   "pan_regex": 0
+  },
+  "Proxifier": {
+   "lines": 2000,
+   "aadhaar_regex": 0,
+   "aadhaar_verhoeff": 0,
+   "card_regex": 0,
+   "card_luhn": 0,
+   "card_luhn_iin": 0,
+   "otp_regex": 2906,
+   "otp_context": 0,
+   "mobile_regex": 0,
+   "pan_regex": 0
+  },
+  "Spark": {
+   "lines": 2000,
+   "aadhaar_regex": 90,
+   "aadhaar_verhoeff": 0,
+   "card_regex": 1,
+   "card_luhn": 0,
+   "card_luhn_iin": 0,
+   "otp_regex": 1268,
+   "otp_context": 0,
+   "mobile_regex": 0,
+   "pan_regex": 0
+  },
+  "Thunderbird": {
+   "lines": 2000,
+   "aadhaar_regex": 0,
+   "aadhaar_verhoeff": 0,
+   "card_regex": 1,
+   "card_luhn": 1,
+   "card_luhn_iin": 0,
+   "otp_regex": 2177,
+   "otp_context": 3,
+   "mobile_regex": 0,
+   "pan_regex": 0
+  },
+  "Windows": {
+   "lines": 2000,
+   "aadhaar_regex": 0,
+   "aadhaar_verhoeff": 0,
+   "card_regex": 0,
+   "card_luhn": 0,
+   "card_luhn_iin": 0,
+   "otp_regex": 3968,
+   "otp_context": 0,
+   "mobile_regex": 0,
+   "pan_regex": 0
+  },
+  "Zookeeper": {
+   "lines": 2000,
+   "aadhaar_regex": 0,
+   "aadhaar_verhoeff": 0,
+   "card_regex": 0,
+   "card_luhn": 0,
+   "card_luhn_iin": 0,
+   "otp_regex": 3726,
+   "otp_context": 0,
+   "mobile_regex": 7,
+   "pan_regex": 0
+  }
+ },
+ "e1_total": {
+  "lines": 32000,
+  "aadhaar_regex": 366,
+  "aadhaar_verhoeff": 4,
+  "card_regex": 6086,
+  "card_luhn": 518,
+  "card_luhn_iin": 81,
+  "otp_regex": 67481,
+  "otp_context": 6,
+  "mobile_regex": 22,
+  "pan_regex": 0
+ },
+ "e2": {
+  "injected": 20000,
+  "real_flagged": 20000,
+  "token_flagged": 0
+ },
+ "e3": {
+  "customers": 20000,
+  "sinks": 40,
+  "token_collisions": 0,
+  "dump_1_accuracy": 1.0,
+  "dump_2_accuracy": 1.0,
+  "dump_5_accuracy": 1.0,
+  "dump_50_accuracy": 1.0
+ },
+ "e4": [
+  {
+   "mask": "Aadhaar, last 4 shown (UIDAI masked Aadhaar)",
+   "candidates": 8000000,
+   "bits_left": 22.93,
+   "bits_leaked": 13.29
+  },
+  {
+   "mask": "Aadhaar, first 4 and last 4 shown",
+   "candidates": 1000,
+   "bits_left": 9.97,
+   "bits_leaked": 26.25
+  },
+  {
+   "mask": "Card 16-digit, last 4 shown",
+   "candidates": 100000000000,
+   "bits_left": 36.54,
+   "bits_leaked": 13.29
+  },
+  {
+   "mask": "Card 16-digit, first 6 and last 4 shown (PCI common format)",
+   "candidates": 100000,
+   "bits_left": 16.61,
+   "bits_leaked": 33.22
+  },
+  {
+   "mask": "Card 16-digit, first 8 and last 4 shown (8-digit BIN)",
+   "candidates": 1000,
+   "bits_left": 9.97,
+   "bits_leaked": 39.86
+  },
+  {
+   "mask": "Mobile, last 4 shown",
+   "candidates": 400000,
+   "bits_left": 18.61,
+   "bits_leaked": 13.29
+  }
+ ]
+}
