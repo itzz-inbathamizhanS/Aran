@@ -54,7 +54,10 @@ Exact leakage left by common masks:
 ```
 docs/
   research/        Research document
-  learning/        Seven beginner learning docs
+  learning/        Seven beginner learning docs (Markdown, open in Obsidian or GitHub)
+artifacts/
+  learning/        PDF copies of the seven learning docs, for printing or offline reading
+  website/         Website design-system prompt
 research/
   aran_core.py     Verhoeff, Luhn, NIST SP 800-38G FF1, checksum-complement tokens, min-entropy counting
   test_core.py     Tests, including the NIST FF1 sample vectors
@@ -75,24 +78,29 @@ python -m pytest test_core.py
 python experiment.py                                # about 3 minutes
 ```
 
+Step-by-step Windows setup, with fixes for common errors, is in [Learn 1](docs/learning/01-python-and-tools.md).
+
 ## Documents
 
 - [Research document](docs/research/aran-research.md): problem analysis, baseline, literature survey, research gaps, novel design with theorems, critical review, results, plan and sources.
 
-Learning docs, in reading order:
+### Learning path for the team
 
-| # | Doc | For |
-| --- | --- | --- |
-| 1 | [Python and Tools](docs/learning/01-python-and-tools.md) | Everyone, first |
-| 2 | [Indian Identifiers and Check Digits](docs/learning/02-identifiers-and-check-digits.md) | Everyone |
-| 3 | [Cryptography Basics](docs/learning/03-cryptography-basics.md) | Inbathamizhan, Aasif (everyone reads section 2) |
-| 4 | [Probability for Detection](docs/learning/04-probability-for-detection.md) | Everyone |
-| 5 | [AI and NLP for Detection](docs/learning/05-ai-and-nlp.md) | Bharadhwaj, Arun |
-| 6 | [Artificial Immune Systems](docs/learning/06-artificial-immune-systems.md) | Inbathamizhan, Aasif |
-| 7 | [Data-Protection Law Basics](docs/learning/07-data-protection-law.md) | Everyone |
+The team is new to this technology, so read these in order before starting any build task. Each doc starts from zero, explains every idea in plain words, works through examples taken from Aran's own code and data (every number in them was checked by running the code), and ends with practice tasks and free further reading.
+
+| # | Doc | Who | Time | What you will be able to do | PDF |
+| --- | --- | --- | --- | --- | --- |
+| 1 | [Python and Tools](docs/learning/01-python-and-tools.md) | Everyone, first | ~6 h | Set up the repo on Windows, use git as a team, read every file in `research/`, write a regex detector with tests | [PDF](artifacts/learning/Aran%20Learn%201%20-%20Python%20and%20Tools.pdf) |
+| 2 | [Indian Identifiers and Check Digits](docs/learning/02-identifiers-and-check-digits.md) | Everyone | ~5 h | Explain the shape of Aadhaar, card, PAN, UPI and OTP; run Luhn and Verhoeff by hand; explain why Aran tokens can never pass the checksum | [PDF](artifacts/learning/Aran%20Learn%202%20-%20Indian%20Identifiers%20and%20Check%20Digits.pdf) |
+| 3 | [Cryptography Basics](docs/learning/03-cryptography-basics.md) | Inbathamizhan, Aasif (everyone reads section 4) | ~7 h | Use AES-GCM and HMAC correctly, explain FF1 through a worked Feistel example, build a Merkle tree, explain crypto-shredding with purpose-bound keys | [PDF](artifacts/learning/Aran%20Learn%203%20-%20Cryptography%20Basics.pdf) |
+| 4 | [Probability for Detection](docs/learning/04-probability-for-detection.md) | Everyone | ~6 h | Compute precision and recall, combine evidence with Bayes' rule, size a Bloom filter, apply the birthday bound, measure mask leakage in bits | [PDF](artifacts/learning/Aran%20Learn%204%20-%20Probability%20for%20Detection.pdf) |
+| 5 | [AI and NLP for Detection](docs/learning/05-ai-and-nlp.md) | Bharadhwaj, Arun | ~8 h | Train and score a CRF name finder, build a character n-gram OTP classifier, calibrate its probabilities | [PDF](artifacts/learning/Aran%20Learn%205%20-%20AI%20and%20NLP%20for%20Detection.pdf) |
+| 6 | [Artificial Immune Systems](docs/learning/06-artificial-immune-systems.md) | Inbathamizhan, Aasif | ~6 h | Turn data flows into feature points, implement negative selection, tune it and compare it with Isolation Forest | [PDF](artifacts/learning/Aran%20Learn%206%20-%20Artificial%20Immune%20Systems.pdf) |
+| 7 | [Data-Protection Law Basics](docs/learning/07-data-protection-law.md) | Everyone | ~4 h | Map each Aran mechanism to DPDP, CERT-In, UIDAI, RBI and PCI DSS duties, walk through a breach and an erasure request, answer judges' questions | [PDF](artifacts/learning/Aran%20Learn%207%20-%20Data-Protection%20Law%20Basics.pdf) |
 
 ## Artifacts
 
+- [Learning docs as PDFs](artifacts/learning/): print-ready copies of the seven learning docs above.
 - [Website design-system prompt for the website design tool](artifacts/website/Aran-Website-Design-System-Prompt.md): brand, colours, typography, components and page content for the Aran website.
 
 ## Regulations addressed
