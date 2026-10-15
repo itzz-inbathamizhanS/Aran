@@ -79,9 +79,9 @@ Weak spots, stated plainly: mobiles with no cue word (68% recall), English OTPs 
 ```
 docs/
   research/        Research document, AI and immune layers report, roadmap
-  learning/        Seven beginner learning docs (Markdown, open in Obsidian or GitHub)
+  learning/        Ten beginner learning docs (Markdown, open in Obsidian or GitHub)
 artifacts/
-  learning/        PDF copies of the seven learning docs, for printing or offline reading
+  learning/        PDF copies of the learning docs, for printing or offline reading
   website/         Website design-system prompt
 research/
   aran_core.py     Verhoeff, Luhn, NIST SP 800-38G FF1, checksum-complement tokens, min-entropy counting
@@ -138,10 +138,13 @@ The team is new to this technology, so read these in order before starting any b
 | 5 | [AI and NLP for Detection](docs/learning/05-ai-and-nlp.md) | Bharadhwaj, Arun | ~8 h | Train and score a CRF name finder, build a character n-gram OTP classifier, calibrate its probabilities | [PDF](artifacts/learning/Aran%20Learn%205%20-%20AI%20and%20NLP%20for%20Detection.pdf) |
 | 6 | [Artificial Immune Systems](docs/learning/06-artificial-immune-systems.md) | Inbathamizhan, Aasif | ~6 h | Turn data flows into feature points, implement negative selection, tune it and compare it with Isolation Forest | [PDF](artifacts/learning/Aran%20Learn%206%20-%20Artificial%20Immune%20Systems.pdf) |
 | 7 | [Data-Protection Law Basics](docs/learning/07-data-protection-law.md) | Everyone | ~4 h | Map each Aran mechanism to DPDP, CERT-In, UIDAI, RBI and PCI DSS duties, walk through a breach and an erasure request, answer judges' questions | [PDF](artifacts/learning/Aran%20Learn%207%20-%20Data-Protection%20Law%20Basics.pdf) |
+| 8 | [Web APIs and Proxies](docs/learning/08-web-apis-and-proxies.md) | Everyone (roadmap items 1 and 6) | ~6 h | Explain HTTP and JSON, build an API with FastAPI, build a reverse proxy that tokenises Aadhaar in responses, build an AI gateway that hides identifiers from a chatbot | [PDF](artifacts/learning/Aran%20Learn%208%20-%20Web%20APIs%20and%20Proxies.pdf) |
+| 9 | [Transformers and Zero-Shot NER](docs/learning/09-transformers-and-zero-shot-ner.md) | Bharadhwaj, Arun (roadmap items 7 and 8) | ~8 h | Explain embeddings, subword tokenisation and attention, fine-tune for NER, use GLiNER and IndicNER, speed up with a cascade and distillation | [PDF](artifacts/learning/Aran%20Learn%209%20-%20Transformers%20and%20Zero-Shot%20NER.pdf) |
+| 10 | [OCR Basics](docs/learning/10-ocr-basics.md) | Bharadhwaj, Arun (roadmap item 10) | ~5 h | Read ID card images with Tesseract, use Verhoeff to catch misreads, measure OCR accuracy, mask the first 8 Aadhaar digits on the image | [PDF](artifacts/learning/Aran%20Learn%2010%20-%20OCR%20Basics.pdf) |
 
 ## Artifacts
 
-- [Learning docs as PDFs](artifacts/learning/): print-ready copies of the seven learning docs above.
+- [Learning docs as PDFs](artifacts/learning/): print-ready copies of the learning docs above.
 - [Website design-system prompt for the website design tool](artifacts/website/Aran-Website-Design-System-Prompt.md): brand, colours, typography, components and page content for the Aran website.
 
 ## Regulations addressed
