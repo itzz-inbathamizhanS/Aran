@@ -25,7 +25,15 @@ Aadhaar numbers carry a Verhoeff check digit and card numbers a Luhn check digit
 | M4. Leakage ledger | Caps how many bits any group of destinations learns about one customer | Quantitative information flow (min-entropy) |
 | M5. Purpose-bound crypto-shredding | One key per customer per purpose; destroying it erases every copy everywhere, with a signed receipt (Theorem 3) | Shannon perfect secrecy, Merkle transparency logs |
 
-Planned additions (in progress): an NER model for names and addresses, a learned OTP context classifier, and a bio-inspired artificial immune system that flags unusual data flows.
+On top of these sit an AI layer and a bio-inspired immune layer, reported in [AI and immune layers](docs/research/ai-and-immune-layers.md):
+
+| Layer | What it does | Owner pair |
+| --- | --- | --- |
+| NER (names and addresses) | CRF model for English, Hindi and Hinglish log text | Bharadhwaj, Arun |
+| OTP and UPI context classifier | Tells OTPs from ports and order numbers, and UPI IDs from e-mails and user@host strings | Bharadhwaj, Arun |
+| Calibrated detector (M2) | Fuses checksum, context and NER evidence into one calibrated probability per finding | Bharadhwaj, Arun |
+| Artificial immune system | Negative selection learns normal data flows and flags non-self flows, with immune memory | Inbathamizhan, Aasif |
+| Firewall wiring | Detect, tokenise or destroy, count flows, alert | Inbathamizhan, Aasif |
 
 ## Results on real data
 
@@ -49,11 +57,28 @@ Exact leakage left by common masks:
 | Card 16-digit, first 8 and last 4 | 1,000 | 10.0 |
 | Aadhaar, first 4 and last 4 | 1,000 | 10.0 |
 
+### AI and immune layers (E5 to E9)
+
+Tested on 16,000 real log lines from 8 Loghub systems the models never saw, with 1,895 generated sensitive values injected into 1,110 of them. Full tables in [AI and immune layers](docs/research/ai-and-immune-layers.md).
+
+| Test | Prototype regex | Aran with AI layers |
+| --- | --- | --- |
+| Sensitive values removed by the firewall | 46.1% | 83.5% |
+| Names and addresses removed | 0% | 74% and 90% |
+| Clean real lines wrongly changed or flagged | 2,357 (15.8%) | 122 (0.8%) |
+| False alarms on real logs (all types) | 2,506 | 60 |
+| Tokens re-detected as real Aadhaar or card numbers | | 0 |
+| NER person F1: CoNLL English / HiNER Hindi / Hinglish tweets | | 0.85 / 0.76 / 0.69 |
+| Calibration error of the detector (ECE) | | 0.015 |
+| Simulated data-flow attacks caught by the immune layer (6 scenarios) | static rules 90%, Isolation Forest 20% | 100%, at 0.6% false alarms |
+
+Weak spots, stated plainly: mobiles with no cue word (68% recall), English OTPs next to transaction words (80%), and line-level anomalies on real BGL logs, where the immune layer did worse than a severity rule.
+
 ## Repository layout
 
 ```
 docs/
-  research/        Research document
+  research/        Research document, AI and immune layers report
   learning/        Seven beginner learning docs (Markdown, open in Obsidian or GitHub)
 artifacts/
   learning/        PDF copies of the seven learning docs, for printing or offline reading
@@ -64,6 +89,14 @@ research/
   experiment.py    Experiments E1 to E4 on real logs
   results.json     Raw results
   fetch_data.sh    Downloads the Loghub samples
+  synth.py         Generated test identifiers and bank log lines (checksum-valid, belong to no one)
+  ai/              NER, OTP/UPI context classifier, calibrated detector (Bharadhwaj, Arun)
+  immune/          Artificial immune system and data-flow simulation (Inbathamizhan, Aasif)
+  firewall/        The wired firewall (Inbathamizhan, Aasif)
+  experiment_ai.py Experiments E5 to E9
+  results_ai.json  Raw results
+  test_ai.py       Tests for the AI, immune and firewall layers
+  fetch_ai_data.sh Downloads CoNLL-2003, HiNER, Hinglish NER, UCI SMS and labelled BGL logs
 ```
 
 ## Run it
@@ -76,6 +109,12 @@ pip install cryptography numpy pytest
 ./fetch_data.sh                                     # Windows: run in Git Bash
 python -m pytest test_core.py
 python experiment.py                                # about 3 minutes
+
+# AI and immune layers
+pip install scikit-learn sklearn-crfsuite
+./fetch_ai_data.sh
+python -m pytest test_ai.py
+python experiment_ai.py                             # about 20 minutes
 ```
 
 Step-by-step Windows setup, with fixes for common errors, is in [Learn 1](docs/learning/01-python-and-tools.md).
@@ -83,6 +122,7 @@ Step-by-step Windows setup, with fixes for common errors, is in [Learn 1](docs/l
 ## Documents
 
 - [Research document](docs/research/aran-research.md): problem analysis, baseline, literature survey, research gaps, novel design with theorems, critical review, results, plan and sources.
+- [AI and immune layers](docs/research/ai-and-immune-layers.md): NER, OTP/UPI classifier, calibrated detector, artificial immune system and firewall wiring, with results on real data and the weak spots.
 
 ### Learning path for the team
 
