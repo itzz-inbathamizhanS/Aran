@@ -34,6 +34,8 @@ On top of these sit an AI layer and a bio-inspired immune layer, reported in [AI
 | Calibrated detector (M2) | Fuses checksum, context and NER evidence into one calibrated probability per finding | Bharadhwaj, Arun |
 | Artificial immune system | Negative selection learns normal data flows and flags non-self flows, with immune memory | Inbathamizhan, Aasif |
 | Firewall wiring | Detect, tokenise or destroy, count flows, alert | Inbathamizhan, Aasif |
+| Normaliser | Undoes URL, JSON and HTML escapes, Devanagari, Tamil and full-width digits, separators, zero-width characters, split fields and base64 before detection | Inbathamizhan, Aasif |
+| Own-customer and OTP registries | HMAC entries in a cuckoo filter for the bank's own identifiers; OTPs bound to the trace that issued them; typo repair against the registry | Inbathamizhan, Aasif (registries), Bharadhwaj, Arun (detector evidence) |
 
 ## Results on real data
 
@@ -74,6 +76,22 @@ Tested on 16,000 real log lines from 8 Loghub systems the models never saw, with
 
 Weak spots, stated plainly: mobiles with no cue word (68% recall), English OTPs next to transaction words (80%), and line-level anomalies on real BGL logs, where the immune layer did worse than a severity rule.
 
+### Normaliser, registries and typo repair (E10 to E12)
+
+Same 16,000 real lines as E9. Full tables in [Normaliser, registries and typo repair](docs/research/normaliser-and-registries.md).
+
+| Test | Before | After |
+| --- | --- | --- |
+| Sensitive values removed by the firewall | 83.5% | 89.7% |
+| Mobiles with no cue word removed | 69.8% | 100% (94.2% at 70% registry coverage) |
+| OTPs removed | 79.4% | 100% (trace-bound OTP registry, with 70,000 other live OTPs) |
+| Identifiers hidden 12 ways (Devanagari or Tamil digits, URL or JSON escapes, separators, base64, split fields) | 8.3% | 100% |
+| Aadhaar and card numbers with one typo | 0% | 99.2% |
+| Clean real lines wrongly changed | 122 | 122 |
+| Tokens wrongly flagged | 0 | 0 |
+
+The mobile and OTP weak spots are closed for a bank that registers its own customers and logs a trace ID. Names (74%) and addresses (90%) are unchanged.
+
 ## Repository layout
 
 ```
@@ -92,11 +110,14 @@ research/
   synth.py         Generated test identifiers and bank log lines (checksum-valid, belong to no one)
   ai/              NER, OTP/UPI context classifier, calibrated detector (Bharadhwaj, Arun)
   immune/          Artificial immune system and data-flow simulation (Inbathamizhan, Aasif)
-  firewall/        The wired firewall (Inbathamizhan, Aasif)
+  firewall/        The wired firewall, normaliser, customer and OTP registries (Inbathamizhan, Aasif)
   experiment_ai.py Experiments E5 to E9
   results_ai.json  Raw results
   test_ai.py       Tests for the AI, immune and firewall layers
   fetch_ai_data.sh Downloads CoNLL-2003, HiNER, Hinglish NER, UCI SMS and labelled BGL logs
+  experiment_registry.py  Experiments E10 to E12 (normaliser, registries, typo repair)
+  results_registry.json   Raw results
+  test_registry.py        Tests for the normaliser and registries
 ```
 
 ## Run it
@@ -115,6 +136,10 @@ pip install scikit-learn sklearn-crfsuite
 ./fetch_ai_data.sh
 python -m pytest test_ai.py
 python experiment_ai.py                             # about 20 minutes
+
+# Normaliser and registries
+python -m pytest test_registry.py
+python experiment_registry.py                       # about 15 minutes after experiment_ai.py
 ```
 
 Step-by-step Windows setup, with fixes for common errors, is in [Learn 1](docs/learning/01-python-and-tools.md).
@@ -123,6 +148,7 @@ Step-by-step Windows setup, with fixes for common errors, is in [Learn 1](docs/l
 
 - [Research document](docs/research/aran-research.md): problem analysis, baseline, literature survey, research gaps, novel design with theorems, critical review, results, plan and sources.
 - [AI and immune layers](docs/research/ai-and-immune-layers.md): NER, OTP/UPI classifier, calibrated detector, artificial immune system and firewall wiring, with results on real data and the weak spots.
+- [Normaliser, registries and typo repair](docs/research/normaliser-and-registries.md): roadmap items 2 and 5, built and measured (E10 to E12). [PDF](artifacts/research/Aran%20-%20Normaliser%20Registries%20and%20Typo%20Repair.pdf)
 - [Roadmap: what to research and build next](docs/research/aran-roadmap.md): what is designed but not yet built, and a prioritised list of 13 additions with effort, owners and the learning docs to read first.
 
 ### Learning path for the team
@@ -145,6 +171,7 @@ The team is new to this technology, so read these in order before starting any b
 ## Artifacts
 
 - [Learning docs as PDFs](artifacts/learning/): print-ready copies of the learning docs above.
+- [Normaliser, registries and typo repair (PDF)](artifacts/research/Aran%20-%20Normaliser%20Registries%20and%20Typo%20Repair.pdf): results report for roadmap items 2 and 5.
 - [Website design-system prompt for the website design tool](artifacts/website/Aran-Website-Design-System-Prompt.md): brand, colours, typography, components and page content for the Aran website.
 
 ## Regulations addressed

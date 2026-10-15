@@ -1,6 +1,6 @@
 # Aran: what to research and build next
 
-This is a prioritised list of what Aran still needs, based on a read of the current code (`research/`), the two research documents, and recent outside work. Nothing here is built yet. Per the team rule, each item names the learning docs to read before anyone starts on it.
+This is a prioritised list of what Aran still needs, based on a read of the current code (`research/`), the two research documents, and recent outside work. **Update:** items 2 and 5 are now built and measured; see [Normaliser, registries and typo repair](normaliser-and-registries.md). The rest is not built yet. Per the team rule, each item names the learning docs to read before anyone starts on it.
 
 ## Where Aran stands today
 
@@ -10,12 +10,12 @@ Designed in the [research document](aran-research.md) but not yet in code:
 
 | Promised in the research doc | Status in `research/` |
 | --- | --- |
-| Own-customer registry (HMAC entries in a cuckoo filter) | Not built. Only a public UPI handle list exists |
-| Trace-bound OTP registry (detect an OTP because it was issued, not by its shape) | Not built. OTPs are found by context only |
+| Own-customer registry (HMAC entries in a cuckoo filter) | **Built** (`firewall/registry.py`) |
+| Trace-bound OTP registry (detect an OTP because it was issued, not by its shape) | **Built** (`firewall/registry.py`) |
 | Leakage ledger (M4) that caps bits learned per customer | Only the offline bit counter exists; no runtime ledger |
 | Purpose-bound crypto-shredding with Merkle erasure receipts (M5) | Not built |
-| Typo repair (108 single-digit edits and 11 swaps checked against the registry) | Not built |
-| Normaliser for URL, base64, JSON escapes and split fields | Not built |
+| Typo repair (108 single-digit edits and 11 swaps checked against the registry) | **Built**, with an own-token check |
+| Normaliser for URL, base64, JSON escapes and split fields | **Built** (`firewall/normalise.py`) |
 | Choke points: API proxy, log transform, AI gateway | Not built. The firewall is a function called from an experiment script |
 
 Measured weak spots ([AI and immune layers, section 7](ai-and-immune-layers.md)): mobiles with no cue word (68% recall), English OTPs next to transaction words (80%), names in English logs (87%), 299 lines per second, and the immune layer failing on line-level logs (AUROC 0.34 on BGL).
@@ -31,10 +31,10 @@ Effort is in working days for the owning pair, assuming the learning docs are al
 | # | Addition | Why it matters to judges and banks | Effort | Owners | Read first |
 | --- | --- | --- | --- | --- | --- |
 | 1 | **Live gateway and dashboard.** A small FastAPI reverse proxy that sits in front of a fake bank API, plus a log-shipping endpoint, both calling `AranFirewall`. A one-page dashboard shows each request before and after, the tokens issued per sink, immune alerts, and an erasure receipt. | Turns a research prototype into something a judge can click. It also proves the "inline, before anything is stored" claim with real latency numbers. | 5 | Inbathamizhan, Aasif (proxy, firewall wiring); Bharadhwaj, Arun (dashboard panels for detector scores and alerts) | Learn 1, Learn 8 |
-| 2 | **Own-customer registry and trace-bound OTP registry.** HMAC-keyed entries in a cuckoo filter for the bank's own Aadhaar, card and mobile numbers; an OTP registry keyed by trace ID with a short expiry. Feed both as evidence into the existing detector. | This is the design's real answer to both weak spots: a bare 10-digit number that is a known customer's mobile is caught with no cue word, and an OTP is caught because it was issued, not because of the words around it. It also removes the 81 HDFS block IDs that pass Luhn. | 3 | Inbathamizhan, Aasif (registries, HMAC keys); Bharadhwaj, Arun (add registry evidence to the detector and re-run E7 and E9) | Learn 3 (HMAC), Learn 4 (Bloom and cuckoo filters) |
+| 2 | **Done.** **Own-customer registry and trace-bound OTP registry.** HMAC-keyed entries in a cuckoo filter for the bank's own Aadhaar, card and mobile numbers; an OTP registry keyed by trace ID with a short expiry. Feed both as evidence into the existing detector. | This is the design's real answer to both weak spots: a bare 10-digit number that is a known customer's mobile is caught with no cue word, and an OTP is caught because it was issued, not because of the words around it. It also removes the 81 HDFS block IDs that pass Luhn. | 3 | Inbathamizhan, Aasif (registries, HMAC keys); Bharadhwaj, Arun (add registry evidence to the detector and re-run E7 and E9) | Learn 3 (HMAC), Learn 4 (Bloom and cuckoo filters) |
 | 3 | **Fix the two ML weak spots directly.** Mobiles: add Indian numbering features (starts with 6 to 9, field names like `mob`, `ph`, `contact` in JSON keys and `key=value` pairs). OTPs: add hard negatives such as "txn TXN123 is 482913" with OTP labels and "OTP" absent, and an "OTP word within N tokens beats txn word" feature. | Raises the two numbers judges will see in the weak-spot line, for banks that cannot share a customer registry. Target: mobile recall above 85% and English OTP recall above 92% with the false-alarm count on real logs kept at or below today's 60. | 2 | Bharadhwaj, Arun | Learn 4, Learn 5 |
 | 4 | **Crypto-shredding with erasure receipts (M5).** Per-customer, per-purpose keys (a local software KMS is fine for the demo), vault-mode random tokens, key destruction, and a Merkle log that returns a signed inclusion proof as the receipt. Include the KYC time-lock. | DPDP erasure is the feature banks worry about most, and the DPDP Rules 2025 obligations take full effect in May 2027, so banks are buying for this now. A live "erase this customer, here is your receipt, the tokens in the logs are now dead" moment is the strongest demo in the project. | 4 | Inbathamizhan, Aasif | Learn 3 (sections on Merkle trees and crypto-shredding), Learn 7 |
-| 5 | **Normaliser and typo repair.** Decode URL, base64 and JSON escapes, join split numeric fields, map Devanagari and Tamil digits (०-९, ௦-௯) and full-width digits to ASCII, strip spaces and dashes inside numbers. Then the typo check against the registry. | Closes two High and Medium attacks from the research doc's own critical review. Evasion by encoding is the first thing a security judge will try. | 2 | Inbathamizhan, Aasif | Learn 1, Learn 2 |
+| 5 | **Done.** **Normaliser and typo repair.** Decode URL, base64 and JSON escapes, join split numeric fields, map Devanagari and Tamil digits (०-९, ௦-௯) and full-width digits to ASCII, strip spaces and dashes inside numbers. Then the typo check against the registry. | Closes two High and Medium attacks from the research doc's own critical review. Evasion by encoding is the first thing a security judge will try. | 2 | Inbathamizhan, Aasif | Learn 1, Learn 2 |
 
 ### Tier 2: what makes Aran stand out
 

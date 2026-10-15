@@ -35,3 +35,19 @@ python3 -m pytest test_ai.py
 | `results_ai.json` | all | Results of the last run |
 
 Results are written up in [docs/research/ai-and-immune-layers.md](../docs/research/ai-and-immune-layers.md).
+
+## Normaliser, registries and typo repair
+
+```
+python3 -m pytest test_registry.py
+python3 experiment_registry.py      # E10 to E12, writes results_registry.json
+```
+
+| File | Owner pair | What it is |
+| --- | --- | --- |
+| `firewall/normalise.py` | Inbathamizhan, Aasif | Undoes escapes, other-script digits, separators, zero-width characters, split fields and base64, with a map back to the original line |
+| `firewall/registry.py` | Inbathamizhan, Aasif | Cuckoo filter, own-customer registry, trace-bound OTP registry, typo neighbours |
+| `ai/detector.py` | Bharadhwaj, Arun | Now adds registry evidence by Bayes' rule and scans every normalised view |
+| `experiment_registry.py` | all | Experiments E10 to E12 |
+
+Results are written up in [docs/research/normaliser-and-registries.md](../docs/research/normaliser-and-registries.md).

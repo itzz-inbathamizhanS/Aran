@@ -22,6 +22,9 @@ from sklearn.linear_model import LogisticRegression
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from aran_core import luhn_valid, verhoeff_valid  # noqa: E402
 
+from firewall.normalise import identity_views  # noqa: E402
+from firewall.registry import CustomerRegistry, canonical, typo_neighbours  # noqa: E402
+
 from .context_clf import UPI_REGISTRY, candidates  # noqa: E402
 
 AADHAAR = re.compile(r"(?<![\d.])([2-9]\d{3})[ -]?(\d{4})[ -]?(\d{4})(?![\d.])")
@@ -51,6 +54,7 @@ class Finding:
     end: int
     p: float = 0.0
     evidence: dict = field(default_factory=dict)
+    meta: dict = field(default_factory=dict)  # registry result, canonical value, view mapping; not model input
 
 
 def _kw(text, s, e, typ):
@@ -63,13 +67,34 @@ def _logit(p):
     return math.log(p / (1 - p))
 
 
+def bayes(p, lr, floor=1e-3):
+    """Posterior after evidence with likelihood ratio lr. A hit in a registry is strong
+    enough to overrule a model that said 0, so the prior is floored before a large lr."""
+    if lr == 1.0:
+        return p
+    if lr > 1.0:
+        p = max(p, floor)
+    p = min(p, 1 - 1e-12)
+    o = p / (1 - p) * lr
+    return o / (1 + o)
+
+
 class Detector:
-    def __init__(self, ner=None, otp_clf=None, upi_clf=None):
+    def __init__(self, ner=None, otp_clf=None, upi_clf=None, registry=None, otp_registry=None, normaliser=None,
+                 miss_lr=None, token_check=None):
         self.ner, self.otp_clf, self.upi_clf = ner, otp_clf, upi_clf
         self.stack, self.iso = {}, {}
+        # Evidence the bank owns (see firewall/registry.py). A hit multiplies the odds by
+        # about 1/eps; a miss is neutral unless miss_lr says otherwise for that type (a
+        # bank that is sure its registry covers every number it could leak can set e.g.
+        # {"CARD": 0.05}). token_check(digits, type) says whether a checksum-failing
+        # number is one of this bank's own Aran tokens, so typo repair never flags them.
+        self.registry, self.otp_registry, self.normaliser = registry, otp_registry, normaliser
+        self.miss_lr = miss_lr or {}
+        self.token_check = token_check
 
     # ------------------------------------------------------------ candidate proposal
-    def propose(self, text):
+    def propose(self, text, trace_id=None):
         out = []
         for m in AADHAAR.finditer(text):
             d = "".join(m.groups())
@@ -94,6 +119,8 @@ class Detector:
                         handle = text[s:e].partition("@")[2].lower()
                         ev.update(registry=float(handle in UPI_REGISTRY), hdot=float("." in handle))
                     out.append(Finding(typ, s, e, evidence=ev))
+            elif spans and typ == "OTP" and self.otp_registry is not None and trace_id:
+                out += [Finding("OTP", s, e, evidence=dict(ctx=0.0)) for s, e in spans]
         if self.ner is not None:
             for s, e, typ, p in self.ner.entities(text):
                 if typ in ("PER", "ADDR"):
@@ -140,20 +167,71 @@ class Detector:
             s = [self.raw_score(findings[i]) for i in idx]
             self.iso[typ] = IsotonicRegression(out_of_bounds="clip", y_min=0.0, y_max=1.0).fit(s, ys)
 
-    def calibrated(self, f):
+    def calibrated(self, f, text=None, trace_id=None):
+        """Calibrated probability; with `text`, registry evidence is added on top."""
+        value = canonical(f.type, text[f.start:f.end]) if text is not None else None
         # Hard gate from the Aran design (Theorem 1): a 12-digit or card-length number that
-        # fails its checksum is either an Aran token or not an identifier, never a leak.
+        # fails its checksum is either an Aran token or not an identifier, never a leak...
         if f.type in ("AADHAAR", "CARD") and f.evidence.get("checksum") == 0.0:
-            return 0.0
+            # ...unless it is one typo away from a registered customer and is not our token.
+            return self._typo(f, value) if value is not None and self.registry is not None else 0.0
         s = self.raw_score(f)
         iso = self.iso.get(f.type)
-        return float(iso.predict([s])[0]) if iso is not None else s
+        p = float(iso.predict([s])[0]) if iso is not None else s
+        if value is None:
+            return p
+        if self.registry is not None and f.type in CustomerRegistry.TYPES:
+            hit = self.registry.contains(f.type, value)
+            f.meta["registry"] = "hit" if hit else "miss"
+            p = bayes(p, self.registry.likelihood_ratio() if hit else self.miss_lr.get(f.type, 1.0))
+        if self.otp_registry is not None and f.type == "OTP":
+            hit = self.otp_registry.contains(value, trace_id)
+            f.meta["registry"] = "hit" if hit else ("miss" if trace_id else "no trace id")
+            if hit:
+                p = bayes(p, 10.0 ** len(value))  # chance that a non-OTP number equals the live OTP
+            elif self.otp_clf is None:
+                p = 0.0  # candidate came from the registry path only; a miss means nothing found
+        return p
+
+    def _typo(self, f, digits):
+        if len(digits) not in ((12,) if f.type == "AADHAAR" else (16,)):
+            return 0.0
+        neighbours = typo_neighbours(digits, f.type)
+        hits = [v for v in neighbours if self.registry.contains(f.type, v)]
+        if not hits or (self.token_check is not None and self.token_check(digits, f.type)):
+            return 0.0
+        prior = Finding(f.type, f.start, f.end, evidence=dict(f.evidence, checksum=1.0))
+        s = self.raw_score(prior)
+        iso = self.iso.get(f.type)
+        p = float(iso.predict([s])[0]) if iso is not None else s
+        f.meta.update(registry="typo", repaired=hits[0])
+        return bayes(p, self.registry.likelihood_ratio(len(neighbours)))
 
     # ------------------------------------------------------------ inference
-    def scan(self, text, threshold=0.5):
+    def _split(self, view, trace_id):
+        """A split-field view only counts if the joined value passes its checksum and the
+        line names the type nearby or the registry knows the value."""
+        d = view.text
+        typ = "AADHAAR" if len(d) == 12 else "CARD"
+        ok = verhoeff_valid(d) and d[0] not in "01" if typ == "AADHAAR" else luhn_valid(d) and bool(IIN.match(d))
+        if not ok:
+            return []
+        a, b = view.parts[0][0], view.parts[-1][1]
+        kw = _kw(view.base, a, b, typ)
+        hit = self.registry is not None and self.registry.contains(typ, d)
+        if not (kw or hit):
+            return []
+        ev = dict(checksum=1.0, kw=kw)
+        if typ == "CARD":
+            ev.update(iin=1.0, len16=1.0)
+        f = Finding(typ, 0, len(d), evidence=ev)
+        f.p = self.calibrated(f, d, trace_id)
+        return [f]
+
+    def _scan_view(self, text, threshold, trace_id):
         found = []
-        for f in self.propose(text):
-            f.p = self.calibrated(f)
+        for f in self.propose(text, trace_id):
+            f.p = self.calibrated(f, text, trace_id)
             if f.p >= threshold:
                 found.append(f)
         # overlapping findings: keep the most probable, then the longest
@@ -162,7 +240,51 @@ class Detector:
         for f in found:
             if all(f.end <= k.start or f.start >= k.end for k in kept):
                 kept.append(f)
-        return sorted(kept, key=lambda f: f.start)
+        return kept
+
+    def scan(self, text, threshold=0.5, trace_id=None):
+        """Findings in original-line coordinates. With a normaliser, each view of the line
+        is scanned; f.meta carries the canonical value, and for split fields the parts, and
+        for base64 blobs the decoded text and span inside it, so the firewall can replace
+        values in place."""
+        views = self.normaliser.views(text) if self.normaliser is not None else identity_views(text)
+        plain, special = [], []
+        for v in views:
+            fs = self._split(v, trace_id) if v.parts else self._scan_view(v.text, threshold, trace_id)
+            for f in fs:
+                if f.p < threshold:
+                    continue
+                f.meta["value"] = v.text[f.start:f.end]
+                a, b = v.span(f.start, f.end)
+                if v.parts:
+                    f.meta["parts"] = v.parts
+                if v.layer is not None:
+                    f.meta.update(layer=v.layer, inner=(a, b), decoded=v.base)
+                    f.start, f.end = v.layer["start"], v.layer["end"]
+                    special.append(f)
+                elif v.parts:
+                    f.start, f.end = a, b
+                    special.append(f)
+                else:
+                    f.start, f.end = a, b
+                    plain.append(f)
+        # findings from different views of the same text: keep the most probable
+        plain.sort(key=lambda f: (-f.p, -(f.end - f.start)))
+        kept = []
+        for f in plain:
+            if all(f.end <= k.start or f.start >= k.end for k in kept):
+                kept.append(f)
+        # a split value or a base64 blob is handled as a whole; drop plain findings inside it
+        cover = []
+        for f in special:
+            cover += [(f.start, f.end)] if "layer" in f.meta else f.meta["parts"]
+        kept = [f for f in kept if all(f.end <= a or f.start >= b for a, b in cover)]
+        seen, uniq = set(), []
+        for f in special:
+            key = (f.type, f.meta["value"], f.start, f.end, f.meta.get("inner"))
+            if key not in seen:
+                seen.add(key); uniq.append(f)
+        return sorted(kept + uniq, key=lambda f: f.start)
 
 
 def label_findings(findings, gold_spans):

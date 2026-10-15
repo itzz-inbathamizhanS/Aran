@@ -1,0 +1,372 @@
+{
+ "e10_evasion": {
+  "test_lines": 628,
+  "conditions": {
+   "today (no normaliser)": {
+    "by_trick": {
+     "plain (control)": {
+      "removed": "629/783",
+      "rate": 0.8033
+     },
+     "Devanagari digits": {
+      "removed": "0/783",
+      "rate": 0.0
+     },
+     "Tamil digits": {
+      "removed": "0/783",
+      "rate": 0.0
+     },
+     "full-width digits": {
+      "removed": "0/783",
+      "rate": 0.0
+     },
+     "URL percent-encoding": {
+      "removed": "0/783",
+      "rate": 0.0
+     },
+     "JSON \\u escapes": {
+      "removed": "0/783",
+      "rate": 0.0
+     },
+     "HTML entities": {
+      "removed": "0/783",
+      "rate": 0.0
+     },
+     "dots between groups": {
+      "removed": "0/783",
+      "rate": 0.0
+     },
+     "underscores between groups": {
+      "removed": "0/783",
+      "rate": 0.0
+     },
+     "space between every digit": {
+      "removed": "155/783",
+      "rate": 0.198
+     },
+     "zero-width space inside": {
+      "removed": "0/783",
+      "rate": 0.0
+     },
+     "split into fields": {
+      "removed": "629/783",
+      "rate": 0.8033
+     },
+     "base64 of the line": {
+      "removed": "0/783",
+      "rate": 0.0
+     }
+    },
+    "hidden_values_removed": 0.0834,
+    "real_lines_changed": "60/16000",
+    "lines_per_second": 478
+   },
+   "normaliser": {
+    "by_trick": {
+     "plain (control)": {
+      "removed": "629/783",
+      "rate": 0.8033
+     },
+     "Devanagari digits": {
+      "removed": "629/783",
+      "rate": 0.8033
+     },
+     "Tamil digits": {
+      "removed": "629/783",
+      "rate": 0.8033
+     },
+     "full-width digits": {
+      "removed": "629/783",
+      "rate": 0.8033
+     },
+     "URL percent-encoding": {
+      "removed": "629/783",
+      "rate": 0.8033
+     },
+     "JSON \\u escapes": {
+      "removed": "629/783",
+      "rate": 0.8033
+     },
+     "HTML entities": {
+      "removed": "629/783",
+      "rate": 0.8033
+     },
+     "dots between groups": {
+      "removed": "629/783",
+      "rate": 0.8033
+     },
+     "underscores between groups": {
+      "removed": "629/783",
+      "rate": 0.8033
+     },
+     "space between every digit": {
+      "removed": "629/783",
+      "rate": 0.8033
+     },
+     "zero-width space inside": {
+      "removed": "629/783",
+      "rate": 0.8033
+     },
+     "split into fields": {
+      "removed": "629/783",
+      "rate": 0.8033
+     },
+     "base64 of the line": {
+      "removed": "629/783",
+      "rate": 0.8033
+     }
+    },
+    "hidden_values_removed": 0.8033,
+    "real_lines_changed": "60/16000",
+    "lines_per_second": 517
+   },
+   "normaliser + registry": {
+    "by_trick": {
+     "plain (control)": {
+      "removed": "783/783",
+      "rate": 1.0
+     },
+     "Devanagari digits": {
+      "removed": "783/783",
+      "rate": 1.0
+     },
+     "Tamil digits": {
+      "removed": "783/783",
+      "rate": 1.0
+     },
+     "full-width digits": {
+      "removed": "783/783",
+      "rate": 1.0
+     },
+     "URL percent-encoding": {
+      "removed": "783/783",
+      "rate": 1.0
+     },
+     "JSON \\u escapes": {
+      "removed": "783/783",
+      "rate": 1.0
+     },
+     "HTML entities": {
+      "removed": "783/783",
+      "rate": 1.0
+     },
+     "dots between groups": {
+      "removed": "783/783",
+      "rate": 1.0
+     },
+     "underscores between groups": {
+      "removed": "783/783",
+      "rate": 1.0
+     },
+     "space between every digit": {
+      "removed": "783/783",
+      "rate": 1.0
+     },
+     "zero-width space inside": {
+      "removed": "783/783",
+      "rate": 1.0
+     },
+     "split into fields": {
+      "removed": "783/783",
+      "rate": 1.0
+     },
+     "base64 of the line": {
+      "removed": "783/783",
+      "rate": 1.0
+     }
+    },
+    "hidden_values_removed": 1.0,
+    "real_lines_changed": "60/16000",
+    "lines_per_second": 498
+   }
+  },
+  "judge": "a value counts as removed if its digits no longer appear after undoing escapes, other scripts, separators and base64 on the output line"
+ },
+ "e11_registries": {
+  "lines": 16000,
+  "injected_identifiers": 1895,
+  "registered_injected_values": 399,
+  "today (detector only)": {
+   "leaks_left_by_type": {
+    "AADHAAR": "0/69",
+    "ADDR": "26/254",
+    "CARD": "0/72",
+    "MOBILE": "57/189",
+    "OTP": "60/291",
+    "PAN": "0/69",
+    "PER": "170/643",
+    "UPI": "0/308"
+   },
+   "recall_by_type": {
+    "AADHAAR": 1.0,
+    "ADDR": 0.8976,
+    "CARD": 1.0,
+    "MOBILE": 0.6984,
+    "OTP": 0.7938,
+    "PAN": 1.0,
+    "PER": 0.7356,
+    "UPI": 1.0
+   },
+   "leak_recall": 0.8348,
+   "clean_real_lines_changed": "122/14890",
+   "clean_line_findings_by_type": {
+    "UPI": 101,
+    "CARD": 2,
+    "OTP": 7,
+    "PER": 12
+   },
+   "tokens_redetected_as_real_ids": 0,
+   "lines_per_second": 298
+  },
+  "normaliser + registries, full coverage": {
+   "leaks_left_by_type": {
+    "AADHAAR": "0/69",
+    "ADDR": "26/254",
+    "CARD": "0/72",
+    "MOBILE": "0/189",
+    "OTP": "0/291",
+    "PAN": "0/69",
+    "PER": "170/643",
+    "UPI": "0/308"
+   },
+   "recall_by_type": {
+    "AADHAAR": 1.0,
+    "ADDR": 0.8976,
+    "CARD": 1.0,
+    "MOBILE": 1.0,
+    "OTP": 1.0,
+    "PAN": 1.0,
+    "PER": 0.7356,
+    "UPI": 1.0
+   },
+   "leak_recall": 0.8966,
+   "clean_real_lines_changed": "122/14890",
+   "clean_line_findings_by_type": {
+    "UPI": 101,
+    "CARD": 2,
+    "OTP": 7,
+    "PER": 12
+   },
+   "tokens_redetected_as_real_ids": 0,
+   "lines_per_second": 292
+  },
+  "normaliser + registries, 70% coverage": {
+   "leaks_left_by_type": {
+    "AADHAAR": "0/69",
+    "ADDR": "26/254",
+    "CARD": "0/72",
+    "MOBILE": "11/189",
+    "OTP": "0/291",
+    "PAN": "0/69",
+    "PER": "170/643",
+    "UPI": "0/308"
+   },
+   "recall_by_type": {
+    "AADHAAR": 1.0,
+    "ADDR": 0.8976,
+    "CARD": 1.0,
+    "MOBILE": 0.9418,
+    "OTP": 1.0,
+    "PAN": 1.0,
+    "PER": 0.7356,
+    "UPI": 1.0
+   },
+   "leak_recall": 0.8908,
+   "clean_real_lines_changed": "122/14890",
+   "clean_line_findings_by_type": {
+    "UPI": 101,
+    "CARD": 2,
+    "OTP": 7,
+    "PER": 12
+   },
+   "tokens_redetected_as_real_ids": 0,
+   "lines_per_second": 290
+  },
+  "registries, strict miss rule": {
+   "leaks_left_by_type": {
+    "AADHAAR": "0/69",
+    "ADDR": "26/254",
+    "CARD": "0/72",
+    "MOBILE": "0/189",
+    "OTP": "0/291",
+    "PAN": "0/69",
+    "PER": "170/643",
+    "UPI": "0/308"
+   },
+   "recall_by_type": {
+    "AADHAAR": 1.0,
+    "ADDR": 0.8976,
+    "CARD": 1.0,
+    "MOBILE": 1.0,
+    "OTP": 1.0,
+    "PAN": 1.0,
+    "PER": 0.7356,
+    "UPI": 1.0
+   },
+   "leak_recall": 0.8966,
+   "clean_real_lines_changed": "121/14890",
+   "clean_line_findings_by_type": {
+    "UPI": 101,
+    "CARD": 1,
+    "OTP": 7,
+    "PER": 12
+   },
+   "tokens_redetected_as_real_ids": 0,
+   "lines_per_second": 283
+  },
+  "real_log_false_alarms_unseen_systems": {
+   "lines": 16000,
+   "detector only": {
+    "AADHAAR": 0,
+    "CARD": 2,
+    "MOBILE": 0
+   },
+   "registry, neutral miss": {
+    "AADHAAR": 0,
+    "CARD": 2,
+    "MOBILE": 0
+   },
+   "registry, strict miss": {
+    "AADHAAR": 0,
+    "CARD": 1,
+    "MOBILE": 0
+   }
+  },
+  "registry": {
+   "entries": 800399,
+   "memory_mb": 4.0,
+   "false_positive_bound": 1.862645149230957e-09,
+   "build_seconds": 33.2,
+   "lookup_microseconds": 16.8,
+   "live_otps": 70291
+  }
+ },
+ "e12_typo": {
+  "registered_identifiers": 802000,
+  "cases": 1990,
+  "without registry": {
+   "AADHAAR adjacent swap": "0/513",
+   "AADHAAR wrong digit": "0/482",
+   "CARD adjacent swap": "0/490",
+   "CARD wrong digit": "0/505"
+  },
+  "without registry_rate": 0.0,
+  "with registry": {
+   "AADHAAR adjacent swap": "504/513",
+   "AADHAAR wrong digit": "474/482",
+   "CARD adjacent swap": "490/490",
+   "CARD wrong digit": "505/505"
+  },
+  "with registry_rate": 0.9915,
+  "tokens": {
+   "tokens": 5000,
+   "sinks": 40,
+   "flagged_with_own_token_check": 0,
+   "flagged_without_check": 0,
+   "mean_checksum_valid_neighbours": 13.88,
+   "projected_flag_rate_without_check_at_1e8_ids": 0.0154,
+   "note": "A token has about m checksum-valid neighbours; with N registered numbers of that type in a space of about 9e10 (Aadhaar), each is registered with probability N/9e10, so without the own-token check about m*N/9e10 of tokens would be flagged as typos."
+  },
+  "real_log_typo_false_alarms": "0 in 16000 lines"
+ }
+}
