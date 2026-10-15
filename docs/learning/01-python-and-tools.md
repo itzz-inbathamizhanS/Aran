@@ -54,10 +54,9 @@ git config --global user.email "you@example.com"
 cd D:\
 git clone https://github.com/itzz-inbathamizhans/aran.git Aran
 cd Aran
-git checkout claude/project-thread-9hgid0
 ```
 
-`clone` copies the whole repo with its full history. The `checkout` line switches to the branch where the research code currently lives; once that branch is merged into `main` you can skip it.
+`clone` copies the whole repo with its full history, on the `main` branch.
 
 **Step 5: Create the virtual environment.** Run this inside `D:\Aran`.
 
