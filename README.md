@@ -151,7 +151,7 @@ cd app/web && npm install && npm run dev            # frontend with live reload 
 ```
 docs/
   research/        Research document, AI and immune layers report, roadmap
-  learning/        Fourteen beginner learning docs (Markdown, open in Obsidian or GitHub)
+  learning/        Fifteen beginner learning docs (Markdown, open in Obsidian or GitHub)
 artifacts/
   learning/        PDF copies of the learning docs, for printing or offline reading
   website/         Website design-system prompt
@@ -252,6 +252,7 @@ The team is new to this technology, so read these in order before starting any b
 | 12 | [Leakage Ledger, AI Gateway and Red-Teaming](docs/learning/12-ledger-ai-gateway-and-red-teaming.md) | Everyone (roadmap items 3, 6, 9 and M4) | ~5 h | Add model features for hard cases, count what joined systems learn in bits, hide identifiers from a chatbot with role-based placeholders and a hash-chained audit log, red-team your own detector with a fair judge, speed a model up with caching and a cascade | [PDF](artifacts/learning/Aran%20Learn%2012%20-%20Leakage%20Ledger%20AI%20Gateway%20and%20Red-Teaming.pdf) |
 | 13 | [Animation and Visual Explainers](docs/learning/13-animation-and-visual-explainers.md) | Everyone (the animated tour) | ~4 h | Draw with SVG, animate with CSS transitions, keyframes and `<animateMotion>`, tell a story step by step with React state, count-ups and radar charts, respect reduced motion, and only ever animate real server data | [PDF](artifacts/learning/Aran%20Learn%2013%20-%20Animation%20and%20Visual%20Explainers.pdf) |
 | 14 | [Post-Quantum Cryptography](docs/learning/14-post-quantum-cryptography.md) | Inbathamizhan, Aasif (everyone reads sections 1 to 3) | ~5 h | Explain what Shor and Grover break, apply Mosca's inequality, run ML-KEM and ML-DSA in Python, explain hybrid key agreement and hybrid signatures and the downgrade trap, produce a CBOM | [PDF](artifacts/learning/Aran%20Learn%2014%20-%20Post-Quantum%20Cryptography.pdf) |
+| 15 | [UI Design Specs and Design Tokens](docs/learning/15-ui-design-specs-and-tokens.md) | Everyone (the new UI design) | ~2 h | Read the UI design spec, use colour tokens like `{primary-color}` instead of fixed colours, design every state of a screen, bind each element to its API field, hand a design off to code | [PDF](artifacts/learning/Aran%20Learn%2015%20-%20UI%20Design%20Specs%20and%20Design%20Tokens.pdf) |
 
 ## Artifacts
 
@@ -261,6 +262,7 @@ The team is new to this technology, so read these in order before starting any b
 - [Post-quantum upgrade (PDF)](artifacts/research/Aran%20-%20Post-Quantum%20Upgrade.pdf): results report for E17 to E19, with Learn 14, also kept by thread in [artifacts/Post-quantum cryptography](artifacts/Post-quantum%20cryptography/).
 - [Website design-system prompt for the website design tool](artifacts/website/Aran-Website-Design-System-Prompt.md): brand, colours, typography, components and page content for the Aran website.
 - [Frontend guide with Claude Design](artifacts/Frontend%20with%20Claude%20Design/Aran%20-%20Frontend%20Guide%20with%20Claude%20Design.md): step-by-step guide, design-system and console prompts for restyling the live console, and the live API it uses.
+- [UI design spec](artifacts/UI%20design%20spec/Aran%20-%20UI%20Design%20Spec.md) ([PDF](artifacts/UI%20design%20spec/Aran%20-%20UI%20Design%20Spec.pdf)): every page of the console with its sections, content, components, data, animations, states and the API endpoint behind each element, with colour placeholders (`{primary-color}`, `{input-color}`, `{leak-color}`) to fill in for a new design. Read [Learn 15](docs/learning/15-ui-design-specs-and-tokens.md) first.
 - [Artifacts index](artifacts/README.md): every artifact by thread, with live links. Older Markdown and PDF copies of the first docs are in [artifacts/Data-flow firewall research](artifacts/Data-flow%20firewall%20research/).
 - [Obsidian vault home](Home.md): open the repo folder as a vault; thread notes are in [notes/threads](notes/threads/), indexed in [notes/Threads.md](notes/Threads.md).
 

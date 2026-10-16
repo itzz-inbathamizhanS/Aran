@@ -25,6 +25,7 @@ Every project thread for Aran, oldest first.
 | 15 | [[15 Sync GitHub Obsidian Notion]] | done |
 | 16 | [[16 Ledger AI gateway and red team]] | done (roadmap items 3, 6, 9, M4; first step on 7, 12) |
 | 17 | [[17 Post-quantum cryptography]] | done (roadmap item 14, E17 to E19, Learn 14) |
+| 18 | [[18 UI design spec]] | done (full page-by-page design spec, Learn 15) |
 
 ## Decisions
 - All work happens locally in `D:\Aran`; nothing goes to GitHub until **save** or **push**.

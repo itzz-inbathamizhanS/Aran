@@ -32,7 +32,11 @@ Repo copies: Markdown in `docs/`, PDFs in `artifacts/learning/` and `artifacts/r
 | 10 | Aran Learn 10 - OCR Basics | `docs/learning/10-ocr-basics.md` |
 | 12 | Aran Learn 12 - Leakage Ledger, AI Gateway and Red-Teaming | `docs/learning/12-ledger-ai-gateway-and-red-teaming.md` |
 | 14 | Aran Learn 14 - Post-Quantum Cryptography | `docs/learning/14-post-quantum-cryptography.md` |
+| 15 | Aran Learn 15 - UI Design Specs and Design Tokens | `docs/learning/15-ui-design-specs-and-tokens.md` |
 
 Learn 1 to 7 were expanded on 15 Oct; the repo Markdown and PDFs hold the expanded text.
 
 Reading order: Learn 1 to 4 and 7 for everyone, then Learn 5 and 9 (AI/ML pair) or Learn 3 and 6 (cyber pair). Learn 8 before roadmap item 1; Learn 10 before item 10.
+
+## UI design spec
+- [Aran - UI Design Spec](../artifacts/UI%20design%20spec/Aran%20-%20UI%20Design%20Spec.md) (Markdown and PDF): every console page, its content, components, data, animations, states and API endpoints, with colour placeholders. Thread: [[18 UI design spec]].
