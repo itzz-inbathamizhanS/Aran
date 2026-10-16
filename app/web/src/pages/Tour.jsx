@@ -280,6 +280,9 @@ const CHAPTERS = [
 export default function Tour({ go }) {
   const fromHash = () => { const m = location.hash.match(/^#tour\/(\d+)/); return m ? Math.min(Number(m[1]), CHAPTERS.length - 1) : 0 }
   const [i, setI] = useState(fromHash)
+  const prev = React.useRef(i)
+  const dir = i >= prev.current ? 'fwd' : 'back'
+  useEffect(() => { prev.current = i }, [i])
   useEffect(() => { const f = () => setI(fromHash()); window.addEventListener('hashchange', f); return () => window.removeEventListener('hashchange', f) }, [])
   useEffect(() => {
     const k = e => { if (e.target.closest('input, textarea, select')) return
@@ -296,7 +299,7 @@ export default function Tour({ go }) {
           <span className="dn">{n + 1}</span><span className="dt">{t}</span></button>))}</nav>
       <select className="chap-select" value={i} onChange={e => to(Number(e.target.value))} aria-label="Chapter">
         {CHAPTERS.map(([t], n) => <option key={t} value={n}>{n + 1}. {t}</option>)}</select>
-      <article className="chapter" key={i}><C go={go} next={() => to(i + 1)} /></article>
+      <article className={'chapter ' + dir} key={i}><C go={go} next={() => to(i + 1)} /></article>
       <div className="row-between tour-nav">
         <button className="secondary" disabled={i === 0} onClick={() => to(i - 1)}>← {i > 0 ? CHAPTERS[i - 1][0] : 'Back'}</button>
         <span className="small muted">← → keys work too</span>

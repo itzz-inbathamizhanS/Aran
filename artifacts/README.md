@@ -32,6 +32,8 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | UI design spec | Aran - UI Design Spec (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/UI%20design%20spec/Aran%20-%20UI%20Design%20Spec.md |
 | UI design spec | Aran Learn 15 - UI Design Specs and Design Tokens (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/15-ui-design-specs-and-tokens.md |
 | UI design spec | Aran - Design References (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/UI%20design%20spec/Aran%20-%20Design%20References.md |
+| 3D tour | Aran Learn 16 - 3D Graphics with three.js (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/16-3d-graphics-with-threejs.md |
+| 3D tour | 3D tour screenshots (3D firewall with live packets, 3D immune feature space with real detectors, light and phone) | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/3D%20tour |
 
 Note: the Markdown copy replaces the embedded architecture diagram with a text placeholder; the PDF keeps it.
 
