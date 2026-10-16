@@ -13,15 +13,20 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Data-flow firewall research | Aran Learn 6 - Artificial Immune Systems | https://claude.ai/code/artifact/434f9864-f7e9-41a3-8177-6b88eee4f458 |
 | Data-flow firewall research | Aran Learn 7 - Data-Protection Law Basics | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/07-data-protection-law.md |
 | Data-flow firewall research | Aran Learn 7 - Data-Protection Law Basics | https://claude.ai/code/artifact/cdf79f63-0b72-4b2d-813c-66758a34ed5c |
+| Data-flow firewall research | Aran Learn 8 - Web APIs and Proxies (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/08-web-apis-and-proxies.md |
+| Data-flow firewall research | Aran Learn 9 - Transformers and Zero-Shot NER (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/09-transformers-and-zero-shot-ner.md |
+| Data-flow firewall research | Aran Learn 10 - OCR Basics (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/10-ocr-basics.md |
+| Normaliser and registries | Aran - Normaliser Registries and Typo Repair (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/research/normaliser-and-registries.md |
+| Roadmap | Aran Roadmap - What to Build Next (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/research/aran-roadmap.md |
 | Website design prompt | Aran-Website-Design-System-Prompt (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/website/Aran-Website-Design-System-Prompt.md |
 | Frontend with Claude Design | Aran - Frontend Guide with Claude Design (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Frontend%20with%20Claude%20Design/Aran%20-%20Frontend%20Guide%20with%20Claude%20Design.md |
 | Ledger AI gateway and red team | Aran - Ledger AI Gateway and Red Team (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/research/ledger-gateway-redteam.md |
 | Ledger AI gateway and red team | Aran Learn 12 - Leakage Ledger, AI Gateway and Red-Teaming (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/12-ledger-ai-gateway-and-red-teaming.md |
-| Frontend with Claude Design | Aran Learn 11 - Frontend Basics (PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/learning/Aran%20Learn%2011%20-%20Frontend%20Basics.pdf |
+| Frontend with Claude Design | Aran Learn 11 - Frontend Basics (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/learning/Aran%20Learn%2011%20-%20Frontend%20Basics.pdf |
 | Animated tour | Aran Learn 13 - Animation and Visual Explainers (PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/learning/Aran%20Learn%2013%20-%20Animation%20and%20Visual%20Explainers.pdf |
 | Animated tour | Animated tour screenshots (packets, token rounds, false alarms, erasure receipt, immune radar, AI gateway) | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/Animated%20tour |
 | Frontend with Claude Design | Aran live console (code) | https://github.com/itzz-inbathamizhans/aran/tree/main/app |
-| Frontend with Claude Design | Guided tour screenshots (chapter 1, hidden numbers, erasure) | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/Frontend%20with%20Claude%20Design |
+| Frontend with Claude Design | Guided tour screenshots (console overview, chapter 1, hidden numbers, erasure) | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/Frontend%20with%20Claude%20Design |
 | Post-quantum cryptography | Aran - Post-Quantum Upgrade (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/research/post-quantum.md |
 | Post-quantum cryptography | Aran Learn 14 - Post-Quantum Cryptography (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/14-post-quantum-cryptography.md |
 | UI design spec | Aran - UI Design Spec (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/UI%20design%20spec/Aran%20-%20UI%20Design%20Spec.md |
