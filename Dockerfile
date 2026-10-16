@@ -1,4 +1,5 @@
-# Aran console: React frontend + FastAPI server running the real Aran firewall.
+# Aran console: the team's design (app/ui, served at /), the earlier React console (at /classic)
+# and the FastAPI server running the real Aran firewall.
 FROM node:22-slim AS web
 WORKDIR /web
 COPY app/web/package.json app/web/package-lock.json ./
@@ -15,6 +16,7 @@ COPY research/ research/
 # Real Loghub production logs, replayed as the bank's normal traffic
 RUN bash research/fetch_data.sh
 COPY app/server/ app/server/
+COPY app/ui/ app/ui/
 COPY --from=web /web/dist app/web/dist
 WORKDIR /srv/app/server
 ENV PYTHONUNBUFFERED=1

@@ -34,6 +34,9 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | UI design spec | Aran - Design References (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/UI%20design%20spec/Aran%20-%20Design%20References.md |
 | 3D tour | Aran Learn 16 - 3D Graphics with three.js (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/16-3d-graphics-with-threejs.md |
 | 3D tour | 3D tour screenshots (3D firewall with live packets, 3D immune feature space with real detectors, light and phone) | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/3D%20tour |
+| Live console (team design) | Aran Learn 17 - Wiring a Static Design to a Live API (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/17-wiring-a-design-to-a-live-api.md |
+| Live console (team design) | Screenshots of the team's design running on the live server (hero, live pipeline, overview, erasure receipt, customers, immune alert from a drill, phone) | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/Live%20console%20(team%20design) |
+| Live console (team design) | The wired console source and its screen-to-endpoint table | https://github.com/itzz-inbathamizhans/aran/blob/main/app/ui/README.md |
 
 Note: the Markdown copy replaces the embedded architecture diagram with a text placeholder; the PDF keeps it.
 

@@ -385,13 +385,29 @@ def tour_gateway(body: GatewayIn):
 
 
 # ---------------------------------------------------------------- frontend
-DIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "web", "dist")
-if os.path.isdir(DIST):
+# "/" is the console from the team's design (app/ui, plain HTML, CSS and JS, no build step).
+# The earlier React console (app/web, built to app/web/dist) stays at /classic.
+HERE = os.path.dirname(os.path.abspath(__file__))
+UI = os.path.join(HERE, "..", "ui")
+DIST = os.path.join(HERE, "..", "web", "dist")
+if os.path.isdir(os.path.join(DIST, "assets")):
     app.mount("/assets", StaticFiles(directory=os.path.join(DIST, "assets")), name="assets")
 
-    @app.get("/{path:path}")
-    def spa(path: str):
-        f = os.path.join(DIST, path)
-        if path and os.path.isfile(f):
-            return FileResponse(f)
-        return FileResponse(os.path.join(DIST, "index.html"))
+
+@app.get("/classic")
+@app.get("/classic/")
+def classic():
+    if not os.path.isfile(os.path.join(DIST, "index.html")):
+        raise HTTPException(404, "the classic console is not built; run npm run build in app/web")
+    return FileResponse(os.path.join(DIST, "index.html"))
+
+
+@app.get("/{path:path}")
+def ui(path: str):
+    if path.startswith("api/"):
+        raise HTTPException(404, "no such endpoint")
+    root = os.path.realpath(UI)
+    f = os.path.realpath(os.path.join(root, path))
+    if path and f.startswith(root + os.sep) and os.path.isfile(f):
+        return FileResponse(f, headers={"Cache-Control": "no-cache"})
+    return FileResponse(os.path.join(root, "index.html"), headers={"Cache-Control": "no-cache"})
