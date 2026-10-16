@@ -385,6 +385,14 @@ def tour_gateway(body: GatewayIn):
     return E.tour_gateway(eng(), body.role, body.text)
 
 
+# ---------------------------------------------------------------- demo features
+# phone arena, with/without split screen, leakage ledger, card photo scan, post-quantum (standout.py)
+import standout  # noqa: E402
+
+standout._eng = eng
+app.include_router(standout.router)
+
+
 # ---------------------------------------------------------------- frontend
 # "/" is the console from the team's design (app/ui, plain HTML, CSS and JS, no build step).
 # The earlier React console (app/web, built to app/web/dist) stays at /classic.

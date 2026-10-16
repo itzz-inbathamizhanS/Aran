@@ -1,0 +1,144 @@
+/* Language switch: English (default, the source text), Tamil and Hindi.
+   The English text written in the pages is the key; A.t(english) returns the chosen
+   language's version, or the English itself when a line is not translated, so English
+   is always complete. Translated: the menu, top bar, every page's eyebrow, title and lede,
+   and every tour chapter's name, title and tagline. Body text inside the live scenes
+   stays in English. Check coverage with: node app/ui/tools/check-i18n.js
+   Translations were drafted for the team to review; fix any line here. */
+window.ARAN = window.ARAN || {};
+(function (A) {
+  const LANGS = { en: 'English', ta: 'தமிழ்', hi: 'हिन्दी' };
+  let lang = 'en';
+  try { lang = localStorage.getItem('aran-lang') || 'en'; } catch (e) {}
+  if (!LANGS[lang]) lang = 'en';
+
+  // strings that are not page headings or tour chapters (top bar, tour frame, hero)
+  A.I18N_EXTRA = ['Menu', 'Sound off', 'Sound on', 'Light', 'Dark', 'Present', 'Chapter', 'Back', '← → keys work too', 'Open the full console',
+    'Data-flow firewall for Indian banks', 'Hold to blast', 'Scroll', 'every value computed by Aran’s code · identifiers are generated, never real people', 'generated IDs only'];
+
+  const T = {
+    ta: {
+      'Guided tour': 'வழிகாட்டும் சுற்றுலா', 'Overview': 'மேலோட்டம்', 'Live traffic': 'நேரடி போக்குவரத்து', 'Customers & erasure': 'வாடிக்கையாளர்கள் & அழிப்பு', 'Leak trace': 'கசிவு தடம்', 'Immune layer': 'நோய் எதிர்ப்பு அடுக்கு', 'Results & tests': 'முடிவுகள் & சோதனைகள்', 'How it works': 'இது எப்படி வேலை செய்கிறது',
+      'Beat the firewall': 'ஃபயர்வாலை வெல்லுங்கள்', 'With / without Aran': 'அரண் உடன் / இல்லாமல்', 'Leakage ledger': 'கசிவு பேரேடு', 'Card photo scan': 'அட்டை புகைப்பட ஸ்கேன்', 'Post-quantum': 'குவாண்டம்-பிந்தைய', 'My data': 'என் தரவு',
+      'DATA-FLOW FIREWALL FOR INDIAN BANKS': 'இந்திய வங்கிகளுக்கான தரவு ஓட்ட ஃபயர்வால்',
+      'Real numbers pass the checksum. Aran’s tokens never do.': 'உண்மையான எண்கள் சரிபார்ப்பு இலக்கத்தைக் கடக்கும். அரணின் டோக்கன்கள் ஒருபோதும் கடக்காது.',
+      'This console runs Aran’s actual code. Send a request, watch it get protected, trace a leak, erase a customer, and see every number update from the live server.': 'இந்த கன்சோல் அரணின் உண்மையான குறியீட்டை இயக்குகிறது. ஒரு கோரிக்கையை அனுப்புங்கள், அது பாதுகாக்கப்படுவதைப் பாருங்கள், கசிவைத் தடம் காணுங்கள், வாடிக்கையாளரை அழியுங்கள்; ஒவ்வொரு எண்ணும் நேரடி சர்வரிலிருந்து புதுப்பிக்கப்படும்.',
+      'LIVE TRAFFIC': 'நேரடி போக்குவரத்து', 'Send a request through Aran': 'அரண் வழியாக ஒரு கோரிக்கையை அனுப்புங்கள்',
+      'Pick a bank request or paste your own text. Aran detects every sensitive value, replaces it before it reaches the sink, and shows its reasoning.': 'ஒரு வங்கி கோரிக்கையைத் தேர்ந்தெடுங்கள் அல்லது உங்கள் உரையை ஒட்டுங்கள். அரண் ஒவ்வொரு உணர்திறன் மதிப்பையும் கண்டறிந்து, சேமிக்கும் அமைப்பை அடையும் முன் மாற்றி, அதன் காரணத்தைக் காட்டுகிறது.',
+      'PURPOSE-BOUND CRYPTO-SHREDDING (M5)': 'நோக்கம் சார்ந்த கிரிப்டோ அழிப்பு (M5)', 'Destroy one key. Every copy is erased, with a signed receipt.': 'ஒரு சாவியை அழியுங்கள். ஒவ்வொரு நகலும் அழியும், கையொப்பமிட்ட ரசீதுடன்.',
+      'Each customer has one key per purpose. Tokens sent to sinks are encrypted under that key. Destroy the key and every token for that purpose, in every log and vendor copy, can never be read again.': 'ஒவ்வொரு வாடிக்கையாளருக்கும் ஒவ்வொரு நோக்கத்திற்கும் ஒரு சாவி உண்டு. அமைப்புகளுக்கு அனுப்பப்படும் டோக்கன்கள் அந்தச் சாவியால் குறியாக்கப்படுகின்றன. சாவியை அழித்தால், அந்த நோக்கத்திற்கான ஒவ்வொரு டோக்கனையும், எந்த லாக் அல்லது விற்பனையாளர் நகலிலும், இனி ஒருபோதும் படிக்க முடியாது.',
+      'LEAK ATTRIBUTION (M3)': 'கசிவு மூலம் கண்டறிதல் (M3)', 'A leaked token names the system that leaked it.': 'கசிந்த டோக்கன் அதைக் கசியவிட்ட அமைப்பின் பெயரைச் சொல்கிறது.',
+      'Every sink receives different tokens for the same customer. Paste a leaked file and Aran tells you which sink it came from, with the evidence.': 'ஒரே வாடிக்கையாளருக்கு ஒவ்வொரு அமைப்பும் வேறு டோக்கன்களைப் பெறுகிறது. கசிந்த கோப்பை ஒட்டுங்கள்; அது எந்த அமைப்பிலிருந்து வந்தது என்று அரண் ஆதாரத்துடன் சொல்லும்.',
+      'ARTIFICIAL IMMUNE SYSTEM': 'செயற்கை நோய் எதிர்ப்பு அமைப்பு', 'Learns what normal looks like, then flags what is not.': 'இயல்பு எப்படி இருக்கும் என்று கற்று, இயல்பில்லாததைக் கொடியிடுகிறது.',
+      'Every 30 seconds the firewall closes one flow record per source and sink: how many messages carried sensitive values, how many left raw, which data classes, how often tokens were read back. The immune layer learns “self” from this server’s own traffic, then scores every new record with negative selection.': 'ஒவ்வொரு 30 வினாடிக்கும் ஃபயர்வால் ஒவ்வொரு மூலம், இலக்குக்கும் ஒரு ஓட்டப் பதிவை மூடுகிறது: எத்தனை செய்திகளில் உணர்திறன் மதிப்புகள் இருந்தன, எத்தனை மாற்றப்படாமல் சென்றன, எந்த தரவு வகைகள், டோக்கன்கள் எத்தனை முறை மீண்டும் படிக்கப்பட்டன. நோய் எதிர்ப்பு அடுக்கு இந்த சர்வரின் சொந்த போக்குவரத்திலிருந்து “தன்னை” கற்று, ஒவ்வொரு புதிய பதிவையும் எதிர்மறைத் தேர்வு மூலம் மதிப்பிடுகிறது.',
+      'EVIDENCE': 'ஆதாரம்', 'Results from the experiment scripts, not from slides': 'ஸ்லைடுகளிலிருந்து அல்ல, சோதனை நிரல்களிலிருந்து வந்த முடிவுகள்',
+      'These tables are read from the result files the experiment scripts wrote. Run the test suite or re-run E1 to E4 on this server and watch the output.': 'இந்த அட்டவணைகள் சோதனை நிரல்கள் எழுதிய முடிவுக் கோப்புகளிலிருந்து படிக்கப்படுகின்றன. சோதனைத் தொகுப்பை இயக்குங்கள் அல்லது E1 முதல் E4 வரை இந்த சர்வரில் மீண்டும் இயக்கி வெளியீட்டைப் பாருங்கள்.',
+      'HOW IT WORKS': 'இது எப்படி வேலை செய்கிறது', 'Five mechanisms, each built on a named theory.': 'ஐந்து வழிமுறைகள், ஒவ்வொன்றும் ஒரு பெயர் பெற்ற கோட்பாட்டின் மேல் கட்டப்பட்டது.',
+      'BEAT THE FIREWALL': 'ஃபயர்வாலை வெல்லுங்கள்', 'Hide the number. Aran will find it.': 'எண்ணை மறையுங்கள். அரண் அதைக் கண்டுபிடிக்கும்.',
+      'Type, paste or speak a message that hides the number below in any disguise you like. It goes through the live firewall and shows up on the big screen.': 'கீழே உள்ள எண்ணை நீங்கள் விரும்பும் எந்த மாறுவேடத்திலும் மறைக்கும் ஒரு செய்தியைத் தட்டச்சு செய்யுங்கள், ஒட்டுங்கள் அல்லது பேசுங்கள். அது நேரடி ஃபயர்வால் வழியாகச் சென்று பெரிய திரையில் தோன்றும்.',
+      'BEAT THE FIREWALL · LIVE BOARD': 'ஃபயர்வாலை வெல்லுங்கள் · நேரடி பலகை', 'Scan the code and try to sneak a number past Aran.': 'குறியீட்டை ஸ்கேன் செய்து, அரணைத் தாண்டி ஒரு எண்ணைக் கடத்த முயலுங்கள்.',
+      'Every try from a phone runs through the real firewall. Caught means the log platform stored a token; slipped means the number got through.': 'தொலைபேசியிலிருந்து வரும் ஒவ்வொரு முயற்சியும் உண்மையான ஃபயர்வால் வழியாகச் செல்கிறது. பிடிபட்டது என்றால் லாக் தளம் ஒரு டோக்கனைச் சேமித்தது; நழுவியது என்றால் எண் கடந்து சென்றது.',
+      'WITHOUT ARAN / WITH ARAN': 'அரண் இல்லாமல் / அரண் உடன்', 'Same traffic. Two endings.': 'அதே போக்குவரத்து. இரண்டு முடிவுகள்.',
+      'Real bank requests from this server play twice. On the left they go straight to the systems that store them. On the right they pass through Aran first. Then one system is breached.': 'இந்த சர்வரின் உண்மையான வங்கி கோரிக்கைகள் இரண்டு முறை ஓடுகின்றன. இடதுபுறம் அவை நேராகச் சேமிக்கும் அமைப்புகளுக்குச் செல்கின்றன. வலதுபுறம் முதலில் அரண் வழியாகச் செல்கின்றன. பிறகு ஒரு அமைப்பு உடைக்கப்படுகிறது.',
+      'LEAKAGE LEDGER (M4)': 'கசிவு பேரேடு (M4)', 'Two safe masks can make one leak.': 'இரண்டு பாதுகாப்பான மறைப்புகள் சேர்ந்து ஒரு கசிவாகலாம்.',
+      'Showing the first 6 digits of a card to one system and the last 4 to another looks safe field by field. If both systems belong to the same vendor, together they leave a few seconds of guessing. The ledger counts exactly what each vendor has seen and refuses the disclosure that crosses the line.': 'அட்டையின் முதல் 6 இலக்கங்களை ஒரு அமைப்புக்கும் கடைசி 4 இலக்கங்களை இன்னொன்றுக்கும் காட்டுவது தனித்தனியாகப் பார்த்தால் பாதுகாப்பாகத் தெரியும். இரண்டும் ஒரே விற்பனையாளருடையவை என்றால், சேர்ந்து சில வினாடிகள் ஊகித்தாலே போதும். ஒவ்வொரு விற்பனையாளரும் பார்த்ததைப் பேரேடு துல்லியமாக எண்ணி, எல்லையைக் கடக்கும் வெளிப்படுத்தலை மறுக்கிறது.',
+      'CARD PHOTO SCAN': 'அட்டை புகைப்பட ஸ்கேன்', 'A photo of an ID card is data too.': 'அடையாள அட்டையின் புகைப்படமும் தரவுதான்.',
+      'KYC scans, chat screenshots and photos of cards leak numbers just like text. Aran reads the picture inside the bank (Tesseract OCR, no cloud), then the live firewall replaces every identifier on it.': 'KYC ஸ்கேன்கள், அரட்டை திரைப்பிடிப்புகள், அட்டைகளின் புகைப்படங்கள் உரையைப் போலவே எண்களைக் கசியவிடுகின்றன. அரண் படத்தை வங்கிக்குள்ளேயே படிக்கிறது (Tesseract OCR, கிளவுட் இல்லை), பிறகு நேரடி ஃபயர்வால் அதிலுள்ள ஒவ்வொரு அடையாள எண்ணையும் மாற்றுகிறது.',
+      'POST-QUANTUM UPGRADE': 'குவாண்டம்-பிந்தைய மேம்பாடு', 'Harvest now, decrypt later.': 'இப்போது சேகரி, பிறகு திற.',
+      'An attacker can record encrypted bank traffic today and open it once a quantum computer exists. Aran wraps keys with X25519 plus ML-KEM-768 (FIPS 203) and signs receipts with Ed25519 plus ML-DSA-65 (FIPS 204), so they stay closed even then.': 'ஒரு தாக்குபவர் இன்று குறியாக்கப்பட்ட வங்கி போக்குவரத்தைப் பதிவுசெய்து, குவாண்டம் கணினி வந்தவுடன் திறக்கலாம். அரண் சாவிகளை X25519 உடன் ML-KEM-768 (FIPS 203) மூலம் மூடி, ரசீதுகளை Ed25519 உடன் ML-DSA-65 (FIPS 204) மூலம் கையொப்பமிடுகிறது; அப்போதும் அவை மூடியே இருக்கும்.',
+      'MY DATA · THE CUSTOMER’S VIEW': 'என் தரவு · வாடிக்கையாளரின் பார்வை', 'Where did my data go?': 'என் தரவு எங்கே சென்றது?',
+      'India’s DPDP Act gives every customer the right to know what is done with their data and to have it erased. This is what that could look like in a bank app, running on the live vault.': 'இந்தியாவின் DPDP சட்டம் ஒவ்வொரு வாடிக்கையாளருக்கும் தங்கள் தரவு என்ன செய்யப்படுகிறது என்று அறியவும் அதை அழிக்கச் சொல்லவும் உரிமை தருகிறது. நேரடி பெட்டகத்தில் இயங்கும் ஒரு வங்கி செயலியில் அது இப்படி இருக்கலாம்.',
+      'Start': 'தொடக்கம்', 'A firewall for data': 'தரவுக்கான ஃபயர்வால்',
+      'Aran swaps customer numbers for safe tokens before any system stores them. Watch real requests flow through it.': 'எந்த அமைப்பும் சேமிக்கும் முன் அரண் வாடிக்கையாளர் எண்களைப் பாதுகாப்பான டோக்கன்களாக மாற்றுகிறது. உண்மையான கோரிக்கைகள் அதன் வழியாகச் செல்வதைப் பாருங்கள்.',
+      'The problem': 'சிக்கல்', 'Leaks come through side doors': 'கசிவுகள் பக்க வாசல்கள் வழியாக வருகின்றன', 'Not the main database: logs, vendors, tickets and AI chatbots.': 'முதன்மை தரவுத்தளம் அல்ல: லாக்குகள், விற்பனையாளர்கள், டிக்கெட்டுகள், AI அரட்டை உதவியாளர்கள்.',
+      'Simple filters fail': 'எளிய வடிகட்டிகள் தோற்கின்றன', 'Why simple search fails': 'எளிய தேடல் ஏன் தோற்கிறது',
+      'Every red square is a harmless number a plain filter would block. These are 300 real production log lines with no customer data at all.': 'ஒவ்வொரு சிவப்பு சதுரமும் ஒரு எளிய வடிகட்டி தடுக்கும் பாதிப்பில்லாத எண். இவை வாடிக்கையாளர் தரவே இல்லாத 300 உண்மையான உற்பத்தி லாக் வரிகள்.',
+      'Check digits': 'சரிபார்ப்பு இலக்கங்கள்', 'The last digit is a lock': 'கடைசி இலக்கம் ஒரு பூட்டு',
+      'Every Aadhaar and card ends in a check digit computed from the others. Real numbers always pass. Watch the maths.': 'ஒவ்வொரு ஆதார் மற்றும் அட்டை எண்ணும் மற்ற இலக்கங்களிலிருந்து கணக்கிடப்பட்ட சரிபார்ப்பு இலக்கத்தில் முடிகிறது. உண்மையான எண்கள் எப்போதும் கடக்கும். கணக்கைப் பாருங்கள்.',
+      'Building a token': 'டோக்கனை உருவாக்குதல்',
+      'Same length, same look, but the last digit is wrong on purpose, so no scanner can ever mistake it for a real number.': 'அதே நீளம், அதே தோற்றம், ஆனால் கடைசி இலக்கம் வேண்டுமென்றே தவறு; எனவே எந்த ஸ்கேனரும் அதை உண்மையான எண்ணாக நினைக்காது.',
+      'Finding data': 'தரவைக் கண்டறிதல்', 'Finding what is sensitive': 'எது உணர்திறன் கொண்டது என்று கண்டறிதல்',
+      'Names, phones, OTPs and UPI IDs have no check digit. Aran weighs clues and gives each value a measured probability.': 'பெயர்கள், தொலைபேசி எண்கள், OTP, UPI ID களுக்குச் சரிபார்ப்பு இலக்கம் இல்லை. அரண் தடயங்களை எடைபோட்டு ஒவ்வொரு மதிப்புக்கும் அளவிடப்பட்ட நிகழ்தகவைத் தருகிறது.',
+      'Disguises': 'மாறுவேடங்கள்', 'Disguises do not work': 'மாறுவேடங்கள் பலிக்காது',
+      'One Aadhaar hidden 12 ways, each sent through the live firewall. Aran undoes the disguise, then checks.': 'ஒரு ஆதார் எண் 12 வழிகளில் மறைக்கப்பட்டு, ஒவ்வொன்றும் நேரடி ஃபயர்வால் வழியாக அனுப்பப்படுகிறது. அரண் மாறுவேடத்தை நீக்கி, பிறகு சரிபார்க்கிறது.',
+      'Tracing a leak': 'கசிவைத் தடம் காணுதல்', 'A leaked file names its source': 'கசிந்த கோப்பு அதன் மூலத்தைச் சொல்கிறது',
+      'Each system received a different token for the same customer. Leak one and watch Aran trace it back.': 'ஒரே வாடிக்கையாளருக்கு ஒவ்வொரு அமைப்பும் வேறு டோக்கனைப் பெற்றது. ஒன்றைக் கசியவிட்டு, அரண் அதைத் திரும்பத் தடம் காண்பதைப் பாருங்கள்.',
+      'Erasure': 'அழிப்பு', 'Erase everywhere, with proof': 'எல்லா இடத்திலும் அழி, ஆதாரத்துடன்',
+      'Each customer’s tokens are locked by their own key per purpose. Destroy the key and every copy, anywhere, becomes meaningless.': 'ஒவ்வொரு வாடிக்கையாளரின் டோக்கன்களும் ஒவ்வொரு நோக்கத்திற்கான அவர்களின் சொந்த சாவியால் பூட்டப்பட்டுள்ளன. சாவியை அழித்தால், எங்குள்ள ஒவ்வொரு நகலும் அர்த்தமற்றதாகிவிடும்.',
+      'Immune system': 'நோய் எதிர்ப்பு அமைப்பு', 'An immune system for data flows': 'தரவு ஓட்டங்களுக்கான நோய் எதிர்ப்பு அமைப்பு',
+      'It learns what normal traffic looks like, then flags anything outside it, with no list of known attacks.': 'இயல்பான போக்குவரத்து எப்படி இருக்கும் என்று கற்று, அறியப்பட்ட தாக்குதல்களின் பட்டியல் இல்லாமலே அதற்கு வெளியே உள்ளதைக் கொடியிடுகிறது.',
+      'AI chatbots': 'AI அரட்டை உதவியாளர்கள்', 'Safe AI chatbots': 'பாதுகாப்பான AI அரட்டை உதவியாளர்கள்',
+      'Staff can ask an AI about a customer. The AI only ever sees placeholders, and each role sees only what it is allowed to.': 'ஊழியர்கள் ஒரு வாடிக்கையாளரைப் பற்றி AI இடம் கேட்கலாம். AI இடம்பிடிப்பான்களை மட்டுமே பார்க்கிறது; ஒவ்வொரு பணிப்பொறுப்பும் அனுமதிக்கப்பட்டதை மட்டுமே பார்க்கிறது.',
+      'Evidence': 'ஆதாரம்', 'The evidence': 'ஆதாரங்கள்', 'Read live from the result files the experiments wrote. Anyone can re-run them.': 'சோதனைகள் எழுதிய முடிவுக் கோப்புகளிலிருந்து நேரடியாகப் படிக்கப்படுகிறது. யார் வேண்டுமானாலும் மீண்டும் இயக்கலாம்.',
+      'Glossary': 'சொற்களஞ்சியம்', 'Glossary and team': 'சொற்களஞ்சியம் மற்றும் குழு',
+      'Menu': 'பட்டியல்', 'Sound off': 'ஒலி அணை', 'Sound on': 'ஒலி இயக்கு', 'Light': 'வெளிர்', 'Dark': 'இருள்', 'Present': 'வழங்கு', 'Chapter': 'அத்தியாயம்', 'Back': 'பின்', '← → keys work too': '← → விசைகளும் வேலை செய்யும்', 'Open the full console': 'முழு கன்சோலைத் திற',
+      'Data-flow firewall for Indian banks': 'இந்திய வங்கிகளுக்கான தரவு ஓட்ட ஃபயர்வால்', 'Hold to blast': 'அழுத்திப் பிடித்து வெடி', 'Scroll': 'உருட்டு',
+      'every value computed by Aran’s code · identifiers are generated, never real people': 'ஒவ்வொரு மதிப்பும் அரணின் குறியீட்டால் கணக்கிடப்படுகிறது · அடையாள எண்கள் உருவாக்கப்பட்டவை, உண்மையான நபர்களுடையவை அல்ல', 'generated IDs only': 'உருவாக்கப்பட்ட எண்கள் மட்டும்',
+    },
+    hi: {
+      'Guided tour': 'निर्देशित टूर', 'Overview': 'सारांश', 'Live traffic': 'लाइव ट्रैफ़िक', 'Customers & erasure': 'ग्राहक और मिटाना', 'Leak trace': 'लीक का पता', 'Immune layer': 'प्रतिरक्षा परत', 'Results & tests': 'नतीजे और टेस्ट', 'How it works': 'यह कैसे काम करता है',
+      'Beat the firewall': 'फ़ायरवॉल को हराओ', 'With / without Aran': 'अरण के साथ / बिना', 'Leakage ledger': 'लीकेज लेजर', 'Card photo scan': 'कार्ड फ़ोटो स्कैन', 'Post-quantum': 'पोस्ट-क्वांटम', 'My data': 'मेरा डेटा',
+      'DATA-FLOW FIREWALL FOR INDIAN BANKS': 'भारतीय बैंकों के लिए डेटा-फ़्लो फ़ायरवॉल',
+      'Real numbers pass the checksum. Aran’s tokens never do.': 'असली नंबर चेकसम पास करते हैं। अरण के टोकन कभी नहीं।',
+      'This console runs Aran’s actual code. Send a request, watch it get protected, trace a leak, erase a customer, and see every number update from the live server.': 'यह कंसोल अरण का असली कोड चलाता है। एक अनुरोध भेजें, उसे सुरक्षित होते देखें, लीक का पता लगाएँ, ग्राहक को मिटाएँ, और हर नंबर लाइव सर्वर से अपडेट होते देखें।',
+      'LIVE TRAFFIC': 'लाइव ट्रैफ़िक', 'Send a request through Aran': 'अरण से होकर एक अनुरोध भेजें',
+      'Pick a bank request or paste your own text. Aran detects every sensitive value, replaces it before it reaches the sink, and shows its reasoning.': 'कोई बैंक अनुरोध चुनें या अपना टेक्स्ट पेस्ट करें। अरण हर संवेदनशील मान पहचानता है, उसे स्टोर करने वाले सिस्टम तक पहुँचने से पहले बदल देता है, और अपना कारण दिखाता है।',
+      'PURPOSE-BOUND CRYPTO-SHREDDING (M5)': 'उद्देश्य-आधारित क्रिप्टो-श्रेडिंग (M5)', 'Destroy one key. Every copy is erased, with a signed receipt.': 'एक कुंजी नष्ट करें। हर कॉपी मिट जाती है, हस्ताक्षरित रसीद के साथ।',
+      'Each customer has one key per purpose. Tokens sent to sinks are encrypted under that key. Destroy the key and every token for that purpose, in every log and vendor copy, can never be read again.': 'हर ग्राहक के पास हर उद्देश्य के लिए एक कुंजी है। सिस्टमों को भेजे गए टोकन उसी कुंजी से एन्क्रिप्ट होते हैं। कुंजी नष्ट करें, और उस उद्देश्य का हर टोकन, हर लॉग और वेंडर कॉपी में, फिर कभी पढ़ा नहीं जा सकता।',
+      'LEAK ATTRIBUTION (M3)': 'लीक का स्रोत (M3)', 'A leaked token names the system that leaked it.': 'लीक हुआ टोकन उस सिस्टम का नाम बताता है जिसने उसे लीक किया।',
+      'Every sink receives different tokens for the same customer. Paste a leaked file and Aran tells you which sink it came from, with the evidence.': 'एक ही ग्राहक के लिए हर सिस्टम को अलग टोकन मिलते हैं। लीक हुई फ़ाइल पेस्ट करें और अरण सबूत के साथ बताएगा कि वह किस सिस्टम से आई।',
+      'ARTIFICIAL IMMUNE SYSTEM': 'कृत्रिम प्रतिरक्षा प्रणाली', 'Learns what normal looks like, then flags what is not.': 'सामान्य कैसा दिखता है यह सीखती है, फिर जो सामान्य नहीं उसे चिह्नित करती है।',
+      'Every 30 seconds the firewall closes one flow record per source and sink: how many messages carried sensitive values, how many left raw, which data classes, how often tokens were read back. The immune layer learns “self” from this server’s own traffic, then scores every new record with negative selection.': 'हर 30 सेकंड में फ़ायरवॉल हर स्रोत और गंतव्य के लिए एक फ़्लो रिकॉर्ड बंद करता है: कितने संदेशों में संवेदनशील मान थे, कितने बिना बदले गए, कौन-से डेटा वर्ग, टोकन कितनी बार वापस पढ़े गए। प्रतिरक्षा परत इस सर्वर के अपने ट्रैफ़िक से “स्वयं” सीखती है, फिर हर नए रिकॉर्ड को नेगेटिव सिलेक्शन से आँकती है।',
+      'EVIDENCE': 'सबूत', 'Results from the experiment scripts, not from slides': 'स्लाइड से नहीं, प्रयोग स्क्रिप्ट से आए नतीजे',
+      'These tables are read from the result files the experiment scripts wrote. Run the test suite or re-run E1 to E4 on this server and watch the output.': 'ये तालिकाएँ प्रयोग स्क्रिप्ट द्वारा लिखी गई नतीजा फ़ाइलों से पढ़ी जाती हैं। टेस्ट सूट चलाएँ या इस सर्वर पर E1 से E4 दोबारा चलाकर आउटपुट देखें।',
+      'HOW IT WORKS': 'यह कैसे काम करता है', 'Five mechanisms, each built on a named theory.': 'पाँच तंत्र, हर एक किसी नामित सिद्धांत पर बना।',
+      'BEAT THE FIREWALL': 'फ़ायरवॉल को हराओ', 'Hide the number. Aran will find it.': 'नंबर छिपाओ। अरण उसे ढूँढ लेगा।',
+      'Type, paste or speak a message that hides the number below in any disguise you like. It goes through the live firewall and shows up on the big screen.': 'नीचे दिया नंबर अपनी पसंद के किसी भी भेष में छिपाकर एक संदेश टाइप करें, पेस्ट करें या बोलें। यह लाइव फ़ायरवॉल से होकर बड़ी स्क्रीन पर दिखेगा।',
+      'BEAT THE FIREWALL · LIVE BOARD': 'फ़ायरवॉल को हराओ · लाइव बोर्ड', 'Scan the code and try to sneak a number past Aran.': 'कोड स्कैन करें और अरण से बचाकर एक नंबर निकालने की कोशिश करें।',
+      'Every try from a phone runs through the real firewall. Caught means the log platform stored a token; slipped means the number got through.': 'फ़ोन से हर कोशिश असली फ़ायरवॉल से होकर जाती है। पकड़ा गया मतलब लॉग प्लेटफ़ॉर्म ने टोकन रखा; निकल गया मतलब नंबर पार हो गया।',
+      'WITHOUT ARAN / WITH ARAN': 'अरण के बिना / अरण के साथ', 'Same traffic. Two endings.': 'वही ट्रैफ़िक। दो अंत।',
+      'Real bank requests from this server play twice. On the left they go straight to the systems that store them. On the right they pass through Aran first. Then one system is breached.': 'इस सर्वर के असली बैंक अनुरोध दो बार चलते हैं। बाईं ओर वे सीधे उन्हें स्टोर करने वाले सिस्टमों में जाते हैं। दाईं ओर पहले अरण से होकर जाते हैं। फिर एक सिस्टम में सेंध लगती है।',
+      'LEAKAGE LEDGER (M4)': 'लीकेज लेजर (M4)', 'Two safe masks can make one leak.': 'दो सुरक्षित मास्क मिलकर एक लीक बना सकते हैं।',
+      'Showing the first 6 digits of a card to one system and the last 4 to another looks safe field by field. If both systems belong to the same vendor, together they leave a few seconds of guessing. The ledger counts exactly what each vendor has seen and refuses the disclosure that crosses the line.': 'कार्ड के पहले 6 अंक एक सिस्टम को और आख़िरी 4 दूसरे को दिखाना अलग-अलग देखने पर सुरक्षित लगता है। अगर दोनों सिस्टम एक ही वेंडर के हैं, तो मिलकर बस कुछ सेकंड का अनुमान बचता है। लेजर ठीक-ठीक गिनता है कि हर वेंडर ने क्या देखा और सीमा पार करने वाले खुलासे को मना कर देता है।',
+      'CARD PHOTO SCAN': 'कार्ड फ़ोटो स्कैन', 'A photo of an ID card is data too.': 'पहचान पत्र की फ़ोटो भी डेटा है।',
+      'KYC scans, chat screenshots and photos of cards leak numbers just like text. Aran reads the picture inside the bank (Tesseract OCR, no cloud), then the live firewall replaces every identifier on it.': 'KYC स्कैन, चैट स्क्रीनशॉट और कार्ड की फ़ोटो भी टेक्स्ट की तरह नंबर लीक करते हैं। अरण तस्वीर को बैंक के अंदर ही पढ़ता है (Tesseract OCR, कोई क्लाउड नहीं), फिर लाइव फ़ायरवॉल उस पर हर पहचान नंबर बदल देता है।',
+      'POST-QUANTUM UPGRADE': 'पोस्ट-क्वांटम अपग्रेड', 'Harvest now, decrypt later.': 'अभी इकट्ठा करो, बाद में खोलो।',
+      'An attacker can record encrypted bank traffic today and open it once a quantum computer exists. Aran wraps keys with X25519 plus ML-KEM-768 (FIPS 203) and signs receipts with Ed25519 plus ML-DSA-65 (FIPS 204), so they stay closed even then.': 'हमलावर आज एन्क्रिप्टेड बैंक ट्रैफ़िक रिकॉर्ड करके क्वांटम कंप्यूटर आने पर उसे खोल सकता है। अरण कुंजियों को X25519 और ML-KEM-768 (FIPS 203) से लपेटता है और रसीदों पर Ed25519 और ML-DSA-65 (FIPS 204) से हस्ताक्षर करता है, ताकि वे तब भी बंद रहें।',
+      'MY DATA · THE CUSTOMER’S VIEW': 'मेरा डेटा · ग्राहक की नज़र से', 'Where did my data go?': 'मेरा डेटा कहाँ गया?',
+      'India’s DPDP Act gives every customer the right to know what is done with their data and to have it erased. This is what that could look like in a bank app, running on the live vault.': 'भारत का DPDP अधिनियम हर ग्राहक को यह जानने का अधिकार देता है कि उसके डेटा के साथ क्या होता है और उसे मिटवाने का भी। लाइव वॉल्ट पर चलते हुए किसी बैंक ऐप में यह ऐसा दिख सकता है।',
+      'Start': 'शुरुआत', 'A firewall for data': 'डेटा के लिए फ़ायरवॉल',
+      'Aran swaps customer numbers for safe tokens before any system stores them. Watch real requests flow through it.': 'किसी भी सिस्टम के स्टोर करने से पहले अरण ग्राहक नंबरों को सुरक्षित टोकन से बदल देता है। असली अनुरोधों को इससे गुज़रते देखें।',
+      'The problem': 'समस्या', 'Leaks come through side doors': 'लीक पिछले दरवाज़ों से होते हैं', 'Not the main database: logs, vendors, tickets and AI chatbots.': 'मुख्य डेटाबेस नहीं: लॉग, वेंडर, टिकट और AI चैटबॉट।',
+      'Simple filters fail': 'साधारण फ़िल्टर विफल', 'Why simple search fails': 'साधारण खोज क्यों विफल होती है',
+      'Every red square is a harmless number a plain filter would block. These are 300 real production log lines with no customer data at all.': 'हर लाल वर्ग एक हानिरहित नंबर है जिसे साधारण फ़िल्टर रोक देता। ये 300 असली प्रोडक्शन लॉग लाइनें हैं जिनमें कोई ग्राहक डेटा नहीं है।',
+      'Check digits': 'चेक अंक', 'The last digit is a lock': 'आख़िरी अंक एक ताला है',
+      'Every Aadhaar and card ends in a check digit computed from the others. Real numbers always pass. Watch the maths.': 'हर आधार और कार्ड नंबर बाक़ी अंकों से गिने गए एक चेक अंक पर ख़त्म होता है। असली नंबर हमेशा पास होते हैं। गणित देखें।',
+      'Building a token': 'टोकन बनाना',
+      'Same length, same look, but the last digit is wrong on purpose, so no scanner can ever mistake it for a real number.': 'वही लंबाई, वही रूप, पर आख़िरी अंक जानबूझकर ग़लत, ताकि कोई स्कैनर इसे कभी असली नंबर न समझे।',
+      'Finding data': 'डेटा ढूँढना', 'Finding what is sensitive': 'क्या संवेदनशील है, यह ढूँढना',
+      'Names, phones, OTPs and UPI IDs have no check digit. Aran weighs clues and gives each value a measured probability.': 'नाम, फ़ोन, OTP और UPI ID में कोई चेक अंक नहीं होता। अरण सुरागों को तौलकर हर मान को एक मापी गई संभावना देता है।',
+      'Disguises': 'भेष', 'Disguises do not work': 'भेष काम नहीं आते',
+      'One Aadhaar hidden 12 ways, each sent through the live firewall. Aran undoes the disguise, then checks.': 'एक आधार नंबर 12 तरीक़ों से छिपाया गया, हर एक लाइव फ़ायरवॉल से भेजा गया। अरण भेष हटाता है, फिर जाँचता है।',
+      'Tracing a leak': 'लीक का पता लगाना', 'A leaked file names its source': 'लीक हुई फ़ाइल अपना स्रोत बताती है',
+      'Each system received a different token for the same customer. Leak one and watch Aran trace it back.': 'एक ही ग्राहक के लिए हर सिस्टम को अलग टोकन मिला। एक लीक करें और अरण को उसका पता लगाते देखें।',
+      'Erasure': 'मिटाना', 'Erase everywhere, with proof': 'हर जगह मिटाओ, सबूत के साथ',
+      'Each customer’s tokens are locked by their own key per purpose. Destroy the key and every copy, anywhere, becomes meaningless.': 'हर ग्राहक के टोकन हर उद्देश्य के लिए उसकी अपनी कुंजी से बंद हैं। कुंजी नष्ट करें और कहीं भी रखी हर कॉपी बेमानी हो जाती है।',
+      'Immune system': 'प्रतिरक्षा प्रणाली', 'An immune system for data flows': 'डेटा प्रवाह के लिए प्रतिरक्षा प्रणाली',
+      'It learns what normal traffic looks like, then flags anything outside it, with no list of known attacks.': 'यह सीखती है कि सामान्य ट्रैफ़िक कैसा दिखता है, फिर ज्ञात हमलों की किसी सूची के बिना उससे बाहर की हर चीज़ को चिह्नित करती है।',
+      'AI chatbots': 'AI चैटबॉट', 'Safe AI chatbots': 'सुरक्षित AI चैटबॉट',
+      'Staff can ask an AI about a customer. The AI only ever sees placeholders, and each role sees only what it is allowed to.': 'कर्मचारी किसी ग्राहक के बारे में AI से पूछ सकते हैं। AI को सिर्फ़ प्लेसहोल्डर दिखते हैं, और हर भूमिका को सिर्फ़ वही दिखता है जिसकी उसे अनुमति है।',
+      'Evidence': 'सबूत', 'The evidence': 'सबूत', 'Read live from the result files the experiments wrote. Anyone can re-run them.': 'प्रयोगों द्वारा लिखी गई नतीजा फ़ाइलों से लाइव पढ़ा गया। कोई भी इन्हें दोबारा चला सकता है।',
+      'Glossary': 'शब्दावली', 'Glossary and team': 'शब्दावली और टीम',
+      'Menu': 'मेन्यू', 'Sound off': 'आवाज़ बंद', 'Sound on': 'आवाज़ चालू', 'Light': 'हल्का', 'Dark': 'गहरा', 'Present': 'प्रस्तुत करें', 'Chapter': 'अध्याय', 'Back': 'पीछे', '← → keys work too': '← → कुंजियाँ भी काम करती हैं', 'Open the full console': 'पूरा कंसोल खोलें',
+      'Data-flow firewall for Indian banks': 'भारतीय बैंकों के लिए डेटा-फ़्लो फ़ायरवॉल', 'Hold to blast': 'दबाकर रखें और उड़ाएँ', 'Scroll': 'स्क्रॉल करें',
+      'every value computed by Aran’s code · identifiers are generated, never real people': 'हर मान अरण के कोड से गिना गया · पहचान नंबर बनाए गए हैं, असली लोगों के नहीं', 'generated IDs only': 'सिर्फ़ बनाए गए नंबर',
+    },
+  };
+
+  A.LANGS = LANGS;
+  A.I18N = T;
+  A.lang = () => lang;
+  A.t = (s) => (lang === 'en' || !s ? s : (T[lang] && T[lang][s]) || s);
+  A.setLang = (l) => { if (!LANGS[l]) return; try { localStorage.setItem('aran-lang', l); } catch (e) {} location.reload(); };
+  if (typeof document !== 'undefined' && document.documentElement && document.documentElement.setAttribute) document.documentElement.setAttribute('lang', lang);
+})(window.ARAN);

@@ -13,7 +13,7 @@ python -m uvicorn main:app --port 8000
 
 Then open http://localhost:8000. While the models load you see the "Starting Aran" screen (it polls `GET /api/health` every 2 s and shows the load error if there is one); then the console opens. GSAP, Lenis and three.js are served from `vendor/`, so only the Google fonts need internet (the page falls back to system fonts without it).
 
-Routes (hash based, as in the spec): `#tour` and `#tour/0` to `#tour/12`, `#overview`, `#traffic`, `#customers`, `#trace`, `#immune`, `#results`, `#about`.
+Routes (hash based, as in the spec): `#tour` and `#tour/0` to `#tour/12`, `#overview`, `#traffic`, `#customers`, `#trace`, `#immune`, `#results`, `#about`. Demo pages: `#arena-live` (big screen with QR code), `#arena` (the judge's phone), `#versus`, `#ledger`, `#scan`, `#quantum`, `#me`. Presenter mode: `?present=1`.
 Design review boards: `#components` (C1 to C33 in every state), `#states` (empty, failing, locked, refused). Whole-app state previews: `?state=starting`, `?state=failed`, `?state=offline`.
 
 ## What is in the box
@@ -27,6 +27,9 @@ Design review boards: `#components` (C1 to C33 in every state), `#states` (empty
 | `js/hero3d.js` | Three.js hero (lazy-loaded from `vendor/three.module.min.js`). Hover pushes the lines, hold pulls them in while a ring charges, release or a full ring fires a shockwave and particles. |
 | `js/sound.js` | Web Audio sounds (hover tick, click, charge whoosh, blast, shatter, chime, error). Off until the top-bar toggle is pressed. |
 | `js/tour.js` | Page 1: 13 chapters. `js/pages.js`: pages 2 to 8. `js/board.js`: review boards. `js/main.js`: shell and router. |
+| `js/standout.js`, `css/standout.css` | Demo pages: phone arena and live board, without/with Aran, leakage ledger, card photo scan, post-quantum, the customer's own view. Server side: `app/server/standout.py` (tests: `app/server/test_standout.py`). |
+| `js/i18n.js` | Language switch (English, Tamil, Hindi) for the menu, top bar, page headings and tour chapters. English is the source text and the fallback. Check with `node tools/check-i18n.js` ([Learn 19](../../docs/learning/19-translating-a-website.md)). |
+| `js/present.js`, `sw.js` | Presenter mode (`?present=1`): a fixed 3-minute path, PageDown/PageUp clicker keys, and offline replay of recorded server answers with a visible banner ([Learn 20](../../docs/learning/20-presenter-mode-and-offline-replay.md)). |
 
 ## Look and feel decisions
 
@@ -61,11 +64,18 @@ Each live block carries a `data-api` attribute naming its endpoint, and calls it
 | Immune layer | `GET /api/tour/immune-radar`, `GET /api/immune`, `GET /api/stats`, `POST /api/immune/learn`, `/immune/alerts/{id}/label`, `/drills/{kind}`, `/replay/start`, `/replay/stop` |
 | Results | `GET /api/results`, `POST/GET /api/jobs/{name}` (real pytest and experiment runs) |
 | How it works | static |
+| Beat the firewall (`#arena`, `#arena-live`) | `GET/POST /api/arena/challenge`, `POST /api/arena/try`, `GET /api/arena/board` (poll 1.5 s), `POST /api/arena/reset`, `GET /api/arena/join`, `GET /api/qr` ([Learn 18](../../docs/learning/18-phone-arena-qr-and-speech.md)) |
+| Without / with Aran | `POST /api/versus/run` (real samples through the live firewall, then `trace` on the breached sink) |
+| Leakage ledger | `POST /api/ledger/disclose`, `GET /api/ledger/state`, `POST /api/ledger/reset` (research/firewall/ledger.py) |
+| Card photo scan | `POST /api/ocr` (Tesseract on the server, then `process`; needs `pytesseract`, `pillow` and the Tesseract program, Learn 10) |
+| Post-quantum | `POST /api/pqc/harvest` (classical vs hybrid key wrap under a simulated Shor attack), `GET /api/pqc/mosca`, `GET /api/pqc/receipt`, `GET /api/pqc/cbom` |
+| My data (customer view) | `GET /api/customers/{ref}`, `POST /api/erase`, `POST /api/receipts/verify`, inclusion proof re-run in the browser |
 
 Server errors (for example the 503 while models load, or the 423 KYC retention lock) are shown inline as notes, never swallowed.
 
 ## Not covered
 
-- Spec section 16 optional pages (leakage ledger, AI gateway console, post-quantum, settings, results E13 to E19) need new endpoints and are not designed here.
+- Spec section 16 optional pages still not designed: AI gateway console, settings, results E13 to E19. The leakage ledger and post-quantum pages now exist (`#ledger`, `#quantum`).
+- The phone arena needs the server on the network (`--host 0.0.0.0`) and the phone on the same Wi-Fi or hotspot. Speech input needs https or localhost; on a phone over plain http, use the keyboard's microphone key.
 - The 3D hero needs WebGL; without it the grey panel and the headline still show.
 - The design-review boards (`#components`, `#states`) still use a few generated example values to show every component state; the eight real pages and the tour do not.

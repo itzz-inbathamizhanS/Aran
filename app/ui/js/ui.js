@@ -16,7 +16,8 @@ window.ARAN = window.ARAN || {};
   U.html = (s) => { const t = document.createElement('template'); t.innerHTML = s.trim(); return t.content.firstElementChild; };
 
   /* rolling letters (C1 links / buttons) */
-  U.roll = (text, extra) => `<span class="roll"${extra || ''}>${[...String(text)].map((c, i) => `<span class="rl" style="--i:${i}" data-c="${c === ' ' ? '&nbsp;' : esc(c)}">${c === ' ' ? '&nbsp;' : esc(c)}</span>`).join('')}</span>`;
+  const graphemes = (s) => (window.Intl && Intl.Segmenter ? [...new Intl.Segmenter().segment(s)].map((x) => x.segment) : [...s]); // keeps Tamil and Hindi vowel signs on their letter
+  U.roll = (text, extra) => `<span class="roll"${extra || ''}>${graphemes(String(text)).map((c, i) => `<span class="rl" style="--i:${i}" data-c="${c === ' ' ? '&nbsp;' : esc(c)}">${c === ' ' ? '&nbsp;' : esc(c)}</span>`).join('')}</span>`;
 
   /* split a heading into words for the GSAP reveal */
   U.split = (el) => {

@@ -33,6 +33,9 @@ Repo copies: Markdown in `docs/`, PDFs in `artifacts/learning/` and `artifacts/r
 | 12 | Aran Learn 12 - Leakage Ledger, AI Gateway and Red-Teaming | `docs/learning/12-ledger-ai-gateway-and-red-teaming.md` |
 | 14 | Aran Learn 14 - Post-Quantum Cryptography | `docs/learning/14-post-quantum-cryptography.md` |
 | 15 | Aran Learn 15 - UI Design Specs and Design Tokens | `docs/learning/15-ui-design-specs-and-tokens.md` |
+| 18 | Aran Learn 18 - Phones, QR Codes and Speech Input | `docs/learning/18-phone-arena-qr-and-speech.md` |
+| 19 | Aran Learn 19 - Translating a Website | `docs/learning/19-translating-a-website.md` |
+| 20 | Aran Learn 20 - Presenter Mode and Offline Replay | `docs/learning/20-presenter-mode-and-offline-replay.md` |
 
 Learn 1 to 7 were expanded on 15 Oct; the repo Markdown and PDFs hold the expanded text.
 
@@ -40,3 +43,6 @@ Reading order: Learn 1 to 4 and 7 for everyone, then Learn 5 and 9 (AI/ML pair) 
 
 ## UI design spec
 - [Aran - UI Design Spec](../artifacts/UI%20design%20spec/Aran%20-%20UI%20Design%20Spec.md) (Markdown and PDF): every console page, its content, components, data, animations, states and API endpoints, with colour placeholders. Thread: [[18 UI design spec]].
+
+## Standout features
+- [Standout features](../artifacts/Standout%20features/): arena (QR, phones, speech), without/with Aran, leakage ledger page, card photo scan, post-quantum page, customer view, Tamil/Hindi switch, presenter mode. Ideas list: [Standout frontend ideas](../artifacts/Standout%20frontend%20ideas/Aran%20-%20Standout%20Frontend%20Ideas.md).

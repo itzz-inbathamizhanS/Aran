@@ -39,6 +39,10 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Live console (team design) | Aran Learn 17 - Wiring a Static Design to a Live API (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/17-wiring-a-design-to-a-live-api.md |
 | Live console (team design) | Screenshots of the team's design running on the live server (hero, live pipeline, overview, erasure receipt, customers, immune alert from a drill, phone) | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/Live%20console%20(team%20design) |
 | Live console (team design) | The wired console source and its screen-to-endpoint table | https://github.com/itzz-inbathamizhans/aran/blob/main/app/ui/README.md |
+| Standout features | Screenshots: without/with Aran, arena board and phone, leakage ledger, card scan, post-quantum, my data, presenter mode, Tamil and Hindi | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/Standout%20features |
+| Standout features | Aran Learn 18 - Phones, QR Codes and Speech Input (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/18-phone-arena-qr-and-speech.md |
+| Standout features | Aran Learn 19 - Translating a Website (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/19-translating-a-website.md |
+| Standout features | Aran Learn 20 - Presenter Mode and Offline Replay (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/20-presenter-mode-and-offline-replay.md |
 
 Note: the Markdown copy replaces the embedded architecture diagram with a text placeholder; the PDF keeps it.
 
