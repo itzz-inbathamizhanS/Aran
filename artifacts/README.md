@@ -17,6 +17,7 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Frontend with Claude Design | Aran - Frontend Guide with Claude Design (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Frontend%20with%20Claude%20Design/Aran%20-%20Frontend%20Guide%20with%20Claude%20Design.md |
 | Frontend with Claude Design | Aran Learn 11 - Frontend Basics (PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/learning/Aran%20Learn%2011%20-%20Frontend%20Basics.pdf |
 | Frontend with Claude Design | Aran live console (code) | https://github.com/itzz-inbathamizhans/aran/tree/main/app |
+| Frontend with Claude Design | Guided tour screenshots (chapter 1, hidden numbers, erasure) | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/Frontend%20with%20Claude%20Design |
 
 Note: the Markdown copy replaces the embedded architecture diagram with a text placeholder; the PDF keeps it.
 

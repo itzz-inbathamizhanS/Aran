@@ -30,7 +30,8 @@ sys.path.insert(0, RESEARCH)
 
 import synth  # noqa: E402
 from ai.detector import Detector  # noqa: E402
-from aran_core import FF1, _offset, luhn_check_digit, verhoeff_check_digit  # noqa: E402
+import base64  # noqa: E402
+from aran_core import FF1, _D, _INV, _P, _offset, luhn_check_digit, luhn_valid, verhoeff_check_digit, verhoeff_valid  # noqa: E402
 from firewall.aran_firewall import card_offset  # noqa: E402
 from firewall.normalise import Normaliser  # noqa: E402
 from firewall.registry import CustomerRegistry, OtpRegistry, canonical  # noqa: E402
@@ -137,11 +138,13 @@ class Engine:
         return dict(ref=ref, name=c["name"], masked=masked, keys=self.vault.key_status(ref))
 
     # ------------------------------------------------------------ requests
-    def sample(self, kind, who="customer"):
+    def sample(self, kind, who="customer", ref=None):
         """A bank request of the given kind, filled with a real enrolled customer's
         identifiers ("customer") or with a stranger's freshly generated ones."""
         r = self.rand
-        if who == "customer" and self.customers:
+        if ref is not None:
+            c = self.customers[ref]
+        elif who == "customer" and self.customers:
             c = self.customers[r.choice(sorted(self.customers))]
         else:
             c = dict(name=synth.gen_name(r, "test"), AADHAAR=re.sub(r"\D", "", synth.gen_aadhaar(r)),
@@ -174,7 +177,7 @@ class Engine:
             raise KeyError(kind)
         return dict(text=text, sink=SAMPLE_SINK[kind], source=SAMPLE_SOURCE[kind], trace_id=trace)
 
-    def process(self, text, source, sink, trace_id=None, record=True):
+    def process(self, text, source, sink, trace_id=None, record=True, observe=True):
         if sink not in SINKS and not re.fullmatch(r"[a-z0-9][a-z0-9.\-]{1,60}", sink):
             raise ValueError("sink names are lower-case letters, digits, dots and dashes")
         with self.lock:
@@ -204,7 +207,8 @@ class Engine:
             raw_left = sum(1 for f in findings if not f["protected"])
             owners = {self.vault.owner_of(f["type"], text[f["start"]:f["end"]]) for f in findings}
             owners.discard(None)
-            self.immune.observe(source, sink, len(findings), raw_left, {f["type"] for f in findings}, len(owners))
+            if observe:
+                self.immune.observe(source, sink, len(findings), raw_left, {f["type"] for f in findings}, len(owners))
             if record:
                 self.latency_ms.append(ms)
                 self.counts["requests"] += 1
@@ -549,3 +553,112 @@ def run_job(eng, name, cmd, timeout=900):
 
     threading.Thread(target=go, daemon=True).start()
     return job
+
+
+# ---------------------------------------------------------------- guided tour: live explanations
+DEVA, TAMIL, FULL = (str.maketrans("0123456789", x) for x in ("०१२३४५६७८९", "௦௧௨௩௪௫௬௭௮௯", "０１２３４５６７８９"))
+# the evasion tricks of experiment E10 (research/experiment_registry.py)
+TRICKS = [
+    ("Plain number", lambda d: d),
+    ("Tamil digits", lambda d: d.translate(TAMIL)),
+    ("Devanagari digits", lambda d: d.translate(DEVA)),
+    ("Full-width digits", lambda d: d.translate(FULL)),
+    ("URL percent-encoding", lambda d: "".join("%%%02X" % ord(c) for c in d)),
+    ("JSON \\u escapes", lambda d: "".join("\\u%04x" % ord(c) for c in d)),
+    ("HTML entities", lambda d: "".join("&#%d;" % ord(c) for c in d)),
+    ("Dots between groups", lambda d: ".".join(d[i:i + 4] for i in range(0, 12, 4))),
+    ("Space between every digit", lambda d: " ".join(d)),
+    ("Zero-width space inside", lambda d: d[:5] + "\u200b" + d[5:]),
+    ("Split into three fields", lambda d: f"{d[:4]} aadhaar_p2={d[4:8]} aadhaar_p3={d[8:]}"),
+    ("Whole line in base64", None),
+]
+
+
+def checksum_explain(digits):
+    """Step-by-step Verhoeff (12 digits) or Luhn (16 digits) check, as the tour shows it."""
+    d = re.sub(r"\D", "", digits)
+    if len(d) == 12:
+        c, steps = 0, []
+        for i, ch in enumerate(reversed(d)):
+            p = _P[i % 8][int(ch)]
+            n = _D[c][p]
+            steps.append(dict(position=len(d) - i, digit=int(ch), permuted=p, before=c, after=n))
+            c = n
+        return dict(kind="Aadhaar (Verhoeff)", digits=d, valid=c == 0, final=c, steps=steps,
+                    correct_check_digit=verhoeff_check_digit(d[:-1]))
+    if len(d) == 16:
+        steps, total = [], 0
+        for i, ch in enumerate(reversed(d)):
+            v = int(ch)
+            dbl = i % 2 == 1
+            w = v * 2 - 9 if dbl and v * 2 > 9 else (v * 2 if dbl else v)
+            steps.append(dict(position=len(d) - i, digit=v, doubled=dbl, value=w))
+            total += w
+        return dict(kind="Card (Luhn)", digits=d, valid=total % 10 == 0, total=total, steps=steps,
+                    correct_check_digit=luhn_check_digit(d[:-1]))
+    raise ValueError("enter 12 digits (Aadhaar) or 16 digits (card)")
+
+
+def tour_tokens(eng):
+    """One enrolled customer's Aadhaar and card sent to four sinks: every sink gets a different token."""
+    with eng.lock:
+        c = eng.customers[eng.rand.choice(sorted(eng.customers))]
+        rows = []
+        for sink in ("log-platform", "crm-notes", "loan-vendor", "marketing-cloud"):
+            ev = eng.process(f"customer {c['ref']} aadhaar {c['AADHAAR']} card {c['CARD']}", "guided-tour", sink, observe=False)
+            toks = {f["type"]: f.get("token") for f in ev["findings"] if f["protected"]}
+            a, k = toks.get("AADHAAR"), toks.get("CARD")
+            rows.append(dict(sink=sink, purpose=SINKS[sink][0], aadhaar_token=a, card_token=k, after=ev["after"],
+                             aadhaar_token_passes=bool(a and a.isdigit() and verhoeff_valid(a)),
+                             card_token_passes=bool(k and k.isdigit() and luhn_valid(k))))
+        return dict(customer=c["ref"], name=c["name"], aadhaar=c["AADHAAR"], card=c["CARD"],
+                    aadhaar_valid=verhoeff_valid(c["AADHAAR"]), card_valid=luhn_valid(c["CARD"]), sinks=rows)
+
+
+def tour_evasion(eng):
+    """The same customer's Aadhaar hidden 12 ways, each sent through the live firewall."""
+    with eng.lock:
+        c = eng.customers[eng.rand.choice(sorted(eng.customers))]
+        a = c["AADHAAR"]
+        out = []
+        for name, fn in TRICKS:
+            if fn is None:
+                line = "customer update aadhaar=" + a
+                line = "payload=" + base64.b64encode(line.encode()).decode()
+            else:
+                line = "customer update aadhaar=" + fn(a)
+            ev = eng.process(line, "guided-tour", "log-platform", observe=False)
+            caught = any(f["type"] == "AADHAAR" and f["protected"] for f in ev["findings"])
+            out.append(dict(trick=name, before=line, after=ev["after"], caught=caught, latency_ms=ev["latency_ms"]))
+        return dict(customer=c["ref"], aadhaar=a, rows=out, caught=sum(r["caught"] for r in out))
+
+
+NAIVE = {"Aadhaar-shaped": re.compile(r"\b\d{4}[ -]?\d{4}[ -]?\d{4}\b"),
+         "Card-shaped": re.compile(r"\b(?:\d[ -]?){13,19}\b"),
+         "OTP-shaped": re.compile(r"\b\d{4,8}\b")}
+
+
+def tour_false_alarms(eng, n=300):
+    """Real production log lines (Loghub) contain no Indian identifiers, so every hit is a
+    false alarm. Count what plain patterns flag versus what Aran's detector flags."""
+    r = random.Random()
+    systems = sorted(eng.replay.logs)
+    lines = [r.choice(eng.replay.logs[r.choice(systems)]) for _ in range(n)]
+    naive = {k: 0 for k in NAIVE}
+    aran, examples = defaultdict(int), []
+    t0 = time.perf_counter()
+    with eng.lock:
+        for ln in lines:
+            hits = []
+            for k, rx in NAIVE.items():
+                m = rx.findall(ln)
+                naive[k] += len(m)
+                if m:
+                    hits.append((k, m[0]))
+            fs = [f for f in eng.det.scan(ln) if f.p >= 0.5]
+            for f in fs:
+                aran[f.type] += 1
+            if hits and len(examples) < 6:
+                examples.append(dict(line=ln[:180], naive=[f"{k}: {v}" for k, v in hits], aran=[f.type for f in fs]))
+    return dict(lines=n, systems=len(systems), naive=naive, naive_total=sum(naive.values()), aran=dict(aran),
+                aran_total=sum(aran.values()), examples=examples, seconds=round(time.perf_counter() - t0, 2))
