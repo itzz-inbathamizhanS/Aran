@@ -15,6 +15,8 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Data-flow firewall research | Aran Learn 7 - Data-Protection Law Basics | https://claude.ai/code/artifact/cdf79f63-0b72-4b2d-813c-66758a34ed5c |
 | Website design prompt | Aran-Website-Design-System-Prompt (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/website/Aran-Website-Design-System-Prompt.md |
 | Frontend with Claude Design | Aran - Frontend Guide with Claude Design (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Frontend%20with%20Claude%20Design/Aran%20-%20Frontend%20Guide%20with%20Claude%20Design.md |
+| Frontend with Claude Design | Aran Learn 11 - Frontend Basics (PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/learning/Aran%20Learn%2011%20-%20Frontend%20Basics.pdf |
+| Frontend with Claude Design | Aran live console (code) | https://github.com/itzz-inbathamizhans/aran/tree/main/app |
 
 Note: the Markdown copy replaces the embedded architecture diagram with a text placeholder; the PDF keeps it.
 

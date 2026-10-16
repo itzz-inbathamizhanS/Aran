@@ -1,0 +1,10 @@
+# Pinned to the versions the saved models were trained with (pickles need the same scikit-learn).
+fastapi==0.143.2
+uvicorn==0.53.0
+pydantic==2.13.5
+cryptography==50.0.1
+numpy==2.5.3
+scikit-learn==1.9.1
+sklearn-crfsuite==0.5.0
+python-crfsuite==0.9.12
+pytest==9.1.1

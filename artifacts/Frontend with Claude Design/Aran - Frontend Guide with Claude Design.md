@@ -8,7 +8,7 @@ Two screens, made in this order:
 
 | # | Screen | Purpose | Who sees it | Prompt |
 |---|---|---|---|---|
-| 1 | **Demo dashboard** (the "console") | Shows Aran working: a request goes in, sensitive values come out as tokens, alerts fire, a leak is traced, a customer is erased with a receipt | Judges during the live demo | Part 3 below (new) |
+| 1 | **Live console** (already built and running in `app/`; Claude Design restyles it) | Shows Aran working: a request goes in, sensitive values come out as tokens, alerts fire, a leak is traced, a customer is erased with a receipt | Judges during the live demo | Part 3 below (new) |
 | 2 | **Showcase website** (landing page) | Explains the problem, the core idea, results and the team in under 2 minutes | Judges before and after the demo, anyone with the link | [Website design prompt](../website/Aran-Website-Design-System-Prompt.md) (already written) |
 
 Build the dashboard first. A judge's first question is "can I see it running?" (roadmap item 1), and the website reuses the same design system, so it gets faster once the dashboard exists.
@@ -85,8 +85,8 @@ Paste the [website prompt](../website/Aran-Website-Design-System-Prompt.md), add
 ### Step 7. Export and hand off to code (lead)
 1. Use **Export / Handoff to Claude Code** (or export as HTML if that is the option shown).
 2. Save the export into the repo under `frontend/design-export/` and commit it.
-3. In the next build thread, ask: "Build the Claude Design export in `frontend/design-export/` as a React + Vite app in `frontend/`, using mock data first, matching the API contract in the frontend guide." Claude Code builds it; then the backend (FastAPI gateway) is wired in.
-4. To host it publicly, the exported site can be deployed as a static site (for example on Vercel).
+3. In a new thread, ask: "Restyle the live console in `app/web` to match the Claude Design export in `frontend/design-export/`, keeping every API call." Learn 11 section 9 explains how.
+4. The console is hosted as one service (frontend and API together) from the repo's `Dockerfile`.
 
 ---
 
@@ -122,7 +122,7 @@ Components, each with states and both themes:
 ### Prompt B: demo dashboard
 
 ```text
-Using the Aran design system in this project, design the "Aran Console", a demo dashboard for hackathon judges. Desktop-first at 1440px, usable at 1024px and 390px. Dark theme by default. All data is mock data; every identifier is generated, and a permanent banner says "Demo · generated data only".
+Using the Aran design system in this project, design the "Aran Console", a live dashboard for hackathon judges. Desktop-first at 1440px, usable at 1024px and 390px. Dark theme by default. This is a visual design for an app that already works: every value comes from a live API, so use realistic placeholder values only to show layout, and design empty, loading and error states for every panel. A permanent banner says "Live · identifiers are generated, never real people".
 
 Demo story the screens must support, in this order:
 1. A sample bank API request with an Aadhaar, PAN, card, UPI ID and OTP goes through Aran.
@@ -150,26 +150,30 @@ Screens (left sidebar order):
 
 8. Settings: sinks list with per-sink key IDs, leakage budget per sink group in bits, theme.
 
-Make the demo flow clickable in the story order above. Empty, loading and error states for Live traffic, Leak trace and Erasure. Keep all numbers exactly as given.
+Make the demo flow clickable in the story order above. Empty, loading and error states for every screen. The Results numbers above are the current values of experiment files and may change when the experiments are re-run, so treat them as layout examples.
 ```
 
 ---
 
-## Part 4: API contract the dashboard will call
+## Part 4: the live API the console uses
 
-The prototype uses mock data. When the backend thread builds the FastAPI gateway, it should serve these endpoints so the frontend plugs in without redesign.
+The console is already built and running on real data (`app/` in the repo; see [Learn 11](../../docs/learning/11-frontend-basics.md)). Claude Design is now for the look only: every number, token, alert and receipt comes from these endpoints, which run Aran's real code.
 
 | Method and path | Sends | Returns |
 |---|---|---|
-| `GET /api/stats` | | `{requests, tokenised, alerts_today, p95_ms}` |
-| `POST /api/demo/request` | `{sample: "loan" \| "kyc" \| "callnote" \| "payment"}` | `{before, after, latency_ms, findings: [{type, masked, token, sink, confidence, evidence}]}` |
-| `GET /api/alerts` | | `[{id, time, severity, source, sink, reason}]` |
-| `POST /api/alerts/{id}/label` | `{label: "attack" \| "normal"}` | `{ok}` |
-| `POST /api/trace` | `{dump: "text"}` | `{top_sink, likelihood, matches, ranking: [{sink, score}]}` |
-| `POST /api/erase` | `{customer_ref, purpose}` | `{receipt: {customer_ref, purpose, keys_destroyed, merkle_root, signed_at, signature}}` |
-| `GET /api/results` | | the experiment tables as JSON |
-
----
+| `GET /api/stats` | | live counters: requests, values protected, p50 and p95 latency, alerts, tokens, keys destroyed |
+| `GET /api/config` | | sinks with purpose and threshold, sample request types, drills, the receipt public key |
+| `POST /api/sample` | `{kind, who}` | one bank request built for an enrolled customer or a stranger, run through the firewall |
+| `POST /api/process` | `{text, source, sink}` | any text run through the firewall: before, after, latency, findings with evidence |
+| `GET /api/events` | | recent requests |
+| `GET/POST /api/customers` | | generated customers with masked identifiers and per-purpose key status |
+| `POST /api/erase` | `{customer_ref, purpose}` | signed Merkle erasure receipt, or 423 when the purpose is retention-locked |
+| `POST /api/receipts/verify` | a receipt | signature and inclusion check |
+| `POST /api/detokenise` | `{token, caller}` | the value, or "erased" after key destruction |
+| `GET /api/leaked-dump?sink=` | | the last lines a sink really stored |
+| `POST /api/trace` | `{dump}` | ranked sinks with per-value evidence |
+| `GET /api/immune`, `POST /api/immune/learn`, `POST /api/drills/{kind}` | | immune state, learning, alerts from live flow windows |
+| `GET /api/results`, `POST /api/jobs/tests` | | experiment result files; runs the test suite on the server |
 
 ## Who does what
 
@@ -182,14 +186,8 @@ The prototype uses mock data. When the backend thread builds the FastAPI gateway
 | 6 Review | Everyone | Fix list |
 | 7 Export | Inbathamizhan | `frontend/design-export/` in the repo |
 
-## What the next thread continues
+## What is built and what is next
 
-Already done in code: normaliser, own-customer and OTP registries, typo repair (roadmap items 2 and 5, experiments E10 to E12).
+Built and live: the API server on the real firewall, crypto-shredding with Merkle receipts (roadmap item 4), and the console (roadmap item 1), on top of the normaliser and registries (items 2 and 5).
 
-Still to build, in this order:
-1. **Roadmap item 1:** FastAPI gateway serving the API contract above, plus the React frontend built from the Claude Design export.
-2. **Roadmap item 4:** crypto-shredding with Merkle erasure receipts (feeds the Erasure screen).
-3. **Roadmap item 3:** mobile and OTP recall fixes, re-run E7 and E9 (feeds the Results screen).
-4. **Roadmap item 6:** AI gateway for LLM prompts, if time allows.
-
-Start that thread with: "Continue Aran: build roadmap item 1 using the frontend guide's API contract."
+Still to build: mobile and OTP recall fixes (item 3), the AI gateway for LLM prompts (item 6), the leakage ledger at runtime (M4), and restyling the console from your Claude Design references.

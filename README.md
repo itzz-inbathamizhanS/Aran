@@ -92,17 +92,42 @@ Same 16,000 real lines as E9. Full tables in [Normaliser, registries and typo re
 
 The mobile and OTP weak spots are closed for a bank that registers its own customers and logs a trace ID. Names (74%) and addresses (90%) are unchanged.
 
+## Live console
+
+`app/` is a working website that runs Aran's real code: send a bank request and watch it get protected, see why each value was caught, trace a leaked dump to the sink that leaked it, erase a customer's purpose key and verify the signed Merkle receipt, teach the immune layer normal traffic (real Loghub logs replayed) and run attack drills, and run the test suite on the server. No value on it is hard-coded; only the customers' identifiers are generated, because real ones must never be used.
+
+| Part | What it is |
+| --- | --- |
+| `app/server/engine.py` | Detector + normaliser + registries + firewall in vault mode + purpose vault + immune layer on live flow windows + real-log replay |
+| `app/server/main.py` | FastAPI routes the console calls (`/api/...`; interactive docs at `/docs`) |
+| `app/server/build_models.py` | Trains the detector once (same training as E5 to E7) and saves `app/server/models/detector.pkl` |
+| `research/firewall/shredder.py` | Purpose-bound crypto-shredding (M5): per-customer per-purpose AES-256-GCM keys, vault tokens that fail their checksum, RFC 6962 Merkle log, Ed25519-signed erasure receipts, KYC retention lock. Tests in `research/test_shredder.py` |
+| `app/web/` | React + Vite frontend, seven pages |
+| `Dockerfile` | Builds the frontend and serves everything from one container |
+
+Run it locally (details in [Learn 11](docs/learning/11-frontend-basics.md)):
+
+```
+cd research && ./fetch_data.sh && cd ..
+pip install -r app/server/requirements.txt
+cd app/server && uvicorn main:app --port 8000       # API + built frontend
+cd app/web && npm install && npm run dev            # frontend with live reload on :5173
+```
+
 ## Repository layout
 
 ```
 docs/
   research/        Research document, AI and immune layers report, roadmap
-  learning/        Ten beginner learning docs (Markdown, open in Obsidian or GitHub)
+  learning/        Eleven beginner learning docs (Markdown, open in Obsidian or GitHub)
 artifacts/
   learning/        PDF copies of the learning docs, for printing or offline reading
   website/         Website design-system prompt
   Frontend with Claude Design/  Frontend guide and dashboard prompts
   research/        PDF results reports
+app/
+  server/          FastAPI server running the real firewall, vault and immune layer
+  web/             React console (seven pages)
 notes/             Obsidian notes: threads, daily notes, artifacts and branches indexes
 templates/         Obsidian templates
 research/
@@ -171,13 +196,14 @@ The team is new to this technology, so read these in order before starting any b
 | 8 | [Web APIs and Proxies](docs/learning/08-web-apis-and-proxies.md) | Everyone (roadmap items 1 and 6) | ~6 h | Explain HTTP and JSON, build an API with FastAPI, build a reverse proxy that tokenises Aadhaar in responses, build an AI gateway that hides identifiers from a chatbot | [PDF](artifacts/learning/Aran%20Learn%208%20-%20Web%20APIs%20and%20Proxies.pdf) |
 | 9 | [Transformers and Zero-Shot NER](docs/learning/09-transformers-and-zero-shot-ner.md) | Bharadhwaj, Arun (roadmap items 7 and 8) | ~8 h | Explain embeddings, subword tokenisation and attention, fine-tune for NER, use GLiNER and IndicNER, speed up with a cascade and distillation | [PDF](artifacts/learning/Aran%20Learn%209%20-%20Transformers%20and%20Zero-Shot%20NER.pdf) |
 | 10 | [OCR Basics](docs/learning/10-ocr-basics.md) | Bharadhwaj, Arun (roadmap item 10) | ~5 h | Read ID card images with Tesseract, use Verhoeff to catch misreads, measure OCR accuracy, mask the first 8 Aadhaar digits on the image | [PDF](artifacts/learning/Aran%20Learn%2010%20-%20OCR%20Basics.pdf) |
+| 11 | [Frontend Basics](docs/learning/11-frontend-basics.md) | Everyone (the live console) | ~5 h | Explain HTML, CSS and JavaScript, build React components with state and effects, call the Aran API with fetch, run the console locally and add a panel to it | [PDF](artifacts/learning/Aran%20Learn%2011%20-%20Frontend%20Basics.pdf) |
 
 ## Artifacts
 
 - [Learning docs as PDFs](artifacts/learning/): print-ready copies of the learning docs above.
 - [Normaliser, registries and typo repair (PDF)](artifacts/research/Aran%20-%20Normaliser%20Registries%20and%20Typo%20Repair.pdf): results report for roadmap items 2 and 5.
 - [Website design-system prompt for the website design tool](artifacts/website/Aran-Website-Design-System-Prompt.md): brand, colours, typography, components and page content for the Aran website.
-- [Frontend guide with Claude Design](artifacts/Frontend%20with%20Claude%20Design/Aran%20-%20Frontend%20Guide%20with%20Claude%20Design.md): step-by-step guide, design-system and demo-dashboard prompts, and the API contract the frontend will call.
+- [Frontend guide with Claude Design](artifacts/Frontend%20with%20Claude%20Design/Aran%20-%20Frontend%20Guide%20with%20Claude%20Design.md): step-by-step guide, design-system and console prompts for restyling the live console, and the live API it uses.
 - [Artifacts index](artifacts/README.md): every artifact by thread, with live links. Older Markdown and PDF copies of the first docs are in [artifacts/Data-flow firewall research](artifacts/Data-flow%20firewall%20research/).
 - [Obsidian vault home](Home.md): open the repo folder as a vault; thread notes are in [notes/threads](notes/threads/), indexed in [notes/Threads.md](notes/Threads.md).
 

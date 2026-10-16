@@ -2,3 +2,5 @@
 .obsidian/workspace*.json
 .obsidian/cache
 .trash/
+node_modules/
+app/web/dist/

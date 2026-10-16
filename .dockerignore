@@ -1,0 +1,8 @@
+**/node_modules
+**/__pycache__
+research/data
+app/web/dist
+.git
+notes
+docs
+artifacts

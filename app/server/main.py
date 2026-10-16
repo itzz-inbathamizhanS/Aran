@@ -1,0 +1,298 @@
+"""Aran console API. Run: uvicorn main:app --port 8000 (from app/server)."""
+import os
+import sys
+import threading
+import time
+
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
+
+import engine as E
+
+app = FastAPI(title="Aran console API", version="1.0")
+ENG = None
+READY = threading.Event()
+LOAD_ERROR = None
+
+
+def _load():
+    global ENG, LOAD_ERROR
+    try:
+        ENG = E.Engine(n_customers=int(os.environ.get("ARAN_CUSTOMERS", "25")))
+        READY.set()
+        while True:
+            ENG.immune.tick()
+            time.sleep(1.0)
+    except Exception as e:  # surfaced on /api/health
+        LOAD_ERROR = repr(e)
+        raise
+
+
+@app.on_event("startup")
+def startup():
+    threading.Thread(target=_load, daemon=True).start()
+
+
+def eng():
+    if not READY.is_set():
+        raise HTTPException(503, LOAD_ERROR or "Aran is loading its models, try again in a few seconds")
+    return ENG
+
+
+# ---------------------------------------------------------------- models
+class ProcessIn(BaseModel):
+    text: str = Field(max_length=20000)
+    source: str = "console"
+    sink: str = "log-platform"
+    trace_id: str | None = None
+
+
+class SampleIn(BaseModel):
+    kind: str
+    who: str = "customer"
+    sink: str | None = None
+
+
+class DetokIn(BaseModel):
+    token: str
+    caller: str = "console"
+
+
+class EraseIn(BaseModel):
+    customer_ref: str
+    purpose: str
+
+
+class TraceIn(BaseModel):
+    dump: str = Field(max_length=200000)
+
+
+class LearnIn(BaseModel):
+    seconds: int = Field(default=360, ge=30, le=1800)
+
+
+class LabelIn(BaseModel):
+    label: str
+
+
+class ReplayIn(BaseModel):
+    rate: float = 1.0
+
+
+class CustomerIn(BaseModel):
+    name: str | None = None
+
+
+# ---------------------------------------------------------------- routes
+@app.get("/api/health")
+def health():
+    return dict(ready=READY.is_set(), error=LOAD_ERROR)
+
+
+@app.get("/api/config")
+def config():
+    e = eng()
+    return dict(sinks=[dict(name=s, purpose=p, threshold=t) for s, (p, t) in E.SINKS.items()],
+                purposes=E.PURPOSES, samples=E.SAMPLES, sample_sinks=E.SAMPLE_SINK, sample_sources=E.SAMPLE_SOURCE,
+                public_key=e.vault.public_key_pem(), window_seconds=E.WINDOW,
+                drills={"new-sink": "Send customer records to a sink never seen before",
+                        "bulk-export": "Bulk export of loan applications in one window",
+                        "detok-spike": "Insider detokenises many customer tokens",
+                        "bypass": "Firewall switched to monitor-only on the log platform"})
+
+
+@app.get("/api/stats")
+def stats():
+    return eng().stats()
+
+
+@app.post("/api/process")
+def process(body: ProcessIn):
+    try:
+        return eng().process(body.text, body.source, body.sink, body.trace_id)
+    except ValueError as err:
+        raise HTTPException(400, str(err))
+
+
+@app.post("/api/sample")
+def sample(body: SampleIn):
+    e = eng()
+    if body.kind not in E.SAMPLES:
+        raise HTTPException(400, "unknown sample")
+    s = e.sample(body.kind, body.who)
+    return e.process(s["text"], s["source"], body.sink or s["sink"], s["trace_id"])
+
+
+@app.get("/api/events")
+def events(limit: int = 50):
+    e = eng()
+    with e.lock:
+        return list(e.events)[:max(1, min(limit, 300))]
+
+
+@app.get("/api/customers")
+def customers():
+    e = eng()
+    with e.lock:
+        return [e.customer_view(r) for r in sorted(e.customers)]
+
+
+@app.post("/api/customers")
+def add_customer(body: CustomerIn):
+    e = eng()
+    c = e.add_customer(body.name)
+    return e.customer_view(c["ref"])
+
+
+@app.get("/api/customers/{ref}")
+def customer(ref: str):
+    e = eng()
+    if ref not in e.customers:
+        raise HTTPException(404, "no such customer")
+    with e.lock:
+        v = e.customer_view(ref)
+        v["tokens"] = [dict(token=t, sink=x["sink"], purpose=x["purpose"], type=x["type"], at=x["at"])
+                       for t, x in e.vault.vault.items() if x["customer"] == ref][-50:]
+        return v
+
+
+@app.post("/api/detokenise")
+def detokenise(body: DetokIn):
+    return eng().detokenise(body.token.strip(), body.caller)
+
+
+@app.post("/api/erase")
+def erase(body: EraseIn):
+    e = eng()
+    try:
+        return e.erase(body.customer_ref, body.purpose)
+    except PermissionError as err:
+        raise HTTPException(423, str(err))
+    except KeyError as err:
+        raise HTTPException(404, str(err))
+
+
+@app.post("/api/receipts/verify")
+def verify(receipt: dict):
+    try:
+        return E.verify_receipt(receipt)
+    except Exception as err:
+        return dict(valid=False, signature_valid=False, included_in_log=False, error=str(err))
+
+
+@app.get("/api/merkle")
+def merkle():
+    e = eng()
+    with e.lock:
+        log = e.vault.log
+        return dict(size=len(log.leaves), root=log.root().hex(),
+                    recent=list(reversed(log.entries[-25:])))
+
+
+@app.post("/api/trace")
+def trace(body: TraceIn):
+    return eng().trace(body.dump)
+
+
+@app.get("/api/leaked-dump")
+def leaked_dump(sink: str, lines: int = 20):
+    return dict(sink=sink, dump=eng().leaked_dump(sink, max(1, min(lines, 200))))
+
+
+@app.get("/api/immune")
+def immune():
+    e = eng()
+    with e.lock:
+        return dict(state=e.immune.state, alerts=[{k: v for k, v in a.items() if k != "_x"} for a in e.immune.alerts[:100]],
+                    open_windows=len(e.immune.cur), closed_windows=len(e.immune.closed))
+
+
+@app.post("/api/immune/learn")
+def learn(body: LearnIn):
+    e = eng()
+    e.immune.start_learning(body.seconds)
+    if not e.replay.running:
+        e.replay.start(e.replay.rate)
+    return e.immune.state
+
+
+@app.post("/api/immune/alerts/{alert_id}/label")
+def label(alert_id: str, body: LabelIn):
+    if body.label not in ("attack", "normal"):
+        raise HTTPException(400, "label is attack or normal")
+    try:
+        a = eng().immune.label(alert_id, body.label)
+    except StopIteration:
+        raise HTTPException(404, "no such alert")
+    return {k: v for k, v in a.items() if k != "_x"}
+
+
+@app.post("/api/drills/{kind}")
+def run_drill(kind: str):
+    e = eng()
+    if e.immune.state["mode"] != "watching":
+        raise HTTPException(409, "Teach the immune layer normal traffic first")
+    try:
+        return dict(done=E.drill(e, kind), window_seconds=E.WINDOW)
+    except KeyError:
+        raise HTTPException(404, "unknown drill")
+
+
+@app.post("/api/replay/start")
+def replay_start(body: ReplayIn):
+    e = eng()
+    try:
+        e.replay.start(body.rate)
+    except RuntimeError as err:
+        raise HTTPException(500, str(err))
+    return e.replay.status()
+
+
+@app.post("/api/replay/stop")
+def replay_stop():
+    e = eng()
+    e.replay.stop()
+    return e.replay.status()
+
+
+@app.get("/api/results")
+def results():
+    return E.results()
+
+
+JOBS = {"tests": [sys.executable, "-m", "pytest", "-q", "test_core.py", "test_registry.py", "test_shredder.py"],
+        "e1-e4": [sys.executable, "experiment.py"]}
+
+
+@app.post("/api/jobs/{name}")
+def start_job(name: str):
+    e = eng()
+    if name not in JOBS:
+        raise HTTPException(404, "unknown job")
+    j = e.jobs.get(name)
+    if j and j["finished"] is None:
+        return j
+    return E.run_job(e, name, JOBS[name])
+
+
+@app.get("/api/jobs/{name}")
+def get_job(name: str):
+    j = eng().jobs.get(name)
+    if not j:
+        raise HTTPException(404, "not run yet")
+    return j
+
+
+# ---------------------------------------------------------------- frontend
+DIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "web", "dist")
+if os.path.isdir(DIST):
+    app.mount("/assets", StaticFiles(directory=os.path.join(DIST, "assets")), name="assets")
+
+    @app.get("/{path:path}")
+    def spa(path: str):
+        f = os.path.join(DIST, path)
+        if path and os.path.isfile(f):
+            return FileResponse(f)
+        return FileResponse(os.path.join(DIST, "index.html"))
