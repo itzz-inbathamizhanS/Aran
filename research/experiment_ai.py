@@ -397,7 +397,8 @@ def e9(det, feat, ais):
         redetected_examples=retok_ex, prototype_clean_lines_flagged=f"{proto_clean}/{clean_n}",
         real_prefix_changed_on_injected_lines=f"{changed_prefix}/{inj_n}",
         tokens_redetected_as_real_ids=retok, lines_per_second=round(len(lines) / dt),
-        sample=[dict(before=text[-160:], after=out[-160:]) for (s, text, _, sp), (out, _) in zip(lines, outs) if sp][:6])
+        # whole lines: cutting before and after at the same length misaligns them, since tokens change the length
+        sample=[dict(before=text, after=out) for (s, text, _, sp), (out, _) in zip(lines, outs) if sp][:6])
     log("E9", R["e9_firewall"]["leak_recall"], R["e9_firewall"]["clean_real_lines_changed"], R["e9_firewall"]["lines_per_second"])
 
 
