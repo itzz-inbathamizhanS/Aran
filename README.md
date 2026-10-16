@@ -110,7 +110,7 @@ Roadmap items 3, 6, 9, the M4 leakage ledger, and a first step on items 7 and 12
 
 ### Post-quantum upgrade (E17 to E19)
 
-Most of Aran is symmetric (FF1 on AES, AES-256-GCM, HMAC, SHA-256 Merkle log) and already quantum-safe. Three parts were not, and are now fixed with hybrid classical plus NIST post-quantum crypto. Full tables in [Post-quantum upgrade](docs/research/post-quantum.md); read [Learn 13](docs/learning/13-post-quantum-cryptography.md) first.
+Most of Aran is symmetric (FF1 on AES, AES-256-GCM, HMAC, SHA-256 Merkle log) and already quantum-safe. Three parts were not, and are now fixed with hybrid classical plus NIST post-quantum crypto. Full tables in [Post-quantum upgrade](docs/research/post-quantum.md); read [Learn 14](docs/learning/14-post-quantum-cryptography.md) first.
 
 | Test | Before | After |
 | --- | --- | --- |
@@ -124,7 +124,7 @@ New finding: crypto-shredding (M5) only erases if the destroyed key never travel
 
 ## Live console
 
-`app/` is a working website that runs Aran's real code. It opens on a **guided tour**: twelve short chapters that explain the problem and every part of Aran in plain words for reviewers new to the topic, each with a live demo (false alarms on real logs, check digits step by step, tokens that fail the checksum, hidden numbers caught 12 ways, a leak traced to its source, erasure with a signed receipt). The rest of the console lets you send a bank request and watch it get protected, see why each value was caught, trace a leaked dump to the sink that leaked it, erase a customer's purpose key and verify the signed Merkle receipt, teach the immune layer normal traffic (real Loghub logs replayed) and run attack drills, and run the test suite on the server. No value on it is hard-coded; only the customers' identifiers are generated, because real ones must never be used.
+`app/` is a working website that runs Aran's real code. It opens on an **animated guided tour**: thirteen short chapters, each a moving picture of a real server response with only a headline and one line of text. Requests flow as packets through the firewall and come out as tokens; 300 real log lines light up as false alarms for plain filters but not for Aran; Verhoeff and Luhn maths runs digit by digit on a dial; a token is built through the ten real FF1 rounds and checked against what the live firewall issued; detection clues fill bars and swing a probability gauge; twelve disguises of one Aadhaar flip to caught; a leaked file travels to the dark web and a trace beam names its source; an erasure shatters the purpose key and your browser re-checks the Merkle receipt itself; the immune layer draws each traffic window on a radar against the normal range it learned, and drills show up as alerts; and an AI-chatbot chapter shows what the model provider sees (placeholders only) and what each staff role gets back. The rest of the console lets you send any request, trace any dump, erase customers, run attack drills and run the test suite. No value on it is hard-coded; only the customers' identifiers are generated, because real ones must never be used.
 
 | Part | What it is |
 | --- | --- |
@@ -132,8 +132,10 @@ New finding: crypto-shredding (M5) only erases if the destroyed key never travel
 | `app/server/main.py` | FastAPI routes the console calls (`/api/...`; interactive docs at `/docs`) |
 | `app/server/build_models.py` | Trains the detector once (same training as E5 to E7) and saves `app/server/models/detector.pkl` |
 | `research/firewall/shredder.py` | Purpose-bound crypto-shredding (M5): per-customer per-purpose AES-256-GCM keys, vault tokens that fail their checksum, RFC 6962 Merkle log, erasure receipts signed with Ed25519 + ML-DSA-65 (post-quantum), KYC retention lock. Tests in `research/test_shredder.py` |
-| `app/web/` | React + Vite frontend: guided tour plus seven console pages |
+| `app/web/` | React + Vite frontend: animated guided tour (`src/pages/Tour.jsx`, scenes in `src/viz.jsx`) plus seven console pages |
 | `Dockerfile` | Builds the frontend and serves everything from one container |
+
+Screenshots of the animated tour: [artifacts/Animated tour](artifacts/Animated%20tour/) (packets through the firewall, token rounds, false alarms, erasure receipt, immune radar, AI gateway). How the animations are built: [Learn 13](docs/learning/13-animation-and-visual-explainers.md). Set `ARAN_LLM_URL`, `ARAN_LLM_KEY` and `ARAN_LLM_MODEL` to point the AI-chatbot chapter at a real OpenAI-compatible model; without them it uses the gateway's echo stand-in and no data leaves the machine.
 
 Run it locally (details in [Learn 11](docs/learning/11-frontend-basics.md)):
 
@@ -149,7 +151,7 @@ cd app/web && npm install && npm run dev            # frontend with live reload 
 ```
 docs/
   research/        Research document, AI and immune layers report, roadmap
-  learning/        Thirteen beginner learning docs (Markdown, open in Obsidian or GitHub)
+  learning/        Fourteen beginner learning docs (Markdown, open in Obsidian or GitHub)
 artifacts/
   learning/        PDF copies of the learning docs, for printing or offline reading
   website/         Website design-system prompt
@@ -248,14 +250,15 @@ The team is new to this technology, so read these in order before starting any b
 | 10 | [OCR Basics](docs/learning/10-ocr-basics.md) | Bharadhwaj, Arun (roadmap item 10) | ~5 h | Read ID card images with Tesseract, use Verhoeff to catch misreads, measure OCR accuracy, mask the first 8 Aadhaar digits on the image | [PDF](artifacts/learning/Aran%20Learn%2010%20-%20OCR%20Basics.pdf) |
 | 11 | [Frontend Basics](docs/learning/11-frontend-basics.md) | Everyone (the live console) | ~5 h | Explain HTML, CSS and JavaScript, build React components with state and effects, call the Aran API with fetch, run the console locally and add a panel to it | [PDF](artifacts/learning/Aran%20Learn%2011%20-%20Frontend%20Basics.pdf) |
 | 12 | [Leakage Ledger, AI Gateway and Red-Teaming](docs/learning/12-ledger-ai-gateway-and-red-teaming.md) | Everyone (roadmap items 3, 6, 9 and M4) | ~5 h | Add model features for hard cases, count what joined systems learn in bits, hide identifiers from a chatbot with role-based placeholders and a hash-chained audit log, red-team your own detector with a fair judge, speed a model up with caching and a cascade | [PDF](artifacts/learning/Aran%20Learn%2012%20-%20Leakage%20Ledger%20AI%20Gateway%20and%20Red-Teaming.pdf) |
-| 13 | [Post-Quantum Cryptography](docs/learning/13-post-quantum-cryptography.md) | Inbathamizhan, Aasif (everyone reads sections 1 to 3) | ~5 h | Explain what Shor and Grover break, apply Mosca's inequality, run ML-KEM and ML-DSA in Python, explain hybrid key agreement and hybrid signatures and the downgrade trap, produce a CBOM | [PDF](artifacts/learning/Aran%20Learn%2013%20-%20Post-Quantum%20Cryptography.pdf) |
+| 13 | [Animation and Visual Explainers](docs/learning/13-animation-and-visual-explainers.md) | Everyone (the animated tour) | ~4 h | Draw with SVG, animate with CSS transitions, keyframes and `<animateMotion>`, tell a story step by step with React state, count-ups and radar charts, respect reduced motion, and only ever animate real server data | [PDF](artifacts/learning/Aran%20Learn%2013%20-%20Animation%20and%20Visual%20Explainers.pdf) |
+| 14 | [Post-Quantum Cryptography](docs/learning/14-post-quantum-cryptography.md) | Inbathamizhan, Aasif (everyone reads sections 1 to 3) | ~5 h | Explain what Shor and Grover break, apply Mosca's inequality, run ML-KEM and ML-DSA in Python, explain hybrid key agreement and hybrid signatures and the downgrade trap, produce a CBOM | [PDF](artifacts/learning/Aran%20Learn%2014%20-%20Post-Quantum%20Cryptography.pdf) |
 
 ## Artifacts
 
 - [Learning docs as PDFs](artifacts/learning/): print-ready copies of the learning docs above.
 - [Normaliser, registries and typo repair (PDF)](artifacts/research/Aran%20-%20Normaliser%20Registries%20and%20Typo%20Repair.pdf): results report for roadmap items 2 and 5.
 - [Ledger, AI gateway and red team (PDF)](artifacts/research/Aran%20-%20Ledger%20AI%20Gateway%20and%20Red%20Team.pdf): results report for roadmap items 3, 6, 9 and M4, with Learn 12, also kept by thread in [artifacts/Ledger AI gateway and red team](artifacts/Ledger%20AI%20gateway%20and%20red%20team/).
-- [Post-quantum upgrade (PDF)](artifacts/research/Aran%20-%20Post-Quantum%20Upgrade.pdf): results report for E17 to E19, with Learn 13, also kept by thread in [artifacts/Post-quantum cryptography](artifacts/Post-quantum%20cryptography/).
+- [Post-quantum upgrade (PDF)](artifacts/research/Aran%20-%20Post-Quantum%20Upgrade.pdf): results report for E17 to E19, with Learn 14, also kept by thread in [artifacts/Post-quantum cryptography](artifacts/Post-quantum%20cryptography/).
 - [Website design-system prompt for the website design tool](artifacts/website/Aran-Website-Design-System-Prompt.md): brand, colours, typography, components and page content for the Aran website.
 - [Frontend guide with Claude Design](artifacts/Frontend%20with%20Claude%20Design/Aran%20-%20Frontend%20Guide%20with%20Claude%20Design.md): step-by-step guide, design-system and console prompts for restyling the live console, and the live API it uses.
 - [Artifacts index](artifacts/README.md): every artifact by thread, with live links. Older Markdown and PDF copies of the first docs are in [artifacts/Data-flow firewall research](artifacts/Data-flow%20firewall%20research/).

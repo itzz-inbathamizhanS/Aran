@@ -11,6 +11,7 @@ never be used outside a bank.
 """
 import glob
 import json
+import math
 import os
 import pickle
 import random
@@ -31,7 +32,7 @@ sys.path.insert(0, RESEARCH)
 import synth  # noqa: E402
 from ai.detector import Detector  # noqa: E402
 import base64  # noqa: E402
-from aran_core import FF1, _D, _INV, _P, _offset, luhn_check_digit, luhn_valid, verhoeff_check_digit, verhoeff_valid  # noqa: E402
+from aran_core import FF1, _D, _num, _str, _INV, _P, _offset, luhn_check_digit, luhn_valid, verhoeff_check_digit, verhoeff_valid  # noqa: E402
 from firewall.aran_firewall import card_offset  # noqa: E402
 from firewall.normalise import Normaliser  # noqa: E402
 from firewall.registry import CustomerRegistry, OtpRegistry, canonical  # noqa: E402
@@ -339,6 +340,7 @@ class Immune:
                           learn_until=None, window_seconds=WINDOW)
         self.feat = self.ais = None
         self.learn_from = None
+        self.recent = deque(maxlen=40)  # scored windows, for the tour's radar view
 
     def _win(self):
         return int(time.time() // WINDOW)
@@ -402,6 +404,9 @@ class Immune:
         rec = self.as_flow(r)
         x = self.feat.transform([rec])
         s = float(self.ais.score(x)[0])
+        z = self.ais.scaler.transform(x)[0]
+        self.recent.appendleft(dict(at=r["window"] * WINDOW, src=rec["src"], sink=rec["sink"], n=rec["n"],
+                                    score=round(s, 4), alert=s > 0, z=[round(float(v), 3) for v in z]))
         if s <= 0:
             return
         names = FlowFeaturizer.names
@@ -645,7 +650,7 @@ def tour_false_alarms(eng, n=300):
     systems = sorted(eng.replay.logs)
     lines = [r.choice(eng.replay.logs[r.choice(systems)]) for _ in range(n)]
     naive = {k: 0 for k in NAIVE}
-    aran, examples = defaultdict(int), []
+    aran, examples, cells = defaultdict(int), [], []
     t0 = time.perf_counter()
     with eng.lock:
         for ln in lines:
@@ -658,7 +663,100 @@ def tour_false_alarms(eng, n=300):
             fs = [f for f in eng.det.scan(ln) if f.p >= 0.5]
             for f in fs:
                 aran[f.type] += 1
+            cells.append([sum(len(rx.findall(ln)) for rx in NAIVE.values()), len(fs)])
             if hits and len(examples) < 6:
                 examples.append(dict(line=ln[:180], naive=[f"{k}: {v}" for k, v in hits], aran=[f.type for f in fs]))
     return dict(lines=n, systems=len(systems), naive=naive, naive_total=sum(naive.values()), aran=dict(aran),
-                aran_total=sum(aran.values()), examples=examples, seconds=round(time.perf_counter() - t0, 2))
+                aran_total=sum(aran.values()), examples=examples, cells=cells, seconds=round(time.perf_counter() - t0, 2))
+
+
+def _ff1_rounds(ff1, digits, tweak):
+    """The ten Feistel rounds of FF1 encryption, recorded half by half (same arithmetic as
+    aran_core.FF1._rounds), so the tour can show a token being built round by round."""
+    radix, n, t = ff1.radix, len(digits), len(tweak)
+    u, v = n // 2, n - n // 2
+    a, b = [int(c) for c in digits[:u]], [int(c) for c in digits[u:]]
+    bl = math.ceil(math.ceil(v * math.log2(radix)) / 8)
+    d = 4 * math.ceil(bl / 4) + 4
+    p = bytes([1, 2, 1]) + radix.to_bytes(3, "big") + bytes([10, u % 256]) + n.to_bytes(4, "big") + t.to_bytes(4, "big")
+    rounds = []
+    for i in range(10):
+        q = tweak + bytes((-t - bl - 1) % 16) + bytes([i]) + _num(b, radix).to_bytes(bl, "big")
+        r = ff1._prf(p + q)
+        s, j = r, 1
+        while len(s) < d:
+            s += ff1._ciph(bytes(x ^ y for x, y in zip(r, j.to_bytes(16, "big"))))
+            j += 1
+        y = int.from_bytes(s[:d], "big")
+        m = u if i % 2 == 0 else v
+        c = (_num(a, radix) + y) % (radix ** m)
+        a, b = b, _str(c, radix, m)
+        rounds.append(dict(round=i + 1, left="".join(map(str, a)), right="".join(map(str, b)), aes=r[:6].hex()))
+    return rounds
+
+
+def tour_build_token(eng, sink="log-platform", aadhaar=None):
+    """Build a vaultless token step by step for a generated Aadhaar, then check the live
+    firewall issues exactly the same token."""
+    with eng.lock:
+        a = aadhaar if aadhaar and re.fullmatch(r"\d{12}", aadhaar) and verhoeff_valid(aadhaar) \
+            else re.sub(r"\D", "", synth.gen_aadhaar(eng.rand))
+        body = a[:11]
+        rounds = _ff1_rounds(eng.ff1, body, sink.encode())
+        enc = rounds[-1]["left"] + rounds[-1]["right"]
+        right = verhoeff_check_digit(enc)
+        off = _offset(eng.key, sink)
+        token = enc + str((int(right) + off) % 10)
+        ev = eng.process(f"kyc check aadhaar {a}", "guided-tour", sink, record=False, observe=False)
+        issued = next((f.get("token") for f in ev["findings"] if f["type"] == "AADHAAR" and f["protected"]), None)
+        return dict(aadhaar=a, body=body, check=a[-1], sink=sink, rounds=rounds, encrypted=enc, right_check=right,
+                    offset=off, token=token, token_valid=verhoeff_valid(token), real_valid=verhoeff_valid(a),
+                    firewall_token=issued, firewall_after=ev["after"], matches=issued == token,
+                    note="enrolled customers get random vault tokens instead; this person is not enrolled, so the vaultless FF1 path is used")
+
+
+def tour_packet(eng, kind=None):
+    """One real request for the animated pipeline: a sample through the live firewall."""
+    kind = kind or eng.rand.choice(sorted(SAMPLES))
+    s = eng.sample(kind)
+    ev = eng.process(s["text"], s["source"], s["sink"], s["trace_id"], observe=False)
+    return dict(ev, kind=kind)
+
+
+def tour_immune_radar(eng):
+    """Recent scored traffic windows in the detector's own scaled feature space. Every
+    feature is scaled so the range seen while learning normal traffic sits in [0.1, 0.7]."""
+    with eng.lock:
+        im = eng.immune
+        return dict(mode=im.state["mode"], names=FlowFeaturizer.names, self_lo=0.1, self_hi=0.7,
+                    windows=list(im.recent)[:20], state=im.state,
+                    learn_left=max(0, round(im.state["learn_until"] - time.time())) if im.state.get("learn_until") else None,
+                    next_window_in=round(WINDOW - time.time() % WINDOW, 1), window_seconds=WINDOW)
+
+
+_GW = {}
+
+
+def gateway(eng):
+    """The AI gateway (research/gateway/ai_gateway.py) on the live detector. With
+    ARAN_LLM_URL, ARAN_LLM_KEY and ARAN_LLM_MODEL set it calls that OpenAI-compatible
+    model; otherwise the provider is the echo stand-in from the gateway's own tests,
+    which repeats the prompt back, the hardest case for placeholders."""
+    if "gw" not in _GW:
+        from gateway.ai_gateway import AIGateway, openai_upstream, recorder_upstream
+        url = os.environ.get("ARAN_LLM_URL")
+        if url:
+            up, name = openai_upstream(url, os.environ.get("ARAN_LLM_KEY", ""), os.environ.get("ARAN_LLM_MODEL", "")), "model at ARAN_LLM_URL"
+        else:
+            up, name = recorder_upstream([]), "echo stand-in (no external AI call)"
+        _GW["gw"], _GW["name"] = AIGateway(eng.det, up), name
+    return _GW["gw"], _GW["name"]
+
+
+def tour_gateway(eng, role, text):
+    gw, name = gateway(eng)
+    conv = "tour-" + secrets.token_hex(4)
+    with eng.lock:
+        res = gw.chat(f"{role}:tour", conv, [{"role": "user", "content": text}])
+    return dict(res, provider=name, role=role, audit_ok=gw.audit.verify(), audit_size=len(gw.audit.entries),
+                audit_last=gw.audit.entries[-1] if gw.audit.entries else None)

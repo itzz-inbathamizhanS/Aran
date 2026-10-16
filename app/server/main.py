@@ -333,6 +333,46 @@ def tour_evasion():
     return E.tour_evasion(eng())
 
 
+class KindIn(BaseModel):
+    kind: str | None = None
+
+
+@app.post("/api/tour/packet")
+def tour_packet(body: KindIn):
+    if body.kind and body.kind not in E.SAMPLES:
+        raise HTTPException(400, "unknown sample")
+    return E.tour_packet(eng(), body.kind)
+
+
+class SinkIn(BaseModel):
+    sink: str = "log-platform"
+    aadhaar: str | None = Field(default=None, max_length=12)
+
+
+@app.post("/api/tour/build-token")
+def tour_build_token(body: SinkIn):
+    if body.sink not in E.SINKS:
+        raise HTTPException(400, "unknown sink")
+    return E.tour_build_token(eng(), body.sink, body.aadhaar)
+
+
+@app.get("/api/tour/immune-radar")
+def tour_immune_radar():
+    return E.tour_immune_radar(eng())
+
+
+class GatewayIn(BaseModel):
+    role: str = "customer-care"
+    text: str = Field(max_length=4000)
+
+
+@app.post("/api/tour/gateway")
+def tour_gateway(body: GatewayIn):
+    if body.role not in ("kyc-officer", "customer-care", "analyst"):
+        raise HTTPException(400, "role is kyc-officer, customer-care or analyst")
+    return E.tour_gateway(eng(), body.role, body.text)
+
+
 # ---------------------------------------------------------------- frontend
 DIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "web", "dist")
 if os.path.isdir(DIST):

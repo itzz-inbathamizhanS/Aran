@@ -4,7 +4,7 @@
 
 **Owners:** Inbathamizhan S and Aasif Ahmed A (cyber security). Bharadhwaj M and SN Arun Vijay read sections 1 and 2.
 
-**Read first:** [Learn 13: Post-Quantum Cryptography](../learning/13-post-quantum-cryptography.md), after [Learn 3](../learning/03-cryptography-basics.md).
+**Read first:** [Learn 14: Post-Quantum Cryptography](../learning/14-post-quantum-cryptography.md), after [Learn 3](../learning/03-cryptography-basics.md).
 
 **Code:** `research/pqc/hybrid.py` (hybrid signatures and key sealing), `research/pqc/cbom.py` (CBOM scanner), `research/firewall/shredder.py` (receipts now hybrid), `research/experiment_pqc.py` (E17 to E19), `research/test_pqc.py` (9 tests). Raw numbers: `research/results_pqc.json`; CBOM: `research/pqc/cbom.json`. No new dependency: `cryptography` 50 ships ML-KEM and ML-DSA.
 

@@ -31,7 +31,7 @@ Repo copies: Markdown in `docs/`, PDFs in `artifacts/learning/` and `artifacts/r
 | 9 | Aran Learn 9 - Transformers and Zero-Shot NER | `docs/learning/09-transformers-and-zero-shot-ner.md` |
 | 10 | Aran Learn 10 - OCR Basics | `docs/learning/10-ocr-basics.md` |
 | 12 | Aran Learn 12 - Leakage Ledger, AI Gateway and Red-Teaming | `docs/learning/12-ledger-ai-gateway-and-red-teaming.md` |
-| 13 | Aran Learn 13 - Post-Quantum Cryptography | `docs/learning/13-post-quantum-cryptography.md` |
+| 14 | Aran Learn 14 - Post-Quantum Cryptography | `docs/learning/14-post-quantum-cryptography.md` |
 
 Learn 1 to 7 were expanded on 15 Oct; the repo Markdown and PDFs hold the expanded text.
 
