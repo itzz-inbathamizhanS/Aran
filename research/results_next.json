@@ -1,0 +1,774 @@
+{
+ "e13_ledger": {
+  "customers": 20000,
+  "sinks": 11,
+  "domains": [
+   "internal",
+   "vendorA",
+   "vendorB",
+   "vendorC"
+  ],
+  "disclosures": 167654,
+  "tau_bits": {
+   "AADHAAR": 20.0,
+   "CARD": 20.0,
+   "MOBILE": 16.0
+  },
+  "exempt": [
+   "sms-alerts MOBILE"
+  ],
+  "requested_masks": {
+   "sms-alerts": {
+    "CARD": "last4",
+    "MOBILE": "full"
+   },
+   "crm-ui": {
+    "CARD": "last4",
+    "AADHAAR": "last4",
+    "MOBILE": "last4"
+   },
+   "branch-crm": {
+    "AADHAAR": "last4"
+   },
+   "vendorA-collections": {
+    "CARD": "last4",
+    "MOBILE": "last4"
+   },
+   "vendorA-bin-analytics": {
+    "CARD": "first8"
+   },
+   "vendorA-callcentre": {
+    "MOBILE": "first4",
+    "AADHAAR": "last4"
+   },
+   "vendorB-statement-print": {
+    "CARD": "last4"
+   },
+   "vendorB-rewards": {
+    "CARD": "first6"
+   },
+   "vendorC-ekyc": {
+    "AADHAAR": "last4"
+   },
+   "vendorC-archive": {
+    "AADHAAR": "first4"
+   },
+   "vendorC-dispute": {
+    "CARD": "first6last4"
+   }
+  },
+  "single_mask_bits": {
+   "CARD last4": 36.5,
+   "CARD first4": 36.5,
+   "CARD first6": 29.9,
+   "CARD first8": 23.3,
+   "CARD first6last4": 16.6,
+   "CARD first4last4": 23.3,
+   "AADHAAR last4": 22.9,
+   "AADHAAR first4": 23.3,
+   "AADHAAR first6": 16.6,
+   "AADHAAR first8": 10.0,
+   "AADHAAR first6last4": 3.3,
+   "AADHAAR first4last4": 10.0,
+   "MOBILE last4": 18.6,
+   "MOBILE first4": 19.9,
+   "MOBILE first6": 13.3,
+   "MOBILE first8": 6.6,
+   "MOBILE first6last4": 0.0,
+   "MOBILE first4last4": 6.6
+  },
+  "masks_as_configured": {
+   "identifiers_below_tau": {
+    "AADHAAR": 1934,
+    "CARD": 10423,
+    "MOBILE": 1818
+   },
+   "total_below_tau": 14175,
+   "worst_case_histogram": {
+    "<= 10 bits (1,000 or fewer candidates)": 7357,
+    "10 to 16 bits": 0,
+    "16 to 20 bits": 6818
+   },
+   "disclosures_shrunk": 0,
+   "shrunk_share": 0.0,
+   "microseconds_per_disclosure": 6.8
+  },
+  "per_field_check": {
+   "identifiers_below_tau": {
+    "AADHAAR": 1934,
+    "CARD": 9301,
+    "MOBILE": 1818
+   },
+   "total_below_tau": 13053,
+   "worst_case_histogram": {
+    "<= 10 bits (1,000 or fewer candidates)": 7357,
+    "10 to 16 bits": 0,
+    "16 to 20 bits": 5696
+   },
+   "disclosures_shrunk": 2048,
+   "shrunk_share": 0.0122,
+   "microseconds_per_disclosure": 23.5
+  },
+  "aran_ledger": {
+   "identifiers_below_tau": {},
+   "total_below_tau": 0,
+   "worst_case_histogram": {
+    "<= 10 bits (1,000 or fewer candidates)": 0,
+    "10 to 16 bits": 0,
+    "16 to 20 bits": 0
+   },
+   "disclosures_shrunk": 16341,
+   "shrunk_share": 0.0975,
+   "microseconds_per_disclosure": 52.3,
+   "shrinks": {
+    "vendorB-statement-print CARD: last4 -> last2": 3473,
+    "vendorB-rewards CARD: first6 -> first4": 3463,
+    "vendorC-dispute CARD: first6last4 -> first4last4": 2048,
+    "vendorA-collections CARD: last4 -> token": 1814,
+    "vendorA-bin-analytics CARD: first8 -> first4": 1791,
+    "vendorC-ekyc AADHAAR: last4 -> token": 971,
+    "vendorC-archive AADHAAR: first4 -> token": 963,
+    "vendorA-callcentre MOBILE: first4 -> token": 930
+   },
+   "ledger_entries": 264042,
+   "memory_mb": 8.06
+  },
+  "example": {
+   "first_sink": "first8 granted, 23.3 bits left",
+   "second_sink": "last4 requested, token granted, 23.3 bits left in the vendor domain",
+   "without_ledger": "first8 + last4 = 10.0 bits (1,000 candidates)"
+  }
+ },
+ "e14_ai_gateway": {
+  "prompts": 2000,
+  "sensitive_values": 2393,
+  "raw_values_reaching_provider": {
+   "AADHAAR": "0/79",
+   "ADDR": "26/304",
+   "CARD": "0/68",
+   "MOBILE": "0/225",
+   "OTP": "0/406",
+   "PAN": "0/79",
+   "PER": "161/793",
+   "UPI": "0/439"
+  },
+  "raw_values_reaching_provider_without_gateway": "2393/2393",
+  "reaching_rate": 0.0781,
+  "round_trip_exact_for_kyc_officer_except_destroyed_otps": "1900/2000",
+  "customer_care_sees_in_clear": {
+   "AADHAAR": "0/79",
+   "ADDR": "298/304",
+   "CARD": "0/68",
+   "MOBILE": "225/225",
+   "OTP": "0/406",
+   "PAN": "0/79",
+   "PER": "793/793",
+   "UPI": "439/439"
+  },
+  "analyst_sees_in_clear": "187/2393",
+  "real_sms_changed": "16/2000",
+  "real_sms_placeholder_types": {
+   "PER": 15,
+   "ADDR": 2
+  },
+  "attacks": {
+   "A1 other caller asks the model for the victim's placeholders": "0/79 values leaked",
+   "A2 planted placeholder (customer-care role, Aadhaar not allowed)": "0/79 Aadhaar shown in clear",
+   "A3 reuse of another caller's conversation id": "79/79 blocked",
+   "A4 identifiers produced by the model itself": "0/400 shown to the caller (hidden, never resolved)",
+   "A5 Aadhaar hidden 4 ways in the prompt (Devanagari, dots, \\u escapes, base64)": "0/316 reached the provider"
+  },
+  "audit_entries": 4273,
+  "audit_chain_valid": true,
+  "audit_chain_valid_after_editing_one_entry": false,
+  "tokenise_ms": {
+   "mean": 2.26,
+   "p95": 3.25
+  },
+  "provider": "recording provider that echoes the prompt; the gateway code is the same for a real OpenAI-compatible provider",
+  "round_trip_note": "the 100 inexact replies differ only in spaces or dashes inside Aadhaar or card numbers (the vault stores canonical digits)"
+ },
+ "e15_redteam": {
+  "test_lines": 500,
+  "conditions": {
+   "detector only": {
+    "by_trick": {
+     "plain (control)": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "Devanagari digits": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "Tamil digits": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "full-width digits": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "URL percent-encoding": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "JSON \\u escapes": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "HTML entities": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "dots between groups": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "underscores between groups": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "space between every digit": {
+      "removed": "125/625",
+      "rate": 0.2
+     },
+     "zero-width space inside": {
+      "removed": "115/625",
+      "rate": 0.184
+     },
+     "split into fields": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "base64 of the line": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "followed by a full stop": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "English number words": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "English with double and triple": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "Hindi number words": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "Tamil number words": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "Hinglish number words": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "look-alike letters (O, l, S, B)": {
+      "removed": "5/625",
+      "rate": 0.008
+     },
+     "mixed scripts in one number": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "double URL-encoding": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "letters between digits": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "digits reversed": {
+      "removed": "163/625",
+      "rate": 0.2608
+     },
+     "hexadecimal": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "base64 of base64": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "one-digit typo (registry knows the real one)": {
+      "removed": "375/625",
+      "rate": 0.6
+     }
+    },
+    "mean_removed_over_tricks": 0.1251,
+    "tricks_fully_caught": 2,
+    "tricks": 26,
+    "real_log_lines_changed": "95/16000",
+    "real_sms_changed": "22/2412",
+    "lines_per_second": 514
+   },
+   "E10 normaliser": {
+    "by_trick": {
+     "plain (control)": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "Devanagari digits": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "Tamil digits": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "full-width digits": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "URL percent-encoding": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "JSON \\u escapes": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "HTML entities": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "dots between groups": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "underscores between groups": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "space between every digit": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "zero-width space inside": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "split into fields": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "base64 of the line": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "followed by a full stop": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "English number words": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "English with double and triple": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "Hindi number words": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "Tamil number words": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "Hinglish number words": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "look-alike letters (O, l, S, B)": {
+      "removed": "5/625",
+      "rate": 0.008
+     },
+     "mixed scripts in one number": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "double URL-encoding": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "letters between digits": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "digits reversed": {
+      "removed": "163/625",
+      "rate": 0.2608
+     },
+     "hexadecimal": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "base64 of base64": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "one-digit typo (registry knows the real one)": {
+      "removed": "375/625",
+      "rate": 0.6
+     }
+    },
+    "mean_removed_over_tricks": 0.5719,
+    "tricks_fully_caught": 14,
+    "tricks": 26,
+    "real_log_lines_changed": "95/16000",
+    "real_sms_changed": "22/2412",
+    "lines_per_second": 548
+   },
+   "E10 normaliser + registry": {
+    "by_trick": {
+     "plain (control)": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "Devanagari digits": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "Tamil digits": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "full-width digits": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "URL percent-encoding": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "JSON \\u escapes": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "HTML entities": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "dots between groups": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "underscores between groups": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "space between every digit": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "zero-width space inside": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "split into fields": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "base64 of the line": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "followed by a full stop": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "English number words": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "English with double and triple": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "Hindi number words": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "Tamil number words": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "Hinglish number words": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "look-alike letters (O, l, S, B)": {
+      "removed": "5/625",
+      "rate": 0.008
+     },
+     "mixed scripts in one number": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "double URL-encoding": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "letters between digits": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "digits reversed": {
+      "removed": "163/625",
+      "rate": 0.2608
+     },
+     "hexadecimal": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "base64 of base64": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "one-digit typo (registry knows the real one)": {
+      "removed": "623/625",
+      "rate": 0.9968
+     }
+    },
+    "mean_removed_over_tricks": 0.5871,
+    "tricks_fully_caught": 15,
+    "tricks": 26,
+    "real_log_lines_changed": "95/16000",
+    "real_sms_changed": "22/2412",
+    "lines_per_second": 506
+   },
+   "red-team normaliser + registry": {
+    "by_trick": {
+     "plain (control)": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "Devanagari digits": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "Tamil digits": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "full-width digits": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "URL percent-encoding": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "JSON \\u escapes": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "HTML entities": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "dots between groups": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "underscores between groups": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "space between every digit": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "zero-width space inside": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "split into fields": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "base64 of the line": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "followed by a full stop": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "English number words": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "English with double and triple": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "Hindi number words": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "Tamil number words": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "Hinglish number words": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "look-alike letters (O, l, S, B)": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "mixed scripts in one number": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "double URL-encoding": {
+      "removed": "625/625",
+      "rate": 1.0
+     },
+     "letters between digits": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "digits reversed": {
+      "removed": "163/625",
+      "rate": 0.2608
+     },
+     "hexadecimal": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "base64 of base64": {
+      "removed": "0/625",
+      "rate": 0.0
+     },
+     "one-digit typo (registry knows the real one)": {
+      "removed": "623/625",
+      "rate": 0.9968
+     }
+    },
+    "mean_removed_over_tricks": 0.8561,
+    "tricks_fully_caught": 22,
+    "tricks": 26,
+    "real_log_lines_changed": "95/16000",
+    "real_sms_changed": "22/2412",
+    "lines_per_second": 520
+   },
+   "detector only, patterns before the E15 fixes": {
+    "by_trick": {
+     "followed by a full stop": {
+      "removed": "0/625",
+      "lines_that_crashed_the_detector": 0
+     },
+     "mixed scripts in one number": {
+      "removed": "357/625",
+      "lines_that_crashed_the_detector": 125
+     }
+    }
+   }
+  },
+  "judge": "a value counts as removed only if its digits cannot be recovered from the output line by undoing escapes twice, other scripts, number words, look-alike letters, letters between digits, separators, base64 twice and hexadecimal, read forwards or backwards"
+ },
+ "e16_speed": {
+  "NER on every line, features as before": {
+   "lines_per_second": 274,
+   "leak_recall": 0.9103,
+   "recall_by_type": {
+    "AADHAAR": 1.0,
+    "ADDR": 0.9055,
+    "CARD": 1.0,
+    "MOBILE": 1.0,
+    "OTP": 1.0,
+    "PAN": 1.0,
+    "PER": 0.7729,
+    "UPI": 1.0
+   },
+   "clean_real_lines_changed": "150/14890"
+  },
+  "NER on every line, features cached per word": {
+   "lines_per_second": 348,
+   "leak_recall": 0.9103,
+   "recall_by_type": {
+    "AADHAAR": 1.0,
+    "ADDR": 0.9055,
+    "CARD": 1.0,
+    "MOBILE": 1.0,
+    "OTP": 1.0,
+    "PAN": 1.0,
+    "PER": 0.7729,
+    "UPI": 1.0
+   },
+   "clean_real_lines_changed": "150/14890"
+  },
+  "identical output to the line above": true,
+  "cached features + NER gate": {
+   "lines_per_second": 654,
+   "leak_recall": 0.9103,
+   "recall_by_type": {
+    "AADHAAR": 1.0,
+    "ADDR": 0.9055,
+    "CARD": 1.0,
+    "MOBILE": 1.0,
+    "OTP": 1.0,
+    "PAN": 1.0,
+    "PER": 0.7729,
+    "UPI": 1.0
+   },
+   "clean_real_lines_changed": "130/14890"
+  },
+  "lines the gate sends to NER": "2194/16000",
+  "generated test lines with a name or address that the gate skips": "0/1797",
+  "no NER at all (upper bound on speed)": {
+   "lines_per_second": 864,
+   "leak_recall": 0.5266,
+   "recall_by_type": {
+    "AADHAAR": 1.0,
+    "ADDR": 0.0,
+    "CARD": 1.0,
+    "MOBILE": 1.0,
+    "OTP": 1.0,
+    "PAN": 1.0,
+    "PER": 0.0,
+    "UPI": 1.0
+   },
+   "clean_real_lines_changed": "119/14890"
+  }
+ },
+ "e13b_item3_unseen_phrasings": {
+  "OTP": {
+   "recall": 0.8467,
+   "false_alarm_rate": 0.0,
+   "positives": 600,
+   "negatives": 600
+  },
+  "MOBILE": {
+   "recall": 1.0,
+   "false_alarm_rate": 0.1733,
+   "positives": 600,
+   "negatives": 600
+  }
+ },
+ "e13b_old_models_same_phrasings": {
+  "OTP": {
+   "recall": 0.9433,
+   "false_alarm_rate": 0.0,
+   "positives": 600,
+   "negatives": 600
+  },
+  "MOBILE": {
+   "recall": 0.6717,
+   "false_alarm_rate": 0.0,
+   "positives": 600,
+   "negatives": 600
+  }
+ }
+}

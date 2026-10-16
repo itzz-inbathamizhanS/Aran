@@ -92,6 +92,22 @@ Same 16,000 real lines as E9. Full tables in [Normaliser, registries and typo re
 
 The mobile and OTP weak spots are closed for a bank that registers its own customers and logs a trace ID. Names (74%) and addresses (90%) are unchanged.
 
+### Mobile and OTP fixes, leakage ledger, AI gateway, red team and speed (E13 to E16)
+
+Roadmap items 3, 6, 9, the M4 leakage ledger, and a first step on items 7 and 12. Full tables, and the two results that went the wrong way, in [Ledger, AI gateway and red team](docs/research/ledger-gateway-redteam.md).
+
+| Test | Before | After |
+| --- | --- | --- |
+| Sensitive values removed, no registries (E9, 8 unseen real systems) | 83.5% | 91.0% |
+| Mobiles with no cue word / OTPs next to transaction words, no registries | 69.8% / 79.4% | 100% / 100% |
+| Same, on phrasings written after the fix (E13b) | 67.2% / 94.3% | 100% / 84.7% (17% of "cheque no" numbers taken as mobiles) |
+| Clean real lines wrongly changed (14,890) | 122 | 150, or 130 with the NER gate |
+| Identifiers a vendor can narrow to under 20 bits by joining its own systems (E13, 20,000 customers) | 14,175 | 0 (ledger shrinks 9.7% of masks) |
+| Raw values reaching an LLM provider through the AI gateway (E14, 2,000 prompts) | 100% | 7.8%, all names or addresses; every number type 0% |
+| Prompt-injection, planted-placeholder and conversation-hijack attacks that leaked a value | | 0 of 5 attack types |
+| Hiding tricks fully caught, of 26 (E15 red team) | 14 | 22; two detector bugs found and fixed (a number before a full stop; mixed-script numbers crashed the detector) |
+| Lines per second on the E9 run, same output (E16) | 274 | 654 |
+
 ## Live console
 
 `app/` is a working website that runs Aran's real code: send a bank request and watch it get protected, see why each value was caught, trace a leaked dump to the sink that leaked it, erase a customer's purpose key and verify the signed Merkle receipt, teach the immune layer normal traffic (real Loghub logs replayed) and run attack drills, and run the test suite on the server. No value on it is hard-coded; only the customers' identifiers are generated, because real ones must never be used.
@@ -119,7 +135,7 @@ cd app/web && npm install && npm run dev            # frontend with live reload 
 ```
 docs/
   research/        Research document, AI and immune layers report, roadmap
-  learning/        Eleven beginner learning docs (Markdown, open in Obsidian or GitHub)
+  learning/        Twelve beginner learning docs (Markdown, open in Obsidian or GitHub)
 artifacts/
   learning/        PDF copies of the learning docs, for printing or offline reading
   website/         Website design-system prompt
@@ -139,7 +155,8 @@ research/
   synth.py         Generated test identifiers and bank log lines (checksum-valid, belong to no one)
   ai/              NER, OTP/UPI context classifier, calibrated detector (Bharadhwaj, Arun)
   immune/          Artificial immune system and data-flow simulation (Inbathamizhan, Aasif)
-  firewall/        The wired firewall, normaliser, customer and OTP registries (Inbathamizhan, Aasif)
+  firewall/        The wired firewall, normaliser, customer and OTP registries, leakage ledger (Inbathamizhan, Aasif)
+  gateway/         AI gateway for LLM prompts: placeholders, role-based detokenising, hash-chained audit log
   experiment_ai.py Experiments E5 to E9
   results_ai.json  Raw results
   test_ai.py       Tests for the AI, immune and firewall layers
@@ -147,6 +164,9 @@ research/
   experiment_registry.py  Experiments E10 to E12 (normaliser, registries, typo repair)
   results_registry.json   Raw results
   test_registry.py        Tests for the normaliser and registries
+  experiment_next.py      Experiments E13 to E16 (ledger, AI gateway, red team, speed) and E13b
+  results_next.json       Raw results
+  test_next.py            Tests for the ledger, AI gateway, red-team normaliser, NER gate and item 3 features
 ```
 
 ## Run it
@@ -169,6 +189,11 @@ python experiment_ai.py                             # about 20 minutes
 # Normaliser and registries
 python -m pytest test_registry.py
 python experiment_registry.py                       # about 15 minutes after experiment_ai.py
+
+# Ledger, AI gateway, red team and speed
+pip install fastapi httpx
+python -m pytest test_next.py
+python experiment_next.py                           # about 15 minutes after experiment_ai.py
 ```
 
 Step-by-step Windows setup, with fixes for common errors, is in [Learn 1](docs/learning/01-python-and-tools.md).
@@ -178,6 +203,7 @@ Step-by-step Windows setup, with fixes for common errors, is in [Learn 1](docs/l
 - [Research document](docs/research/aran-research.md): problem analysis, baseline, literature survey, research gaps, novel design with theorems, critical review, results, plan and sources.
 - [AI and immune layers](docs/research/ai-and-immune-layers.md): NER, OTP/UPI classifier, calibrated detector, artificial immune system and firewall wiring, with results on real data and the weak spots.
 - [Normaliser, registries and typo repair](docs/research/normaliser-and-registries.md): roadmap items 2 and 5, built and measured (E10 to E12). [PDF](artifacts/research/Aran%20-%20Normaliser%20Registries%20and%20Typo%20Repair.pdf)
+- [Ledger, AI gateway and red team](docs/research/ledger-gateway-redteam.md): roadmap items 3, 6 and 9, the M4 leakage ledger and a first speed-up, built and measured (E13 to E16). [PDF](artifacts/research/Aran%20-%20Ledger%20AI%20Gateway%20and%20Red%20Team.pdf)
 - [Roadmap: what to research and build next](docs/research/aran-roadmap.md): what is designed but not yet built, and a prioritised list of 13 additions with effort, owners and the learning docs to read first.
 
 ### Learning path for the team
@@ -197,11 +223,13 @@ The team is new to this technology, so read these in order before starting any b
 | 9 | [Transformers and Zero-Shot NER](docs/learning/09-transformers-and-zero-shot-ner.md) | Bharadhwaj, Arun (roadmap items 7 and 8) | ~8 h | Explain embeddings, subword tokenisation and attention, fine-tune for NER, use GLiNER and IndicNER, speed up with a cascade and distillation | [PDF](artifacts/learning/Aran%20Learn%209%20-%20Transformers%20and%20Zero-Shot%20NER.pdf) |
 | 10 | [OCR Basics](docs/learning/10-ocr-basics.md) | Bharadhwaj, Arun (roadmap item 10) | ~5 h | Read ID card images with Tesseract, use Verhoeff to catch misreads, measure OCR accuracy, mask the first 8 Aadhaar digits on the image | [PDF](artifacts/learning/Aran%20Learn%2010%20-%20OCR%20Basics.pdf) |
 | 11 | [Frontend Basics](docs/learning/11-frontend-basics.md) | Everyone (the live console) | ~5 h | Explain HTML, CSS and JavaScript, build React components with state and effects, call the Aran API with fetch, run the console locally and add a panel to it | [PDF](artifacts/learning/Aran%20Learn%2011%20-%20Frontend%20Basics.pdf) |
+| 12 | [Leakage Ledger, AI Gateway and Red-Teaming](docs/learning/12-ledger-ai-gateway-and-red-teaming.md) | Everyone (roadmap items 3, 6, 9 and M4) | ~5 h | Add model features for hard cases, count what joined systems learn in bits, hide identifiers from a chatbot with role-based placeholders and a hash-chained audit log, red-team your own detector with a fair judge, speed a model up with caching and a cascade | [PDF](artifacts/learning/Aran%20Learn%2012%20-%20Leakage%20Ledger%20AI%20Gateway%20and%20Red-Teaming.pdf) |
 
 ## Artifacts
 
 - [Learning docs as PDFs](artifacts/learning/): print-ready copies of the learning docs above.
 - [Normaliser, registries and typo repair (PDF)](artifacts/research/Aran%20-%20Normaliser%20Registries%20and%20Typo%20Repair.pdf): results report for roadmap items 2 and 5.
+- [Ledger, AI gateway and red team (PDF)](artifacts/research/Aran%20-%20Ledger%20AI%20Gateway%20and%20Red%20Team.pdf): results report for roadmap items 3, 6, 9 and M4, with Learn 12, also kept by thread in [artifacts/Ledger AI gateway and red team](artifacts/Ledger%20AI%20gateway%20and%20red%20team/).
 - [Website design-system prompt for the website design tool](artifacts/website/Aran-Website-Design-System-Prompt.md): brand, colours, typography, components and page content for the Aran website.
 - [Frontend guide with Claude Design](artifacts/Frontend%20with%20Claude%20Design/Aran%20-%20Frontend%20Guide%20with%20Claude%20Design.md): step-by-step guide, design-system and console prompts for restyling the live console, and the live API it uses.
 - [Artifacts index](artifacts/README.md): every artifact by thread, with live links. Older Markdown and PDF copies of the first docs are in [artifacts/Data-flow firewall research](artifacts/Data-flow%20firewall%20research/).

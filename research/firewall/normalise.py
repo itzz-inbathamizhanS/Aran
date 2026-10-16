@@ -190,12 +190,97 @@ def b64_encode(txt, alphabet, padded):
     return out if padded else out.rstrip("=")
 
 
+# ---------------------------------------------------------------- red-team additions (E15)
+# Spelled-out digits ("nine eight seven ..."), letters that look like digits inside a
+# long number ("98765 4321O", "2345 6789 Ol23"), and escapes applied twice ("%2532").
+# Off by default so E10 measures the normaliser exactly as it was built.
+NUM_WORDS = {
+    "zero": "0", "oh": "0", "nil": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6",
+    "seven": "7", "eight": "8", "nine": "9",
+    "shunya": "0", "ek": "1", "do": "2", "teen": "3", "char": "4", "chaar": "4", "paanch": "5", "panch": "5",
+    "chhe": "6", "che": "6", "saat": "7", "aath": "8", "nau": "9",
+    "शून्य": "0", "एक": "1", "दो": "2", "तीन": "3", "चार": "4", "पांच": "5", "पाँच": "5", "छह": "6", "छः": "6",
+    "सात": "7", "आठ": "8", "नौ": "9",
+    "பூஜ்ஜியம்": "0", "சுழியம்": "0", "ஒன்று": "1", "இரண்டு": "2", "மூன்று": "3", "நான்கு": "4", "ஐந்து": "5",
+    "ஆறு": "6", "ஏழு": "7", "எட்டு": "8", "ஒன்பது": "9",
+}
+REPEAT = {"double": 2, "triple": 3}
+WORD_TOKEN = re.compile(r"[^\s,;:/\-_.]+")
+LOOKALIKE = str.maketrans({"O": "0", "o": "0", "I": "1", "l": "1", "|": "1", "S": "5", "B": "8"})
+LOOK_RUN = re.compile(r"(?<![A-Za-z])[0-9OoIl|SB](?:[ \-]?[0-9OoIl|SB]){9,18}(?![A-Za-z])")
+
+
+def words_to_digits(text, st, en, min_digits=4):
+    """Runs of spelled-out digits become digits; each digit maps back to its word."""
+    toks = [(m.start(), m.end(), m.group().lower()) for m in WORD_TOKEN.finditer(text)]
+    out_runs, i = [], 0
+    while i < len(toks):
+        run, j, pend = [], i, 1
+        while j < len(toks):
+            a, b, w = toks[j]
+            if run and text[run[-1][1]:a].strip(" ,-") != "":
+                break
+            if w in REPEAT and j + 1 < len(toks) and toks[j + 1][2] in NUM_WORDS:
+                pend = REPEAT[w]; run.append((a, b, "")); j += 1
+                continue
+            if w not in NUM_WORDS:
+                break
+            run.append((a, b, NUM_WORDS[w] * pend)); pend = 1; j += 1
+        ndig = sum(len(d) for _, _, d in run)
+        if ndig >= min_digits:
+            out_runs.append(run); i = j
+        else:
+            i += 1
+    if not out_runs:
+        return text, st, en
+    chars, nst, nen, last = [], [], [], 0
+    for run in out_runs:
+        a0, b0 = run[0][0], run[-1][1]
+        chars += text[last:a0]; nst += st[last:a0]; nen += en[last:a0]
+        for a, b, d in run:
+            for c in d:
+                chars.append(c); nst.append(st[a]); nen.append(en[b - 1])
+        last = b0
+    chars += text[last:]; nst += st[last:]; nen += en[last:]
+    return "".join(chars), nst, nen
+
+
+def fix_lookalikes(text, st, en):
+    """Inside a 10 to 19 character number-shaped run that is at least 70% real digits,
+    read O, o as 0, I, l, | as 1, S as 5 and B as 8. One character for one, so the map
+    is unchanged."""
+    out = list(text)
+    for m in LOOK_RUN.finditer(text):
+        g = m.group()
+        core = g.replace(" ", "").replace("-", "")
+        if sum(c.isdigit() for c in core) >= 0.7 * len(core) and not core.isdigit():
+            for k in range(m.start(), m.end()):
+                out[k] = text[k].translate(LOOKALIKE)
+    return "".join(out), st, en
+
+
+def recanonical(text, st, en):
+    """A second escape pass for doubly-escaped text, composed with the first map."""
+    t2, s2, e2 = canonical_view(text)
+    if t2 == text:
+        return text, st, en
+    return t2, [st[k] for k in s2], [en[k - 1] for k in e2]
+
+
 class Normaliser:
-    def __init__(self, decode_base64=True, join_split_fields=True):
+    def __init__(self, decode_base64=True, join_split_fields=True, number_words=False, lookalikes=False,
+                 double_escapes=False):
         self.decode_base64, self.join_split_fields = decode_base64, join_split_fields
+        self.number_words, self.lookalikes, self.double_escapes = number_words, lookalikes, double_escapes
 
     def _views_of(self, base, layer=None):
         t, st, en = canonical_view(base)
+        if self.double_escapes:
+            t, st, en = recanonical(t, st, en)
+        if self.number_words:
+            t, st, en = words_to_digits(t, st, en)
+        if self.lookalikes:
+            t, st, en = fix_lookalikes(t, st, en)
         t, st, en = collapse_separators(t, st, en)
         views = [View(t, st, en, base, layer=layer)]
         if self.join_split_fields:

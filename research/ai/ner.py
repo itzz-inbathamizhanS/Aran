@@ -13,14 +13,37 @@ import csv
 import os
 import random
 import re
+from functools import lru_cache
 
 import sklearn_crfsuite
 
 TOKEN = re.compile(r"[\wऀ-ॿ]+(?:[.'@\-/][\wऀ-ॿ]+)*|[^\s\wऀ-ॿ]")
 DEVANAGARI = re.compile(r"[ऀ-ॿ]")
+PIN6 = re.compile(r"(?<!\d)[1-9]\d{5}(?!\d)")
 KEY_WORDS = {"name", "customer", "cust", "holder", "payer", "payee", "applicant", "user", "dear", "for", "by",
              "from", "to", "naam", "ग्राहक", "नाम", "जी", "ji", "bhai", "madam", "sir", "shri", "smt", "mr", "mrs", "ms",
              "address", "addr", "residing", "at", "पता", "ghar", "dispatch", "pickup", "delivery"}
+
+
+CAL = (r"(?:Mon|Monday|Tue|Tues|Tuesday|Wed|Wednesday|Thu|Thur|Thurs|Thursday|Fri|Friday|Sat|Saturday|Sun|Sunday|"
+       r"Jan|January|Feb|February|Mar|March|Apr|April|May|Jun|June|Jul|July|Aug|August|Sep|Sept|September|Oct|October|"
+       r"Nov|November|Dec|December)")
+TITLE_PAIR = re.compile(r"\b(?!" + CAL + r"\b)[A-Z][a-z]{2,}\s+(?!" + CAL + r"\b)[A-Z][a-z]{2,}\b|\b[A-Z]{3,}\s+[A-Z]{3,}\b")
+# cue words that are common in machine logs ("for", "from", "user") count only when a
+# capitalised word follows them
+WEAK_CUES = {"for", "from", "to", "by", "user", "at"}
+GATE_WORDS = re.compile(r"(?i:\b(" + "|".join(sorted((w for w in KEY_WORDS if w.isascii() and w not in WEAK_CUES and len(w) > 1),
+                                                       key=len, reverse=True))
+                        + r")\b|\b(?:road|street|nagar|salai|marg|lane|colony|flat|house)\b)"
+                        r"|\b(?i:for|from|to|by|user|at)\s+(?!" + CAL + r"\b)[A-Z][a-z]")
+
+
+def may_have_entities(text):
+    """Cheap first stage of the NER cascade (roadmap items 7 and 12): run the CRF only on
+    lines that could hold a name or an address, meaning Devanagari text, a cue word
+    (customer, name, dear, address, ...), an address word, a weak cue such as "from"
+    followed by a capitalised word, or two capitalised words in a row that are not dates."""
+    return bool(DEVANAGARI.search(text) or GATE_WORDS.search(text) or TITLE_PAIR.search(text))
 
 
 def tokenize(text):
@@ -36,7 +59,20 @@ def _shape(w):
     return re.sub(r"(.)\1+", r"\1\1", s)
 
 
+@lru_cache(maxsize=500_000)
+def _base_feats(w):
+    """Features of one word, computed once per distinct word (roadmap item 12). Log lines
+    repeat the same words endlessly, and these regexes were 70% of the detector's time."""
+    return tuple(_word_feats_uncached(w, "").items())
+
+
 def _word_feats(w, p):
+    if p == "":
+        return dict(_base_feats(w))
+    return {p + k: v for k, v in _base_feats(w)}
+
+
+def _word_feats_uncached(w, p):
     lw = w.lower()
     return {
         p + "lower": lw,
@@ -60,12 +96,11 @@ def sent_features(words):
     for i, w in enumerate(words):
         f = {"bias": 1.0, "len": min(len(w), 12)}
         f.update(_word_feats(w, ""))
-        f["pin6"] = bool(re.fullmatch(r"[1-9]\d{5}", w))
+        f["pin6"] = bool(PIN6.fullmatch(w))
         for off in (-2, -1, 1, 2):
             j = i + off
             if 0 <= j < n:
-                wf = _word_feats(words[j], f"{off}:")
-                f.update({k: v for k, v in wf.items() if not k.endswith(("pre2", "suf2"))})
+                f.update({f"{off}:{k}": v for k, v in _base_feats(words[j]) if k not in ("pre2", "suf2")})
             else:
                 f[f"{off}:pad"] = True
         if i > 0:

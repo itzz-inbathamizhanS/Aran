@@ -27,9 +27,14 @@ from firewall.registry import CustomerRegistry, canonical, typo_neighbours  # no
 
 from .context_clf import UPI_REGISTRY, candidates  # noqa: E402
 
-AADHAAR = re.compile(r"(?<![\d.])([2-9]\d{3})[ -]?(\d{4})[ -]?(\d{4})(?![\d.])")
-CARD = re.compile(r"(?<![\d.])(\d(?:[ -]?\d){12,18})(?![\d.])")
-MOBILE = re.compile(r"(?<![\w.])(?:\+91[ -]?)?[6-9]\d{9}(?![\d.])")
+# A full stop next to a number only rules it out when it is a decimal point (digit on the
+# other side): "mobile 9876543210." ends a sentence (red-team finding, E15). ASCII digits
+# only: Python's \d also matches Devanagari and other digits, and a number mixing scripts
+# ("9८7६...") reached the checksum code and crashed it (E15). The normaliser maps every
+# script to ASCII first, so nothing is lost.
+AADHAAR = re.compile(r"(?<!\d)(?<!\d\.)([2-9]\d{3})[ -]?(\d{4})[ -]?(\d{4})(?!\d|\.\d)", re.ASCII)
+CARD = re.compile(r"(?<!\d)(?<!\d\.)(\d(?:[ -]?\d){12,18})(?!\d|\.\d)", re.ASCII)
+MOBILE = re.compile(r"(?<!\w)(?<!\d\.)(?:\+91[ -]?)?[6-9]\d{9}(?!\d|\.\d)", re.ASCII)
 PAN = re.compile(r"(?<![A-Z0-9])[A-Z]{3}[PCHFATBLJG][A-Z]\d{4}[A-Z](?![A-Z0-9])")
 IIN = re.compile(r"^(4|5[1-5]|222[1-9]|22[3-9]|2[3-6]|27[01]|2720|60|65|81|82|508|3[47]|35)")
 KEYWORDS = {
@@ -38,6 +43,12 @@ KEYWORDS = {
     "MOBILE": r"mobile|phone|call|sms|number|ivr|whatsapp|मोबाइल|फ़ोन|फोन|naya number",
     "PAN": r"\bpan\b|income tax|पैन",
 }
+# Indian numbering cues for a bare 10-digit number (roadmap item 3): a JSON key or
+# key=value field named like a phone, a preposition or verb that takes a phone number,
+# and words that announce a reference number instead.
+MOBILE_KEY = re.compile(r"(mob|mobile|phone|ph|msisdn|cell|contact|tel|whatsapp|alt_no|rmn)\w*[\"']?\s*[:=]\s*[\"']?(\+91[ -]?)?$", re.I)
+SEND_TO = re.compile(r"(\bto|\bfrom|\bon|\bat|call|dial|sms|reach|registered|linked|\bno\.?|number|को|पर|pe)\s*[:=]?\s*$", re.I)
+ID_WORDS = re.compile(r"txn|rrn|utr|ref|order|ticket|invoice|acct|a/c|account|cust_id|id\b|batch|job|build|seq|pid|खाता|आदेश", re.I)
 CALENDAR = re.compile(r"\b(mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun|monday|tuesday|wednesday|thursday|friday|"
                       r"saturday|sunday|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec|january|february|march|"
                       r"april|june|july|august|september|october|november|december)\b", re.I)
@@ -81,8 +92,9 @@ def bayes(p, lr, floor=1e-3):
 
 class Detector:
     def __init__(self, ner=None, otp_clf=None, upi_clf=None, registry=None, otp_registry=None, normaliser=None,
-                 miss_lr=None, token_check=None):
+                 miss_lr=None, token_check=None, ner_gate=None):
         self.ner, self.otp_clf, self.upi_clf = ner, otp_clf, upi_clf
+        self.ner_gate = ner_gate  # e.g. ai.ner.may_have_entities: skip the CRF on lines that cannot hold a name
         self.stack, self.iso = {}, {}
         # Evidence the bank owns (see firewall/registry.py). A hit multiplies the odds by
         # about 1/eps; a miss is neutral unless miss_lr says otherwise for that type (a
@@ -106,8 +118,13 @@ class Detector:
                                evidence=dict(checksum=float(luhn_valid(d)), iin=float(bool(IIN.match(d))),
                                              len16=float(len(d) == 16), kw=_kw(text, m.start(), m.end(), "CARD"))))
         for m in MOBILE.finditer(text):
+            left = text[max(0, m.start() - 32):m.start()]
+            lw = " ".join(re.findall(r"[\w/]+", left.lower())[-3:])
             out.append(Finding("MOBILE", m.start(), m.end(),
-                               evidence=dict(plus91=float(m.group().startswith("+91")), kw=_kw(text, m.start(), m.end(), "MOBILE"))))
+                               evidence=dict(plus91=float(m.group().startswith("+91")), kw=_kw(text, m.start(), m.end(), "MOBILE"),
+                                             keyfield=float(bool(MOBILE_KEY.search(left))),
+                                             sendto=float(bool(SEND_TO.search(left))),
+                                             idword=float(bool(ID_WORDS.search(lw))))))
         for m in PAN.finditer(text):
             out.append(Finding("PAN", m.start(), m.end(), evidence=dict(kw=_kw(text, m.start(), m.end(), "PAN"))))
         for kind, clf, typ in (("otp", self.otp_clf, "OTP"), ("upi", self.upi_clf, "UPI")):
@@ -121,7 +138,8 @@ class Detector:
                     out.append(Finding(typ, s, e, evidence=ev))
             elif spans and typ == "OTP" and self.otp_registry is not None and trace_id:
                 out += [Finding("OTP", s, e, evidence=dict(ctx=0.0)) for s, e in spans]
-        if self.ner is not None:
+        gate = getattr(self, "ner_gate", None)  # detectors pickled before the gate existed
+        if self.ner is not None and (gate is None or gate(text)):
             for s, e, typ, p in self.ner.entities(text):
                 if typ in ("PER", "ADDR"):
                     span, left = text[s:e], text[max(0, s - 24):s]

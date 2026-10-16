@@ -23,6 +23,7 @@ Every project thread for Aran, oldest first.
 | 13 | [[13 Learning docs 8 to 10]] | done |
 | 14 | [[14 Normaliser and registries]] | done (roadmap items 2, 5) |
 | 15 | [[15 Sync GitHub Obsidian Notion]] | done |
+| 16 | [[16 Ledger AI gateway and red team]] | done (roadmap items 3, 6, 9, M4; first step on 7, 12) |
 
 ## Decisions
 - All work happens locally in `D:\Aran`; nothing goes to GitHub until **save** or **push**.
@@ -36,7 +37,10 @@ Every project thread for Aran, oldest first.
 - [ ] Set the GitHub repo description.
 - [x] Commit the untracked vault files on the next save.
 - [x] Research prototype is on `main`.
-- [ ] Roadmap item 4: crypto-shredding with erasure receipts (Inbathamizhan, Aasif). **Next.**
-- [ ] Roadmap item 1: live gateway and dashboard (everyone). **Next.**
-- [ ] Roadmap item 3: mobile and OTP ML fixes (Bharadhwaj, Arun).
+- [x] Roadmap item 4: crypto-shredding with erasure receipts (live console thread).
+- [x] Roadmap item 1: live gateway and dashboard (live console thread).
+- [x] Roadmap items 3, 6, 9 and the M4 ledger ([[16 Ledger AI gateway and red team]]).
+- [ ] Fix the two item 3 regressions found on unseen phrasings (OTP value before "PIN"; "cheque no" taken as a mobile).
+- [ ] Run the AI gateway against a real model; transformer NER for names (item 7); vectorised speed-up (item 12).
+- [ ] Items 8 (Tamil NER), 10 (OCR on KYC images), 11 (immune layer on templates).
 - [ ] Get a legal view on crypto-shredding as DPDP erasure (roadmap item 13).

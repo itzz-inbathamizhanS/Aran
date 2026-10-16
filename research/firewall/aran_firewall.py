@@ -26,6 +26,7 @@ from collections import defaultdict
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from aran_core import FF1, _offset, cc_token_aadhaar, luhn_check_digit, verhoeff_check_digit  # noqa: E402
 
+from .ledger import LENGTH, positions, render  # noqa: E402
 from .normalise import b64_encode  # noqa: E402
 
 
@@ -42,8 +43,13 @@ def card_offset(key, sink):
 
 
 class AranFirewall:
-    def __init__(self, detector, key, ais=None, featurizer=None, thresholds=None):
+    def __init__(self, detector, key, ais=None, featurizer=None, thresholds=None, ledger=None, mask_policy=None):
+        """ledger, mask_policy: optional leakage ledger (ledger.py) and, per sink, the
+        partial mask that sink asks for, e.g. {"crm-ui": {"CARD": "last4"}}. The ledger
+        grants the mask only if no trust domain of that sink drops below its bit
+        threshold, and otherwise a smaller mask or a token."""
         self.det, self.key, self.ff1 = detector, key, FF1(key)
+        self.ledger, self.mask_policy = ledger, mask_policy or {}
         self.ais, self.feat = ais, featurizer
         self.thresholds = thresholds or {}
         self.flows = defaultdict(lambda: dict(n=0, raw=0, classes=set(), detok=0))
@@ -82,6 +88,12 @@ class AranFirewall:
 
     def _replace(self, f, value, sink):
         digits = re.sub(r"[^0-9]", "", value)
+        want = self.mask_policy.get(sink, {}).get(f.type)
+        shown = digits[-10:] if f.type == "MOBILE" else digits
+        if want and self.ledger is not None and len(shown) == LENGTH.get(f.type):
+            granted, _ = self.ledger.decide(f.type, shown, sink, want)
+            if granted != "token":
+                return render(shown, positions(granted, len(shown)))
         if f.type == "AADHAAR" and len(digits) == 12:
             return cc_token_aadhaar(self.ff1, self.key, digits, sink)
         if f.type == "CARD" and len(digits) == 16:

@@ -329,9 +329,47 @@ def grammar_line(r, split, part=None):
     return dict(lang=lang, text=text, spans=[(a, a + len(val), "OTP")] if pos else [])
 
 
-def make_train_corpus(n, seed=0, grammar_frac=0.3, part=None):
-    rows = make_corpus("train", int(n * (1 - grammar_frac)), seed, part=part)
+# Roadmap item 3: hard cases for the two measured weak spots, TRAIN phrasings only.
+# OTPs next to transaction words ("OTP for ref 12345 is 482913") as positives, and the
+# same shapes with no OTP word as negatives; bare mobiles after a verb or in a phone-named
+# field as positives, and 10-digit reference numbers as negatives.
+G_REF_EN = ["txn", "ref", "order", "invoice", "transfer", "payment", "booking", "request"]
+G_OTP_TX = ["{o} for {w} {id} is {v}", "{w} {id}: {o} {v}", "{o} {v} to confirm {w} {id}", "use {o} {v} for {w} {id}",
+            "{w} {id} needs {o} {v}", "{o} to approve {w} {id} = {v}"]
+G_NEG_TX = ["{w} {id} is {v}", "{w} {id}: amount {v}", "{w} {id} retried {v} times", "{w} {id} value {v}",
+            "{w} {id} queued at {v}", "{w} {id} batch {v}"]
+G_MOB_POS = ["sms sent to {m}", "alert delivered to {m}", "callback from {m}", "linked {m} to account",
+             "forwarded to {m} ok", '"mob":"{m}"', "ph={m}", '{{"contact": "{m}"}}', "msisdn={m} status=ACTIVE",
+             "registered {m} for alerts", "{m} se call aaya", "{m} पर संदेश भेजा"]
+G_MOB_NEG = ["ref no {r} posted", "acct {r} credited", "order id {r} shipped", "batch {r} done", "rrn={r} ok",
+             '"txn_id":"{r}"', "job {r} finished", "invoice {r} raised"]
+
+
+def hard_line(r, split, part=None):
+    if r.random() < 0.5:
+        pos = r.random() < 0.5
+        tpl = r.choice(_half(G_OTP_TX if pos else G_NEG_TX, part))
+        o = r.choice(_half(G_OTP_EN, part))
+        w = r.choice(_half(G_REF_EN, part))
+        ident = r.choice(["TXN", "REF", "", "#"]) + digits(r, r.choice([5, 8, 10]))
+        v = gen_otp(r) if pos else str(r.randint(1000, 99999999))
+        a = tpl.format(o=o, w=w, id=ident, v="\x00").index("\x00")
+        text = tpl.format(o=o, w=w, id=ident, v=v)
+        return dict(lang="en", text=text, spans=[(a, a + len(v), "OTP")] if pos else [])
+    pos = r.random() < 0.5
+    tpl = r.choice(_half(G_MOB_POS if pos else G_MOB_NEG, part))
+    m = str(r.randint(6, 9)) + digits(r, 9)
+    text = tpl.format(m=m, r=m)
+    a = text.index(m)
+    lang = "hi" if "पर" in tpl else ("hl" if "aaya" in tpl else "en")
+    return dict(lang=lang, text=text, spans=[(a, a + 10, "MOBILE")] if pos else [])
+
+
+def make_train_corpus(n, seed=0, grammar_frac=0.3, part=None, hard_frac=0.08):
+    rows = make_corpus("train", int(n * (1 - grammar_frac - hard_frac)), seed, part=part)
     r = random.Random(seed + 1000)
-    rows += [grammar_line(r, "train", part) for _ in range(n - len(rows))]
+    n_hard = int(n * hard_frac)
+    rows += [grammar_line(r, "train", part) for _ in range(n - len(rows) - n_hard)]
+    rows += [hard_line(r, "train", part) for _ in range(n_hard)]
     random.Random(seed).shuffle(rows)
     return rows

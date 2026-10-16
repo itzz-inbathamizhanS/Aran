@@ -15,5 +15,6 @@ Every new git branch gets a row here when it is created.
 | claude/project-thread-yhfc7y | 2026-10-15 | main | AI and immune layers ([[10 Build AI and immune layers]]) | merged (tip `5f20681`) |
 | claude/project-thread-121le6 | 2026-10-15 | main | Roadmap and Learn 8 to 10 ([[12 Next features for Aran]]) | merged (tip `69872f1`) |
 | claude/project-thread-m98ust | 2026-10-15 | main | Normaliser and registries ([[14 Normaliser and registries]]) | merged (tip `3944f75`, same as main) |
+| claude/project-thread-us9f9i | 2026-10-16 | main | Ledger, AI gateway, red team ([[16 Ledger AI gateway and red team]]) | merged into main |
 
 All feature branches are fully merged; they can be deleted from GitHub whenever convenient.

@@ -15,7 +15,7 @@ import numpy as np
 from sklearn.feature_extraction import FeatureHasher
 from sklearn.linear_model import LogisticRegression
 
-NUM_CAND = re.compile(r"(?<![\w.@/+\-])(\d{4,8})(?![\w@]|\.\d)")
+NUM_CAND = re.compile(r"(?<![\w.@/+\-])(\d{4,8})(?![\w@]|\.\d)", re.ASCII)
 VPA_CAND = re.compile(r"(?<![\w.\-])([\w.\-]{2,64}@[A-Za-z][A-Za-z0-9.\-]{1,63})(?!\w)")
 WORD = re.compile(r"[\wऀ-ॿ]+")
 # Prior knowledge written by the team, not learned: words that announce a secret code,
@@ -61,6 +61,21 @@ def featurize(text, s, e, kind):
     f += [f"otpword_near={bool(OTP_WORDS.search(near))}", f"otpword_left={bool(OTP_WORDS.search(left))}",
           f"otpword_right={bool(OTP_WORDS.search(right[:24]))}", f"numword_near={bool(NUMBER_WORDS.search(near))}",
           f"numword_right={bool(NUMBER_WORDS.search(' '.join(rw[:2])))}"]
+    # Which cue is nearest on the left, and both kinds of cue together: "OTP for txn
+    # TXN123 is 482913" has a number word next to the value but an OTP word earlier in
+    # the same clause, and a linear model needs the pair as its own feature to learn that.
+    clause = re.split(r"[.;|!?\n]", left)[-1]
+    cw = WORD.findall(clause.lower())
+    nearest = "none"
+    for w in reversed(cw[-8:]):
+        if OTP_WORDS.search(w):
+            nearest = "otp"; break
+        if NUMBER_WORDS.search(w):
+            nearest = "num"; break
+    otp_clause = bool(OTP_WORDS.search(clause))
+    f += [f"nearest_cue={nearest}", f"otp_in_clause={otp_clause}",
+          f"cue_pair={otp_clause}|{bool(NUMBER_WORDS.search(near))}",
+          f"connector={bool(re.search(r'(\bis|:|=|\bhai|है)\s*$', left))}"]
     f.append("lpunct=" + (left.rstrip()[-1:] if left.strip() else "^"))
     f.append("rpunct=" + (right.lstrip()[:1] if right.strip() else "$"))
     if kind == "otp":
