@@ -18,6 +18,7 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Data-flow firewall research | Aran Learn 10 - OCR Basics (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/10-ocr-basics.md |
 | Normaliser and registries | Aran - Normaliser Registries and Typo Repair (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/research/normaliser-and-registries.md |
 | Roadmap | Aran Roadmap - What to Build Next (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/research/aran-roadmap.md |
+| Standout frontend ideas | Aran - Standout Frontend Ideas (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Standout%20frontend%20ideas/Aran%20-%20Standout%20Frontend%20Ideas.md |
 | Website design prompt | Aran-Website-Design-System-Prompt (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/website/Aran-Website-Design-System-Prompt.md |
 | Frontend with Claude Design | Aran - Frontend Guide with Claude Design (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Frontend%20with%20Claude%20Design/Aran%20-%20Frontend%20Guide%20with%20Claude%20Design.md |
 | Ledger AI gateway and red team | Aran - Ledger AI Gateway and Red Team (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/research/ledger-gateway-redteam.md |

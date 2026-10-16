@@ -231,6 +231,7 @@ Step-by-step Windows setup, with fixes for common errors, is in [Learn 1](docs/l
 - [Normaliser, registries and typo repair](docs/research/normaliser-and-registries.md): roadmap items 2 and 5, built and measured (E10 to E12). [PDF](artifacts/research/Aran%20-%20Normaliser%20Registries%20and%20Typo%20Repair.pdf)
 - [Ledger, AI gateway and red team](docs/research/ledger-gateway-redteam.md): roadmap items 3, 6 and 9, the M4 leakage ledger and a first speed-up, built and measured (E13 to E16). [PDF](artifacts/research/Aran%20-%20Ledger%20AI%20Gateway%20and%20Red%20Team.pdf)
 - [Post-quantum upgrade](docs/research/post-quantum.md): what a quantum computer breaks in Aran, retroactive un-erasure (E17), hybrid receipts and key sealing, cost (E18), CBOM and Mosca priority table (E19), plan. [PDF](artifacts/research/Aran%20-%20Post-Quantum%20Upgrade.pdf)
+- [Standout frontend ideas](artifacts/Standout%20frontend%20ideas/Aran%20-%20Standout%20Frontend%20Ideas.md): eight features that make the console stand out at a demo (judges attack it from their phones, a with/without Aran split screen, the leakage ledger page), top three first.
 - [Roadmap: what to research and build next](docs/research/aran-roadmap.md): what is designed but not yet built, and a prioritised list of 13 additions with effort, owners and the learning docs to read first.
 
 ### Learning path for the team
