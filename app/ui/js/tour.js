@@ -72,14 +72,26 @@ window.ARAN = window.ARAN || {};
   ];
 
   /* ======================================================== chapters */
+  /* figures quoted in the notes are read from the result files (GET /api/results), never typed in */
+  const RD = (k) => ((A.results && A.results.raw && A.results.raw[k]) || {}).data || {};
+  const fr = (v) => { const [a, b] = String(v).split('/').map(Number); return b ? a / b : null; };
+  const pc = (x, d) => (x == null || isNaN(x) ? '?' : (x * 100).toFixed(d || 0) + '%');
+  const nf = (x) => (x == null ? '?' : U.fmt(x));
+  const caught = (t) => { const e9 = RD('E5-E9 AI and immune').e9_firewall || {}; const v = (e9.leaks_left_by_type || {})[t]; return v ? 1 - fr(v) : null; };
+  const F = () => {
+    const c = RD('E1-E4 core'), a = RD('E5-E9 AI and immune'), g = RD('E10-E12 normaliser and registries');
+    const e1 = c.e1_total || {}, e7 = (a.e7_detector || {}).overall || {}, ner = (a.e5_ner || {}).corpora_plus_logs || {}, e8 = a.e8_immune || {}, e10 = ((g.e10_evasion || {}).conditions) || {}, e12 = g.e12_typo || {}, e9 = a.e9_firewall || {};
+    const f1 = (k) => (ner[k] && ner[k].PER ? ner[k].PER.f1.toFixed(2) : '?');
+    return { e1, ece: e7.ece_after, f1en: f1('conll_test'), f1hi: f1('hiner_test'), f1hg: f1('hinglish_test'), e8, e10before: (e10['today (no normaliser)'] || {}).hidden_values_removed, e10after: (e10['normaliser + registry'] || e10.normaliser || {}).hidden_values_removed, e12before: e12['without registry_rate'], e12after: e12['with registry_rate'], lps: e9.lines_per_second };
+  };
   const hoodTxt = {
-    3: 'Lines from Loghub (16 systems). On all 32,000 lines (E1): OTP pattern 67,481 false alarms vs 6 for Aran; cards 6,086 vs 81; Aadhaar 366 vs 4. Code: <code>research/experiment.py</code>.',
+    3: () => { const e = F().e1; return `Lines from Loghub (16 systems). On all ${nf(e.lines)} lines (E1): OTP pattern ${nf(e.otp_regex)} false alarms vs ${nf(e.otp_context)} for Aran; cards ${nf(e.card_regex)} vs ${nf(e.card_luhn_iin)}; Aadhaar ${nf(e.aadhaar_regex)} vs ${nf(e.aadhaar_verhoeff)}. Code: <code>research/experiment.py</code>.`; },
     5: 'Theorem 1 (perfect separability): every real identifier passes Verhoeff or Luhn; no Aran token does. The body is encrypted with NIST SP 800-38G FF1 (format-preserving AES, ten Feistel rounds, tweak = the receiving system’s name); the check digit is the correct one plus a keyed offset from 1 to 9. Customers enrolled in DPDP scope get random vault tokens instead. Tested on 20,000 tokens: 0 taken for real (E2). Code: <code>research/aran_core.py</code>, <code>app/server/engine.py</code>.',
-    6: 'Evidence is fused per type by a logistic stacker and calibrated with isotonic regression, so 90% is right about 9 times in 10 (calibration error 0.015, E7). Names: CRF model, F1 0.85 English, 0.76 Hindi, 0.69 Hinglish (E5). The bank’s own customers and recently sent OTPs are matched through HMAC entries in a cuckoo filter. Code: <code>research/ai/</code>, <code>research/firewall/registry.py</code>.',
-    7: 'The normaliser keeps a map from cleaned text back to original characters, so the token is written back in the same disguise. It also repairs one-digit typos against the customer registry. Measured: hidden identifiers removed 8.3% before, 100% after (E10); typo’d identifiers 0% before, 99.2% after (E12). Code: <code>research/firewall/normalise.py</code>.',
+    6: () => { const f = F(); return `Evidence is fused per type by a logistic stacker and calibrated with isotonic regression, so 90% is right about 9 times in 10 (calibration error ${f.ece == null ? '?' : f.ece}, E7). Names: CRF model, F1 ${f.f1en} English, ${f.f1hi} Hindi, ${f.f1hg} Hinglish (E5). The bank’s own customers and recently sent OTPs are matched through HMAC entries in a cuckoo filter. Code: <code>research/ai/</code>, <code>research/firewall/registry.py</code>.`; },
+    7: () => { const f = F(); return `The normaliser keeps a map from cleaned text back to original characters, so the token is written back in the same disguise. It also repairs one-digit typos against the customer registry. Measured: hidden identifiers removed ${pc(f.e10before, 1)} before, ${pc(f.e10after)} after (E10); typo’d identifiers ${pc(f.e12before)} before, ${pc(f.e12after, 1)} after (E12). Code: <code>research/firewall/normalise.py</code>.`; },
     8: 'Theorem 2: each system’s tokens come from a different pseudorandom permutation, so two systems sharing a token is negligible and the most likely source of a dump is the system whose tokens it holds. Measured (E3): 100% correct across 40 systems, even from a single token.',
     9: 'Each (customer, purpose) has its own AES-256-GCM key; vault tokens store only ciphertext. Erasure drops the key, appends KEY_DESTROYED to an RFC 6962 Merkle log, and signs the event, root and proof with Ed25519 and ML-DSA-65 together. Your browser re-runs the inclusion proof with WebCrypto. KYC is retention-locked for 5 years (PMLA). Whether key destruction counts as DPDP erasure still needs legal confirmation.',
-    10: 'Negative selection with variable-radius detectors (V-detector) over 7 features per (source, sink, 30-second window). Each feature is scaled so the range seen while learning sits between 0.1 and 0.7: the green band on the radar. Measured on six exfiltration scenarios (E8): 100% caught at 0.6% false alarms, vs 90% for static rules and 20% for Isolation Forest.',
+    10: () => { const e = F().e8, t = (k) => pc((e[k] || {}).tpr); return `Negative selection with variable-radius detectors (V-detector) over 7 features per (source, sink, 30-second window). Each feature is scaled so the range seen while learning sits between 0.1 and 0.7: the green band on the radar. Measured on six exfiltration scenarios (E8): ${t('ais')} caught at ${pc((e.ais || {}).fpr, 1)} false alarms, vs ${t('static_rules')} for static rules and ${t('isolation_forest')} for Isolation Forest.`; },
     11: 'Same value, same placeholder within a conversation, so the model can still reason. The reply is scanned again; placeholders resolve only for the caller’s own conversation and role, and every resolution is appended to a hash-chained audit log. Without <code>ARAN_LLM_URL</code> the provider is an echo stand-in.',
   };
 
@@ -111,7 +123,7 @@ window.ARAN = window.ARAN || {};
         const draw = async () => { const r = await A.falseAlarms(); const cell = (v, k, mode) => `<span class="${v ? 'hit' : ''}" style="--a:${Math.min(1, 0.45 + v * 0.2)};animation-delay:${k * 5}ms"></span>`;
           $('#fa', root).innerHTML = `<div class="card gc danger plus"><div class="between"><span class="label">Plain pattern search</span></div><div class="n" id="fa-n1">0</div><div class="muted small">false alarms in ${r.lines} real log lines</div><div class="cellgrid">${r.cells.map((c, k) => cell(c[0], k)).join('')}</div></div><div class="card gc calm plus"><div class="between"><span class="label">Aran</span></div><div class="n" id="fa-n2">0</div><div class="muted small">false alarms in the same lines</div><div class="cellgrid">${r.cells.map((c, k) => cell(c[1], k)).join('')}</div></div>`;
           U.countUp($('#fa-n1', root), r.naive_total, { ms: 1.6 }); U.countUp($('#fa-n2', root), r.aran_total, { ms: 1.6 });
-          $('#fa-ex', root).innerHTML = U.hood(`<div class="scroll"><table class="tbl dense"><thead><tr><th>Real log line</th><th>Plain pattern saw</th><th>Aran</th></tr></thead><tbody>${r.examples.map((e) => `<tr><td class="mono">${U.esc(e.line)}</td><td class="t-leak">${U.esc(e.naive.join(', '))}</td><td>${e.aran.length ? e.aran.join(', ') : 'nothing'}</td></tr>`).join('')}</tbody></table></div><p style="margin-top:12px">${hoodTxt[3]}</p>`); };
+          $('#fa-ex', root).innerHTML = U.hood(`<div class="scroll"><table class="tbl dense"><thead><tr><th>Real log line</th><th>Plain pattern saw</th><th>Aran</th></tr></thead><tbody>${r.examples.map((e) => `<tr><td class="mono">${U.esc(e.line)}</td><td class="t-leak">${U.esc(e.naive.join(', '))}</td><td>${e.aran.length ? e.aran.join(', ') : 'nothing'}</td></tr>`).join('')}</tbody></table></div><p style="margin-top:12px">${hoodTxt[3]()}</p>`); };
         const c = skeletonThen(root, '#fa-wrap', 0, () => guard($('#fa', root), draw)); live(root, '#fa-new', 'Scanning…', draw); return c; } },
 
     /* ---------------------------------------------------------------- 3 */
@@ -147,7 +159,7 @@ window.ARAN = window.ARAN || {};
     /* ---------------------------------------------------------------- 4 */
     { name: 'Building a token', title: 'Building a token', tag: 'Same length, same look, but the last digit is wrong on purpose, so no scanner can ever mistake it for a real number.',
       view: () => `<div class="chips" id="tk-sinks">${[['log-platform', 'Log platform'], ['crm-notes', 'CRM notes'], ['loan-vendor', 'Loan vendor'], ['marketing-cloud', 'Marketing']].map(([k, l], i) => U.chip('for ' + l, { btn: true, on: i === 0, attrs: `data-k="${k}"` })).join('')}</div><section class="scene" id="tk-scene" data-api="POST /api/tour/build-token"></section><div class="row"><button class="btn ghost" id="tk-new">↻ Another Aadhaar</button></div><p class="muted small">Pick another system: the same Aadhaar becomes a different token for each one. That is what makes leaks traceable (chapter 8).</p>`,
-      hood: hoodTxt[5],
+      hood: () => (typeof hoodTxt[5] === 'function' ? hoodTxt[5]() : hoodTxt[5]),
       mount(root) {
         let sink = 'log-platform', r = null, st = null;
         const cells = (arr, cls) => `<div class="cells">${arr.map(([c, k]) => `<span class="${k || ''} ${cls || ''}">${c}</span>`).join('')}</div>`;
@@ -174,7 +186,7 @@ window.ARAN = window.ARAN || {};
     /* ---------------------------------------------------------------- 5 */
     { name: 'Finding data', title: 'Finding what is sensitive', tag: 'Names, phones, OTPs and UPI IDs have no check digit. Aran weighs clues and gives each value a measured probability.',
       view: () => `<div class="chips" id="dt-kinds">${[['callnote', 'Hinglish call note'], ['loan', 'Loan application'], ['chatbot', 'Chatbot prompt'], ['payment', 'UPI payment log'], ['otp', 'OTP log'], ['kyc', 'KYC record']].map(([k, l]) => U.chip(l, { btn: true, on: k === 'callnote', attrs: `data-k="${k}"` })).join('')}</div><section class="scene" id="dt-scene" data-api="POST /api/sample"></section>`,
-      hood: hoodTxt[6],
+      hood: () => (typeof hoodTxt[6] === 'function' ? hoodTxt[6]() : hoodTxt[6]),
       mount(root) {
         let ev, pick = 0; const sc = $('#dt-scene', root);
         const draw = () => {
@@ -191,13 +203,13 @@ window.ARAN = window.ARAN || {};
     /* ---------------------------------------------------------------- 6 */
     { name: 'Disguises', title: 'Disguises do not work', tag: 'One Aadhaar hidden 12 ways, each sent through the live firewall. Aran undoes the disguise, then checks.',
       view: () => `<section class="scene" data-api="POST /api/tour/evasion"><div class="between" style="margin-bottom:16px"><div class="mono" style="font-size:clamp(1.5rem,3vw,2.5rem);letter-spacing:-.06em"><span id="ev-n">0</span>/12 <span class="muted" style="font-size:.5em;letter-spacing:0">disguises caught</span></div></div><div class="evgrid" id="ev-grid"></div>${U.controls('Unmask them')}</section><div class="row"><button class="btn secondary" id="ev-new">↻ Another customer</button></div>`,
-      hood: hoodTxt[7],
+      hood: () => (typeof hoodTxt[7] === 'function' ? hoodTxt[7]() : hoodTxt[7]),
       mount(root) { let st = null, r; const build = async () => { const x = await guard($('#ev-grid', root), A.evasion); if (!x) return; if (st) st.destroy(); r = x; st = U.stepper($('.scene', root), 13, 330, (i) => { $('#ev-n', root).textContent = Math.min(i, 12); $('#ev-grid', root).innerHTML = r.rows.map((row, k) => `<div class="evc ${k < i ? 'caught' : ''}"><div class="tt">${row.trick}</div><div class="in">${U.esc(row.before.slice(0, 64))}</div>${k < i ? `<div class="out">${U.esc(row.after.slice(0, 64))}</div><span class="bd">✓</span>` : ''}</div>`).join(''); }, { label: 'Unmask them' }); }; $('#ev-new', root).onclick = build; build(); return () => st && st.destroy(); } },
 
     /* ---------------------------------------------------------------- 7 */
     { name: 'Tracing a leak', title: 'A leaked file names its source', tag: 'Each system received a different token for the same customer. Leak one and watch Aran trace it back.',
       view: () => `<section class="scene"><div class="scene-scroll" id="tm" data-api="POST /api/tour/tokens → POST /api/trace"></div><div class="ctl" id="tm-btns"></div><div id="tm-v"></div></section><div class="row"><button class="btn ghost" id="tm-new">↻ Another customer</button></div>`,
-      hood: hoodTxt[8],
+      hood: () => (typeof hoodTxt[8] === 'function' ? hoodTxt[8]() : hoodTxt[8]),
       mount(root) {
         let t; const timers = [];
         const svg = () => `<svg class="tmap" viewBox="0 0 860 340" role="img" aria-label="A customer’s four tokens, one per system, and a leaked file traced back to its source."><g class="nd cust" transform="translate(10 120)"><rect width="190" height="100"/><text x="14" y="26">${t.name}</text><text class="sm" x="14" y="46">${t.customer} · real Aadhaar</text><text x="14" y="76" class="mono" style="font:400 13px var(--font-mono);fill:var(--real-data-color)">${H.group(t.aadhaar, 4)}</text></g>${t.sinks.map((s, i) => `<path class="lane" d="M200,170 C300,170 330,${55 + i * 76} 400,${55 + i * 76}"/><g class="nd" data-k="${s.sink}" transform="translate(400 ${i * 76 + 20})"><rect width="250" height="62"/><text x="14" y="22">${A.sinkLabel(s.sink)}</text><text class="tk" x="14" y="46">${s.aadhaar_token}</text></g>`).join('')}<path class="lane" id="to-dark" d="M650,170 C700,170 700,170 730,170"/><g class="nd dark" id="dark" transform="translate(730 120)"><rect width="120" height="100"/><text x="14" y="42">Dark web</text><text class="sm" x="14" y="62">leaked file</text></g><path class="beam" id="beam" d="" opacity="0"/><g id="doc" opacity="0"><rect x="-10" y="-13" width="20" height="26" rx="2" fill="var(--surface-color)" stroke="var(--leak-color)" stroke-width="2"/></g></svg>`;
@@ -223,7 +235,7 @@ window.ARAN = window.ARAN || {};
     /* ---------------------------------------------------------------- 8 */
     { name: 'Erasure', title: 'Erase everywhere, with proof', tag: 'Each customer’s tokens are locked by their own key per purpose. Destroy the key and every copy, anywhere, becomes meaningless.',
       view: () => `<section class="scene" data-api="POST /api/customers · /tour/customer-loan · /detokenise · /erase · /receipts/verify"><div class="estages" id="er-st"></div><div class="vault"><div class="vbox" id="er-c"></div><div class="keys" id="er-k"></div><div class="vbox" id="er-v"></div></div><div class="ctl"><button class="btn" id="er-1">1. Enrol a customer</button><button class="btn secondary" id="er-2" disabled>2. Send their loan application</button><button class="btn danger" id="er-3" disabled>3. Erase Loans</button><button class="btn secondary" id="er-kyc" disabled>Try erasing KYC</button></div><div id="er-msg"></div><div id="er-rc"></div></section>`,
-      hood: hoodTxt[9],
+      hood: () => (typeof hoodTxt[9] === 'function' ? hoodTxt[9]() : hoodTxt[9]),
       mount(root) {
         let c = null, tok = null, stage = 0, erased = false, readBack = null, kycUntil = null; const KEYS = ['KYC', 'Loans', 'Service', 'Marketing'];
         const msg = $('#er-msg', root), busy = (on) => $$('.ctl button', root).forEach((b) => (b.dataset.busy = on ? '1' : '', b.classList.toggle('busy', on)));
@@ -252,16 +264,16 @@ window.ARAN = window.ARAN || {};
     /* ---------------------------------------------------------------- 9 */
     { name: 'Immune system', title: 'An immune system for data flows', tag: 'It learns what normal traffic looks like, then flags anything outside it, with no list of known attacks.',
       view: () => `<section class="scene" id="im" data-api="GET /api/tour/immune-radar (poll 2 s) · POST /api/immune/learn · POST /api/drills/{kind}"></section><div id="im-alerts"></div><a class="btn secondary" href="#immune"><span>Open the full immune console</span><span class="arr">→</span></a>`,
-      hood: hoodTxt[10],
+      hood: () => (typeof hoodTxt[10] === 'function' ? hoodTxt[10]() : hoodTxt[10]),
       mount(root) { return A.mountImmune(root, 'im', 'im-alerts'); } },
 
     /* ---------------------------------------------------------------- 10 */
     { name: 'AI chatbots', title: 'Safe AI chatbots', tag: 'Staff can ask an AI about a customer. The AI only ever sees placeholders, and each role sees only what it is allowed to.',
       view: () => `<div class="chips" id="gw-roles">${[['customer-care', 'Customer care'], ['kyc-officer', 'KYC officer'], ['analyst', 'Analyst']].map(([k, l], i) => U.chip(l, { btn: true, on: i === 0, attrs: `data-k="${k}"` })).join('')}</div><label class="field">Prompt<textarea id="gw-t" class="mono" rows="3"></textarea></label><div class="row"><button class="btn" id="gw-ask"><span>Ask the AI through Aran</span><span class="arr">→</span></button><button class="btn secondary" id="gw-cmp">Compare all three roles</button></div><section class="scene hidden" id="gw-scene" data-api="POST /api/tour/gateway"></section><div id="gw-cmpbox"></div>`,
-      hood: hoodTxt[11],
+      hood: () => (typeof hoodTxt[11] === 'function' ? hoodTxt[11]() : hoodTxt[11]),
       mount(root) {
         let role = 'customer-care', st = null;
-        A.generate().then((g) => { const t = $('#gw-t', root); if (t && !t.value) t.value = `Customer Meena Iyer, mobile 9${H.digits(9)}, says card ${H.group(g.card, 4)} was charged twice. Her Aadhaar is ${H.group(g.aadhaar, 4)}. Draft a polite reply.`; }).catch(() => {});
+        A.generate().then((g) => { const t = $('#gw-t', root); if (t && !t.value) t.value = `Customer Meena Iyer, mobile ${g.mobile}, says card ${H.group(g.card, 4)} was charged twice. Her Aadhaar is ${H.group(g.aadhaar, 4)}. Draft a polite reply.`; }).catch(() => {});
         const seen = (r) => { const s = (r.audit_last && r.audit_last.shown) || {}; const e = Object.entries(s); return e.length ? e.map(([k, n]) => `${A.TYPE[k] || k} ${n}`).join(', ') : 'nothing (all masked)'; };
         $$('#gw-roles .chip', root).forEach((b) => (b.onclick = () => { role = b.dataset.k; $$('#gw-roles .chip', root).forEach((x) => x.classList.toggle('on', x === b)); }));
         $('#gw-ask', root).onclick = async () => {
@@ -277,7 +289,7 @@ window.ARAN = window.ARAN || {};
       view: () => { const R = A.results; if (!R || !R.core || !R.ai) return U.note('info', 'No result files on this server yet. Run the experiments (see Results) to fill this chapter.'); return `<div class="grid g3" data-api="GET /api/results">${U.stat('tokens mistaken for real', `${R.core.e2.token_flagged} <span class="muted" style="font-size:.5em">/ 20,000</span>`)}${U.stat('leaks traced to the right one of ' + R.core.e3.sinks + ' systems', '', '', { count: R.core.e3.dump_1_accuracy * 100, fmt: 'pct' })}${U.stat('data-flow attacks caught', '', '', { count: R.ai.e8.ais.tpr * 100, fmt: 'pct' })}</div>
         ${[['OTP false alarms on real logs', R.core.e1.otp_regex, R.core.e1.otp_context, 'fewer is better'], ['Sensitive values removed (%)', Math.round(R.ai.e9.prototype_regex_recall * 100), Math.round(R.ai.e9.leak_recall * 100), 'more is better']].map(([t, a, b, n]) => { const m = Math.max(a, b); return `<div class="vs"><div class="between"><b>${t}</b><span class="small muted">${n}</span></div><div class="vsrow"><span>Simple rules</span><div class="vsbar bad"><i style="width:${(a / m) * 100}%"></i></div><span class="mono">${U.fmt(a)}</span></div><div class="vsrow"><span>Aran</span><div class="vsbar good"><i style="width:${Math.max(0.5, (b / m) * 100)}%"></i></div><span class="mono">${U.fmt(b)}</span></div></div>`; }).join('')}
         <a class="btn secondary" href="#results"><span>All results and live test runs</span><span class="arr">→</span></a>
-        <div class="sechead" style="margin-top:48px"><h3>Not finished yet</h3></div><div class="limits">${[['Names and addresses', '74% and 90% caught'], ['Speed', '~300 lines/s per core; Rust core planned'], ['Erasure in law', 'needs a lawyer’s confirmation'], ['Keys', 'in memory here; an HSM in a bank']].map(([a, b]) => `<div class="lim"><b>${a}</b><span class="small muted">${b}</span></div>`).join('')}</div>
+        <div class="sechead" style="margin-top:48px"><h3>Not finished yet</h3></div><div class="limits">${[['Names and addresses', `${pc(caught('PER'))} and ${pc(caught('ADDR'))} caught (E9)`], ['Speed', `~${nf(F().lps)} lines/s per core (E9); Rust core planned`], ['Erasure in law', 'needs a lawyer’s confirmation'], ['Keys', 'in memory here; an HSM in a bank']].map(([a, b]) => `<div class="lim"><b>${a}</b><span class="small muted">${b}</span></div>`).join('')}</div>
         <div class="chips" style="margin-top:24px">${['DPDP Act 2023 and Rules 2025', 'CERT-In 2022', 'UIDAI Data Vault', 'RBI tokenisation', 'RBI FREE-AI', 'PCI DSS', 'PMLA retention'].map((x) => U.chip(x)).join('')}</div>`; },
       mount(root) { U.runCounts(root); } },
 
@@ -296,7 +308,7 @@ window.ARAN = window.ARAN || {};
     const nav = `<div class="tournav"><button class="btn secondary" data-n="${i - 1}" ${i === 0 ? 'disabled' : ''}>← ${prev || 'Back'}</button><span class="caption muted">← → keys work too</span>${next ? `<button class="btn" data-n="${i + 1}"><span>${next}</span><span class="arr">→</span></button>` : `<a class="btn" href="#traffic"><span>Open the full console</span><span class="arr">→</span></a>`}</div>`;
     const hero = C.hero ? `<section class="hero" id="hero"><canvas aria-hidden="true"></canvas><div class="hero-meta"><span>Aran அரண் · data-flow firewall</span><span>Team Iravora Void · KARE · Banking &amp; FinTech</span></div><div class="hero-copy"><div class="eyebrow">Data-flow firewall for Indian banks</div><h1 id="hero-h">A firewall for data</h1><p class="lede">${C.tag}</p></div><div class="hero-hint"><span>Hold to blast</span><span>Dare <b>⚡</b> to touch the lines</span></div><div class="charge" aria-hidden="true"><svg viewBox="0 0 100 100"><circle class="tr" cx="50" cy="50" r="44"/><circle class="fl" cx="50" cy="50" r="44"/></svg></div><div class="scrollcue"><span>Scroll</span><i></i></div></section>` : '';
     const head = C.hero ? '' : `<header class="chead"><div class="eyebrow">Chapter ${String(i + 1).padStart(2, '0')} / 13</div><h1 data-split>${C.title}</h1>${C.tag ? `<p class="tag">${C.tag}</p>` : ''}</header>`;
-    const body = `${head}<article class="chapter">${C.view(i)}</article>${C.hood ? U.hood(C.hood) : ''}`;
+    const body = `${head}<article class="chapter">${C.view(i)}</article>${C.hood ? U.hood(typeof C.hood === 'function' ? C.hood() : C.hood) : ''}`;
     return `${hero}<div class="page ${C.hero ? 'tourpage' : ''}">${dots}${body}${nav}</div>`;
   };
   T.seen = new Set();

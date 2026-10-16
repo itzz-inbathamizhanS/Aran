@@ -299,10 +299,11 @@ def tour_checksum(body: DigitsIn):
 
 @app.get("/api/tour/generate")
 def tour_generate():
-    """A fresh generated Aadhaar and card (checksum-valid, belonging to no one)."""
+    """A fresh generated Aadhaar, card and mobile (checksum-valid, belonging to no one)."""
     import synth
     r = eng().rand
-    return dict(aadhaar=E.re.sub(r"\D", "", synth.gen_aadhaar(r)), card=E.re.sub(r"\D", "", synth.gen_card(r)))
+    return dict(aadhaar=E.re.sub(r"\D", "", synth.gen_aadhaar(r)), card=E.re.sub(r"\D", "", synth.gen_card(r)),
+                mobile=E.re.sub(r"\D", "", synth.gen_mobile(r))[-10:])
 
 
 @app.post("/api/tour/tokens")
