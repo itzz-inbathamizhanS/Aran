@@ -476,3 +476,41 @@ ul.plain { padding-left: 22px; } ul.plain li { margin: 4px 0; }
   .digits { gap: 3px; } .dg { width: 24px; height: 54px; border-radius: 6px; } .dg > span { font-size: 17px; } .dg i { font-size: 11px; }
 }
 .legend.col > span { display: flex; align-items: center; gap: 6px; } .legend.col .lg { margin: 0; }
+
+/* ================================================================ 3D scenes and extra motion */
+.three-box { position: relative; width: 100%; border-radius: 12px; overflow: hidden; background: radial-gradient(ellipse at center, color-mix(in srgb, var(--accent) 10%, var(--surface)) 0%, var(--surface) 70%); cursor: grab; }
+.three-box:active { cursor: grabbing; }
+.three-box canvas { display: block; }
+.loading3d { display: grid; place-items: center; height: 440px; }
+.l3d-layer { position: absolute; inset: 0; }
+.l3d { font: 500 12px Inter, sans-serif; color: var(--text); background: color-mix(in srgb, var(--surface) 82%, transparent); border: 1px solid var(--border); padding: 2px 8px; border-radius: 6px; pointer-events: none; white-space: nowrap; }
+.l3d.brand { font: 700 14px "Space Grotesk", sans-serif; letter-spacing: .12em; color: var(--accent); border-color: var(--accent); }
+.l3d.axis { color: var(--info); border-color: var(--info); }
+.l3d.ok { color: var(--real); border-color: var(--real); }
+.seg-t { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; padding: 3px; gap: 2px; margin-bottom: 10px; background: var(--surface-2); }
+.seg-t button { background: transparent; border: 0; color: var(--text-2); padding: 5px 14px; border-radius: 6px; font-size: 13px; }
+.seg-t button.on { background: var(--accent); color: #fff; }
+.radar-wrap.wide { grid-template-columns: 1fr; }
+.radar-wrap.wide .radar-side { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; }
+.radar-wrap.wide .drills { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ax-pick { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--info); font-weight: 600; text-transform: uppercase; }
+.lg.sdot { background: var(--real); border-radius: 50%; } .lg.det { background: var(--leak-bg); border: 1px solid var(--leak); border-radius: 50%; }
+.im3d .legend span { display: inline-flex; align-items: center; gap: 6px; } .im3d .legend .lg { margin: 0; }
+
+/* motion: drifting glow behind each chapter, shimmer on headlines, lift on hover */
+.tour { position: relative; }
+.tour::before, .tour::after { content: ""; position: absolute; z-index: -1; width: 420px; height: 420px; border-radius: 50%; filter: blur(90px); opacity: .18; pointer-events: none; animation: drift 18s ease-in-out infinite alternate; }
+.tour::before { background: var(--accent); top: -80px; right: -60px; }
+.tour::after { background: var(--info); top: 420px; left: -120px; animation-delay: -9s; }
+@keyframes drift { from { transform: translate(0, 0) scale(1); } to { transform: translate(-60px, 80px) scale(1.15); } }
+.chead h1 { background-size: 200% 100%; background-image: linear-gradient(90deg, var(--text) 0%, var(--accent) 40%, var(--text) 80%); animation: shine 6s linear infinite; }
+@keyframes shine { to { background-position: -200% 0; } }
+.chapter.fwd { animation: slideL .5s cubic-bezier(.2,.8,.2,1) both; } .chapter.back { animation: slideR .5s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes slideL { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: none; } }
+@keyframes slideR { from { opacity: 0; transform: translateX(-40px); } to { opacity: 1; transform: none; } }
+.scene, .pillar, .grid-card, .evc, .card.stat, .lim, .gl, .q { transition: transform .25s ease-out, box-shadow .25s ease-out, border-color .25s; }
+.pillar:hover, .grid-card:hover, .card.stat:hover, .lim:hover, .gl:hover, .q:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.evc:hover { transform: translateY(-2px) scale(1.01); }
+button:not(:disabled):active { transform: scale(.97); }
+.tl-line::before { background-size: 200% 100%; background-image: linear-gradient(90deg, var(--border), var(--leak), var(--border)); animation: shine 4s linear infinite; }
+@media (max-width: 760px) { .radar-wrap.wide .radar-side { grid-template-columns: 1fr; } .radar-wrap.wide .drills { grid-template-columns: 1fr; } .tour::before, .tour::after { display: none; } }

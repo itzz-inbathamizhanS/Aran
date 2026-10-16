@@ -2,6 +2,16 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { api, fmt, pct } from './api.js'
 import { TYPE_LABEL, Marked, Tokens } from './components.jsx'
 
+// 3D scenes load only when shown, so pages without them stay light.
+const Firewall3D = React.lazy(() => import('./three/Firewall3D.jsx'))
+const Immune3D = React.lazy(() => import('./three/Immune3D.jsx'))
+export const HAS_WEBGL = (() => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')) } catch { return false } })()
+const Loading3D = () => <div className="three-box loading3d"><div className="spinner" /></div>
+
+export function ViewToggle({ view, setView, options }) {
+  return <div className="seg-t" role="tablist">{options.map(([k, l]) => <button key={k} role="tab" aria-selected={view === k} className={view === k ? 'on' : ''} onClick={() => setView(k)}>{l}</button>)}</div>
+}
+
 /* Animated scenes for the guided tour. Every scene replays a real server response:
    nothing here invents a number. See docs/learning/13-animation-and-visual-explainers.md. */
 
@@ -107,8 +117,11 @@ export function Pipeline({ autoplay = true, showInput = true }) {
   const [err, setErr] = useState(null)
   const now = useNow(packets.length > 0)
   const busy = useRef(false)
+  const [view, setView] = useState(HAS_WEBGL && window.innerWidth >= 640 ? '3d' : '2d') // phones start on the 2D map, where labels have room
+  const fw = useRef(null)
 
   const launch = ev => {
+    fw.current && fw.current.launch(ev)
     const si = Math.max(0, SOURCES.findIndex(s => s[0] === ev.source))
     const sj = Math.max(0, SINKS.findIndex(s => s[0] === ev.sink))
     const types = [...new Set(ev.findings.filter(f => f.protected).map(f => TYPE_LABEL[f.type] || f.type))]
@@ -149,6 +162,8 @@ export function Pipeline({ autoplay = true, showInput = true }) {
 
   return (
     <div className="scene">
+      {HAS_WEBGL && <ViewToggle view={view} setView={setView} options={[['3d', '3D'], ['2d', '2D map']]} />}
+      {view === '3d' ? <React.Suspense fallback={<Loading3D />}><Firewall3D ref={fw} /></React.Suspense> :
       <div className="scene-scroll">
         <svg viewBox={`0 0 ${PW} ${TOP * 2 + ROW * 7}`} className="pipe" role="img" aria-label="Requests flow from bank systems through Aran to the systems that store them">
           {SOURCES.map((s, i) => <path key={s[0]} d={pathOf(laneIn(i))} className={'lane' + (active.has(i) ? ' on' : '')} />)}
@@ -171,7 +186,7 @@ export function Pipeline({ autoplay = true, showInput = true }) {
           <text x="97" y="14" textAnchor="middle" className="cap">BANK SYSTEMS SEND</text>
           <text x="803" y="14" textAnchor="middle" className="cap">SYSTEMS THAT STORE IT</text>
         </svg>
-      </div>
+      </div>}
       <div className="legend"><span className="lg raw" /> real customer data <span className="lg tok" /> Aran tokens <span className="lg clean" /> nothing sensitive
         <span className="grow" />
         <span className="mono small">{fmt(sent)} requests · {fmt(prot)} values protected</span></div>
@@ -577,6 +592,7 @@ export function ImmuneScene({ go }) {
   const [alerts, setAlerts] = useState([])
   const [err, setErr] = useState(null)
   const [drill, setDrill] = useState(null)
+  const [view, setView] = useState(HAS_WEBGL ? '3d' : 'radar')
   useEffect(() => {
     let live = true
     const f = async () => { try { const x = await api('/tour/immune-radar'); if (live) setR(x); if (x.mode === 'watching') { const im = await api('/immune'); if (live) setAlerts(im.alerts.slice(0, 3)) } } catch (e) { live && setErr(e.message) } }
@@ -600,10 +616,11 @@ export function ImmuneScene({ go }) {
         <div><b>Learning what "normal" looks like…</b><div className="small muted">Real log lines are flowing through the firewall right now. You can explore other chapters and come back.</div></div>
       </div>}
       {r.mode === 'watching' && <>
-        <div className="radar-wrap">
-          <Radar names={r.names} windows={r.windows.slice(0, 8)} />
+        {HAS_WEBGL && <ViewToggle view={view} setView={setView} options={[['3d', '3D space'], ['radar', 'Radar']]} />}
+        <div className={'radar-wrap' + (view === '3d' ? ' wide' : '')}>
+          {view === '3d' ? <React.Suspense fallback={<Loading3D />}><Immune3D /></React.Suspense> : <Radar names={r.names} windows={r.windows.slice(0, 8)} />}
           <div className="radar-side">
-            <div className="legend col"><span><i className="lg band" /> normal range it learned</span><span><i className="lg win" /> a 30-second traffic window</span><span><i className="lg alert" /> outside normal: alert</span></div>
+            {view === 'radar' && <div className="legend col"><span><i className="lg band" /> normal range it learned</span><span><i className="lg win" /> a 30-second traffic window</span><span><i className="lg alert" /> outside normal: alert</span></div>}
             <div className="small muted">Next check in <b className="mono">{Math.ceil(r.next_window_in)}s</b> · {r.state.detectors} detectors</div>
             <div className="drills">{[['new-sink', 'Send data to an unknown site'], ['bulk-export', 'Bulk export'], ['detok-spike', 'Insider reads many numbers'], ['bypass', 'Switch the firewall off']].map(([k, l]) =>
               <button key={k} className="secondary" onClick={() => run(k)}>⚡ {l}</button>)}</div>

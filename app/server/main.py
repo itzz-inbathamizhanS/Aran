@@ -356,6 +356,17 @@ def tour_build_token(body: SinkIn):
     return E.tour_build_token(eng(), body.sink, body.aadhaar)
 
 
+@app.get("/api/tour/immune-space")
+def tour_immune_space(axes: str = "0,1,3"):
+    try:
+        a = [int(x) for x in axes.split(",")]
+    except ValueError:
+        raise HTTPException(400, "axes are three feature numbers, e.g. 0,1,3")
+    if len(a) != 3 or len(set(a)) != 3 or not all(0 <= x < 7 for x in a):
+        raise HTTPException(400, "pick three different features from 0 to 6")
+    return E.tour_immune_space(eng(), tuple(a))
+
+
 @app.get("/api/tour/immune-radar")
 def tour_immune_radar():
     return E.tour_immune_radar(eng())

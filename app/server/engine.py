@@ -760,3 +760,26 @@ def tour_gateway(eng, role, text):
         res = gw.chat(f"{role}:tour", conv, [{"role": "user", "content": text}])
     return dict(res, provider=name, role=role, audit_ok=gw.audit.verify(), audit_size=len(gw.audit.entries),
                 audit_last=gw.audit.entries[-1] if gw.audit.entries else None)
+
+
+def tour_immune_space(eng, axes=(0, 1, 3), max_self=400, max_det=250):
+    """Three of the immune layer's seven scaled features, for the 3D view. Detectors are
+    balls; the orthogonal shadow of a ball on any three axes is a ball of the same radius,
+    so the spheres drawn are the exact shadows of the real detectors."""
+    with eng.lock:
+        im = eng.immune
+        names = FlowFeaturizer.names
+        if im.ais is None:
+            return dict(mode=im.state["mode"], names=names, axes=list(axes))
+        a = list(axes)
+        S, C, R = im.ais.self_pts, im.ais.C, im.ais.R
+        rng = np.random.default_rng(0)
+        si = rng.choice(len(S), min(len(S), max_self), replace=False) if len(S) else []
+        di = np.argsort(-R)[:max_det]
+        r3 = lambda v: [round(float(x), 3) for x in v]
+        return dict(mode=im.state["mode"], names=names, axes=a, self_lo=0.1, self_hi=0.7,
+                    self_pts=[r3(S[i, a]) for i in si],
+                    detectors=[dict(c=r3(C[i, a]), r=round(float(R[i]), 3)) for i in di], detectors_total=len(C),
+                    memory=[dict(c=r3(c[a]), r=round(float(r), 3)) for c, r in zip(im.ais.mem_C, im.ais.mem_R)][:100],
+                    windows=[dict(at=w["at"], src=w["src"], sink=w["sink"], alert=w["alert"], score=w["score"], p=[w["z"][i] for i in a])
+                             for w in list(im.recent)[:30]])
