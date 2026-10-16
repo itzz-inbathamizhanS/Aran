@@ -209,6 +209,7 @@ Dockerfile        builds the frontend, installs the server, and runs both as one
 
 | Page | File | API calls |
 | --- | --- | --- |
+| Guided tour | `Tour.jsx` | `/tour/false-alarms`, `/tour/checksum`, `/tour/tokens`, `/tour/evasion`, `/tour/customer-loan`, plus `/sample`, `/trace`, `/erase` |
 | Overview | `Overview.jsx` | `/stats`, `/events`, `/immune` |
 | Live traffic | `Traffic.jsx` | `/config`, `/sample`, `/process`, `/events` |
 | Customers & erasure | `Customers.jsx` | `/customers`, `/erase`, `/receipts/verify`, `/detokenise`, `/merkle` |

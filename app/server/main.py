@@ -285,6 +285,54 @@ def get_job(name: str):
     return j
 
 
+class DigitsIn(BaseModel):
+    digits: str = Field(max_length=40)
+
+
+@app.post("/api/tour/checksum")
+def tour_checksum(body: DigitsIn):
+    try:
+        return E.checksum_explain(body.digits)
+    except ValueError as err:
+        raise HTTPException(400, str(err))
+
+
+@app.get("/api/tour/generate")
+def tour_generate():
+    """A fresh generated Aadhaar and card (checksum-valid, belonging to no one)."""
+    import synth
+    r = eng().rand
+    return dict(aadhaar=E.re.sub(r"\D", "", synth.gen_aadhaar(r)), card=E.re.sub(r"\D", "", synth.gen_card(r)))
+
+
+@app.post("/api/tour/tokens")
+def tour_tokens():
+    return E.tour_tokens(eng())
+
+
+@app.post("/api/tour/false-alarms")
+def tour_false_alarms():
+    return E.tour_false_alarms(eng())
+
+
+class RefIn(BaseModel):
+    customer_ref: str
+
+
+@app.post("/api/tour/customer-loan")
+def tour_customer_loan(body: RefIn):
+    e = eng()
+    if body.customer_ref not in e.customers:
+        raise HTTPException(404, "no such customer")
+    s = e.sample("loan", ref=body.customer_ref)
+    return e.process(s["text"], "guided-tour", "loan-vendor", s["trace_id"], observe=False)
+
+
+@app.post("/api/tour/evasion")
+def tour_evasion():
+    return E.tour_evasion(eng())
+
+
 # ---------------------------------------------------------------- frontend
 DIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "web", "dist")
 if os.path.isdir(DIST):

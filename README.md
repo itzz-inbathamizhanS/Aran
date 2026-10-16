@@ -110,7 +110,7 @@ Roadmap items 3, 6, 9, the M4 leakage ledger, and a first step on items 7 and 12
 
 ## Live console
 
-`app/` is a working website that runs Aran's real code: send a bank request and watch it get protected, see why each value was caught, trace a leaked dump to the sink that leaked it, erase a customer's purpose key and verify the signed Merkle receipt, teach the immune layer normal traffic (real Loghub logs replayed) and run attack drills, and run the test suite on the server. No value on it is hard-coded; only the customers' identifiers are generated, because real ones must never be used.
+`app/` is a working website that runs Aran's real code. It opens on a **guided tour**: twelve short chapters that explain the problem and every part of Aran in plain words for reviewers new to the topic, each with a live demo (false alarms on real logs, check digits step by step, tokens that fail the checksum, hidden numbers caught 12 ways, a leak traced to its source, erasure with a signed receipt). The rest of the console lets you send a bank request and watch it get protected, see why each value was caught, trace a leaked dump to the sink that leaked it, erase a customer's purpose key and verify the signed Merkle receipt, teach the immune layer normal traffic (real Loghub logs replayed) and run attack drills, and run the test suite on the server. No value on it is hard-coded; only the customers' identifiers are generated, because real ones must never be used.
 
 | Part | What it is |
 | --- | --- |
@@ -118,7 +118,7 @@ Roadmap items 3, 6, 9, the M4 leakage ledger, and a first step on items 7 and 12
 | `app/server/main.py` | FastAPI routes the console calls (`/api/...`; interactive docs at `/docs`) |
 | `app/server/build_models.py` | Trains the detector once (same training as E5 to E7) and saves `app/server/models/detector.pkl` |
 | `research/firewall/shredder.py` | Purpose-bound crypto-shredding (M5): per-customer per-purpose AES-256-GCM keys, vault tokens that fail their checksum, RFC 6962 Merkle log, Ed25519-signed erasure receipts, KYC retention lock. Tests in `research/test_shredder.py` |
-| `app/web/` | React + Vite frontend, seven pages |
+| `app/web/` | React + Vite frontend: guided tour plus seven console pages |
 | `Dockerfile` | Builds the frontend and serves everything from one container |
 
 Run it locally (details in [Learn 11](docs/learning/11-frontend-basics.md)):

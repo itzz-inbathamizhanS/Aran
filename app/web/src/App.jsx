@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { api } from './api.js'
+import Tour from './pages/Tour.jsx'
 import Overview from './pages/Overview.jsx'
 import Traffic from './pages/Traffic.jsx'
 import Customers from './pages/Customers.jsx'
@@ -9,6 +10,7 @@ import Results from './pages/Results.jsx'
 import About from './pages/About.jsx'
 
 const PAGES = [
+  ['tour', 'Guided tour', Tour],
   ['overview', 'Overview', Overview],
   ['traffic', 'Live traffic', Traffic],
   ['customers', 'Customers & erasure', Customers],
@@ -29,7 +31,7 @@ function Mark() {
 }
 
 export default function App() {
-  const [page, setPage] = useState(() => location.hash.slice(1) || 'overview')
+  const [page, setPage] = useState(() => location.hash.slice(1).split('/')[0] || 'tour')
   const [health, setHealth] = useState(null)
   const [menu, setMenu] = useState(false)
   const [theme, setTheme] = useState(() => { try { return localStorage.getItem('aran-theme') || 'dark' } catch { return 'dark' } })
@@ -39,7 +41,7 @@ export default function App() {
     try { localStorage.setItem('aran-theme', theme) } catch {}
   }, [theme])
   useEffect(() => {
-    const f = () => setPage(location.hash.slice(1) || 'overview')
+    const f = () => setPage(location.hash.slice(1).split('/')[0] || 'tour')
     window.addEventListener('hashchange', f)
     return () => window.removeEventListener('hashchange', f)
   }, [])
