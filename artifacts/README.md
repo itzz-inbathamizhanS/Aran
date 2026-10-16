@@ -18,6 +18,8 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Ledger AI gateway and red team | Aran - Ledger AI Gateway and Red Team (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/research/ledger-gateway-redteam.md |
 | Ledger AI gateway and red team | Aran Learn 12 - Leakage Ledger, AI Gateway and Red-Teaming (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/12-ledger-ai-gateway-and-red-teaming.md |
 | Frontend with Claude Design | Aran Learn 11 - Frontend Basics (PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/learning/Aran%20Learn%2011%20-%20Frontend%20Basics.pdf |
+| Animated tour | Aran Learn 13 - Animation and Visual Explainers (PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/learning/Aran%20Learn%2013%20-%20Animation%20and%20Visual%20Explainers.pdf |
+| Animated tour | Animated tour screenshots (packets, token rounds, false alarms, erasure receipt, immune radar, AI gateway) | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/Animated%20tour |
 | Frontend with Claude Design | Aran live console (code) | https://github.com/itzz-inbathamizhans/aran/tree/main/app |
 | Frontend with Claude Design | Guided tour screenshots (chapter 1, hidden numbers, erasure) | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/Frontend%20with%20Claude%20Design |
 
