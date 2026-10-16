@@ -101,6 +101,9 @@ docs/
 artifacts/
   learning/        PDF copies of the learning docs, for printing or offline reading
   website/         Website design-system prompt
+  research/        PDF results reports
+notes/             Obsidian notes: threads, daily notes, artifacts and branches indexes
+templates/         Obsidian templates
 research/
   aran_core.py     Verhoeff, Luhn, NIST SP 800-38G FF1, checksum-complement tokens, min-entropy counting
   test_core.py     Tests, including the NIST FF1 sample vectors
@@ -173,6 +176,8 @@ The team is new to this technology, so read these in order before starting any b
 - [Learning docs as PDFs](artifacts/learning/): print-ready copies of the learning docs above.
 - [Normaliser, registries and typo repair (PDF)](artifacts/research/Aran%20-%20Normaliser%20Registries%20and%20Typo%20Repair.pdf): results report for roadmap items 2 and 5.
 - [Website design-system prompt for the website design tool](artifacts/website/Aran-Website-Design-System-Prompt.md): brand, colours, typography, components and page content for the Aran website.
+- [Artifacts index](artifacts/README.md): every artifact by thread, with live links. Older Markdown and PDF copies of the first docs are in [artifacts/Data-flow firewall research](artifacts/Data-flow%20firewall%20research/).
+- [Obsidian vault home](Home.md): open the repo folder as a vault; thread notes are in [notes/threads](notes/threads/), indexed in [notes/Threads.md](notes/Threads.md).
 
 ## Regulations addressed
 
