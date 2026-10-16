@@ -6,7 +6,7 @@ const M = [
   ['M2', 'Evidence-fusion detector', 'A calibrated probability per value from the checksum, the context, NER, the own-customer registry and the trace-bound OTP registry.', ['Bayes\' rule', 'Isotonic calibration', 'Cuckoo filter']],
   ['M3', 'Per-sink tokens', 'Every destination gets different tokens, so a leaked token names the system that leaked it.', ['PRP families', 'Maximum likelihood']],
   ['M4', 'Leakage ledger', 'Caps how many bits any group of destinations can learn about one customer. Designed; runtime ledger not built yet.', ['Min-entropy']],
-  ['M5', 'Purpose-bound crypto-shredding', 'One key per customer per purpose; destroying it erases every copy everywhere, with a signed Merkle receipt.', ['AES-256-GCM', 'Ed25519', 'RFC 6962 Merkle log']],
+  ['M5', 'Purpose-bound crypto-shredding', 'One key per customer per purpose; destroying it erases every copy everywhere, with a signed Merkle receipt.', ['AES-256-GCM', 'Ed25519 + ML-DSA-65', 'RFC 6962 Merkle log']],
 ]
 const TEAM = [['IS', 'Inbathamizhan S', 'Team lead · Cybersecurity'], ['AA', 'Aasif Ahmed A', 'Cybersecurity'], ['SA', 'SN Arun Vijay', 'AI/ML'], ['BM', 'Bharadhwaj M', 'AI/ML']]
 

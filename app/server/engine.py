@@ -85,7 +85,7 @@ class Engine:
         t0 = time.time()
         with open(MODELS, "rb") as fh:
             base = pickle.load(fh)
-        self.key = secrets.token_bytes(16)
+        self.key = secrets.token_bytes(32)  # AES-256 for FF1: Grover leaves 128-bit strength
         self.registry = CustomerRegistry(secrets.token_bytes(32), capacity=100_000)
         self.otp_registry = OtpRegistry(secrets.token_bytes(32), ttl=300.0)
         self.det = Detector(base.ner, base.otp_clf, base.upi_clf, normaliser=Normaliser(),

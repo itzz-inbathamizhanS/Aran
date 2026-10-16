@@ -11,8 +11,12 @@ token was copied (logs, vendors, backups): the copies stay, the meaning is gone.
 
 Every key creation and destruction is appended to a Merkle log (RFC 6962 hashing). An
 erasure returns a receipt: the event, the log root at that size, the inclusion proof,
-and an Ed25519 signature over all of it. Anyone with the public key can check that the
-erasure was recorded and has not been rewritten since.
+and a hybrid signature over all of it: Ed25519 plus ML-DSA-65 (FIPS 204, post-quantum),
+both required. Anyone with the public keys can check that the erasure was recorded and has
+not been rewritten since, even after a quantum computer can forge Ed25519 alone.
+Receipts made before the upgrade (Ed25519 only, no "alg" field) still verify, unless the
+verifier is told to require post-quantum receipts (require_pq=True), which blocks a forger
+who strips the ML-DSA half and presents the receipt as an old one.
 
 A purpose can carry a retention lock (KYC records must be kept for a period under the
 PMLA rules). Erasure of a locked purpose is refused until the lock ends.
@@ -35,6 +39,8 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from aran_core import luhn_check_digit, random_cc_token, verhoeff_check_digit  # noqa: E402
+
+from pqc.hybrid import SIG_ALG, HybridSigner, verify_hybrid  # noqa: E402
 
 from .aran_firewall import AranFirewall  # noqa: E402
 from .registry import canonical  # noqa: E402
@@ -126,9 +132,10 @@ def _unb64(s):
 
 # ---------------------------------------------------------------- vault
 class PurposeVault:
-    def __init__(self, index_key=None, signing_key=None, clock=time.time):
+    def __init__(self, index_key=None, signing_key=None, clock=time.time, pq=True):
         self.index_key = index_key or secrets.token_bytes(32)
         self.sk = signing_key or Ed25519PrivateKey.generate()
+        self.signer = HybridSigner(ed_key=self.sk) if pq else None
         self.clock = clock
         self.keys = {}        # (customer_ref, purpose) -> bytearray key, absent once destroyed
         self.locks = {}       # (customer_ref, purpose) -> retain-until timestamp
@@ -218,8 +225,15 @@ class PurposeVault:
         size = len(self.log.leaves)
         body = dict(event=event, leaf_index=idx, tree_size=size, root=_b64(self.log.root(size)),
                     proof=[_b64(p) for p in self.log.proof(idx, size)])
-        sig = self.sk.sign(json.dumps(body, sort_keys=True, separators=(",", ":")).encode())
-        receipt = dict(body, signature=_b64(sig), public_key=self.public_key_pem())
+        if self.signer is None:  # legacy Ed25519-only receipt
+            sig = self.sk.sign(json.dumps(body, sort_keys=True, separators=(",", ":")).encode())
+            receipt = dict(body, signature=_b64(sig), public_key=self.public_key_pem())
+        else:
+            body["alg"] = SIG_ALG  # signed, so it cannot be stripped without breaking both signatures
+            sig = self.signer.sign(json.dumps(body, sort_keys=True, separators=(",", ":")).encode())
+            pub = self.signer.public()
+            receipt = dict(body, signature=sig["ed25519"], public_key=pub["ed25519"],
+                           pq_signature=sig["ml_dsa_65"], pq_public_key=pub["ml_dsa_65"])
         self.destroyed[k] = receipt
         return receipt
 
@@ -228,19 +242,33 @@ class PurposeVault:
                                                  serialization.PublicFormat.SubjectPublicKeyInfo).decode()
 
 
-def verify_receipt(receipt) -> dict:
-    """Checks a receipt on its own: signature, then inclusion of the event in the signed root."""
-    body = {k: receipt[k] for k in ("event", "leaf_index", "tree_size", "root", "proof")}
-    pk = serialization.load_pem_public_key(receipt["public_key"].encode())
-    assert isinstance(pk, Ed25519PublicKey)
-    try:
-        pk.verify(_unb64(receipt["signature"]), json.dumps(body, sort_keys=True, separators=(",", ":")).encode())
-        sig_ok = True
-    except InvalidSignature:
-        sig_ok = False
+def verify_receipt(receipt, require_pq=False) -> dict:
+    """Checks a receipt on its own: signature(s), then inclusion of the event in the signed root.
+
+    require_pq=True rejects Ed25519-only receipts; turn it on once Ed25519 can no longer be
+    trusted on its own (or for receipts dated after the bank's migration)."""
+    fields = ("event", "leaf_index", "tree_size", "root", "proof") + (("alg",) if "alg" in receipt else ())
+    body = {k: receipt[k] for k in fields}
+    msg = json.dumps(body, sort_keys=True, separators=(",", ":")).encode()
+    pq = None
+    if receipt.get("alg") == SIG_ALG:
+        res = verify_hybrid(dict(ed25519=receipt["public_key"], ml_dsa_65=receipt["pq_public_key"]),
+                            dict(ed25519=receipt["signature"], ml_dsa_65=receipt.get("pq_signature", "")), msg)
+        sig_ok, pq = res["valid"], res["ml_dsa_65"]
+    elif "alg" in receipt:
+        sig_ok = False  # unknown algorithm
+    else:
+        pk = serialization.load_pem_public_key(receipt["public_key"].encode())
+        assert isinstance(pk, Ed25519PublicKey)
+        try:
+            pk.verify(_unb64(receipt["signature"]), msg)
+            sig_ok = not require_pq
+        except InvalidSignature:
+            sig_ok = False
     leaf = _leaf(json.dumps(body["event"], sort_keys=True, separators=(",", ":")).encode())
     inc_ok = verify_inclusion(leaf, body["leaf_index"], body["tree_size"], [_unb64(p) for p in body["proof"]], _unb64(body["root"]))
-    return dict(signature_valid=sig_ok, included_in_log=inc_ok, valid=sig_ok and inc_ok)
+    return dict(signature_valid=sig_ok, included_in_log=inc_ok, valid=sig_ok and inc_ok,
+                alg=receipt.get("alg", "Ed25519"), post_quantum_valid=pq)
 
 
 # ---------------------------------------------------------------- firewall in vault mode

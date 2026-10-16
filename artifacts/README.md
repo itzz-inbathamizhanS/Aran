@@ -20,6 +20,8 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Frontend with Claude Design | Aran Learn 11 - Frontend Basics (PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/learning/Aran%20Learn%2011%20-%20Frontend%20Basics.pdf |
 | Frontend with Claude Design | Aran live console (code) | https://github.com/itzz-inbathamizhans/aran/tree/main/app |
 | Frontend with Claude Design | Guided tour screenshots (chapter 1, hidden numbers, erasure) | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/Frontend%20with%20Claude%20Design |
+| Post-quantum cryptography | Aran - Post-Quantum Upgrade (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/research/post-quantum.md |
+| Post-quantum cryptography | Aran Learn 13 - Post-Quantum Cryptography (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/13-post-quantum-cryptography.md |
 
 Note: the Markdown copy replaces the embedded architecture diagram with a text placeholder; the PDF keeps it.
 

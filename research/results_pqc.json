@@ -1,0 +1,265 @@
+{
+ "E17": {
+  "customers": 1000,
+  "erased_customers": 300,
+  "erased_values": 1200,
+  "readable_by_bank_after_erasure": 0,
+  "sealing": {
+   "X25519": {
+    "backup_bytes": 260117,
+    "keys_recovered": 4000,
+    "erased_values_recovered": 1200,
+    "erased_values_recovered_pct": 100.0
+   },
+   "X25519+ML-KEM-768": {
+    "backup_bytes": 261580,
+    "keys_recovered": 0,
+    "erased_values_recovered": 0,
+    "erased_values_recovered_pct": 0.0
+   },
+   "never exported (HSM only)": {
+    "backup_bytes": 0,
+    "keys_recovered": 0,
+    "erased_values_recovered": 0,
+    "erased_values_recovered_pct": 0.0
+   }
+  }
+ },
+ "E18": {
+  "signatures": [
+   {
+    "alg": "Ed25519",
+    "public_key_bytes": 32,
+    "signature_bytes": 64,
+    "keygen_us": 37.5,
+    "sign_us": 39.5,
+    "verify_us": 123.6
+   },
+   {
+    "alg": "ML-DSA-44",
+    "public_key_bytes": 1312,
+    "signature_bytes": 2420,
+    "keygen_us": 140.1,
+    "sign_us": 639.7,
+    "verify_us": 202.0
+   },
+   {
+    "alg": "ML-DSA-65",
+    "public_key_bytes": 1952,
+    "signature_bytes": 3309,
+    "keygen_us": 248.5,
+    "sign_us": 1160.2,
+    "verify_us": 235.7
+   },
+   {
+    "alg": "ML-DSA-87",
+    "public_key_bytes": 2592,
+    "signature_bytes": 4627,
+    "keygen_us": 346.3,
+    "sign_us": 1486.1,
+    "verify_us": 382.9
+   }
+  ],
+  "kems": [
+   {
+    "alg": "X25519",
+    "public_key_bytes": 32,
+    "ciphertext_bytes": 32,
+    "encaps_us": 74.9,
+    "decaps_us": 36.5
+   },
+   {
+    "alg": "ML-KEM-768",
+    "public_key_bytes": 1184,
+    "ciphertext_bytes": 1088,
+    "encaps_us": 28.9,
+    "decaps_us": 43.8
+   },
+   {
+    "alg": "ML-KEM-1024",
+    "public_key_bytes": 1568,
+    "ciphertext_bytes": 1568,
+    "encaps_us": 38.8,
+    "decaps_us": 57.7
+   },
+   {
+    "alg": "X25519+ML-KEM-768",
+    "public_key_bytes": 1216,
+    "ciphertext_bytes": 1120,
+    "encaps_us": 146.4,
+    "decaps_us": 131.7
+   }
+  ],
+  "receipts": [
+   {
+    "signature": "Ed25519",
+    "receipt_json_bytes": 904,
+    "erasures_per_second": 176,
+    "verifications_per_second": 5657,
+    "all_valid": true
+   },
+   {
+    "signature": "Ed25519+ML-DSA-65",
+    "receipt_json_bytes": 8155,
+    "erasures_per_second": 133,
+    "verifications_per_second": 1930,
+    "all_valid": true
+   }
+  ],
+  "ff1": [
+   {
+    "aes_key_bits": 128,
+    "grover_bits": 64,
+    "tokens_per_second": 5939
+   },
+   {
+    "aes_key_bits": 256,
+    "grover_bits": 128,
+    "tokens_per_second": 5787
+   }
+  ]
+ },
+ "E19": {
+  "cbom_before": {
+   "AES (FF1 format-preserving encryption)": {
+    "quantum": "depends on key size",
+    "uses": 1
+   },
+   "AES-GCM": {
+    "quantum": "depends on key size",
+    "uses": 2
+   },
+   "Ed25519": {
+    "quantum": "broken",
+    "uses": 3
+   },
+   "HMAC-SHA256": {
+    "quantum": "safe",
+    "uses": 8
+   },
+   "SHA-256": {
+    "quantum": "safe",
+    "uses": 13
+   }
+  },
+  "cbom_after": {
+   "AES (FF1 format-preserving encryption)": {
+    "quantum": "depends on key size",
+    "uses": 1
+   },
+   "AES-GCM": {
+    "quantum": "depends on key size",
+    "uses": 4
+   },
+   "Ed25519 (hybrid with ML-DSA-65)": {
+    "quantum": "safe while the PQ half holds",
+    "uses": 6
+   },
+   "HMAC-SHA256": {
+    "quantum": "safe",
+    "uses": 8
+   },
+   "ML-DSA-65": {
+    "quantum": "safe",
+    "uses": 2
+   },
+   "ML-KEM-768": {
+    "quantum": "safe",
+    "uses": 2
+   },
+   "SHA-256": {
+    "quantum": "safe",
+    "uses": 13
+   },
+   "SHA3-256": {
+    "quantum": "safe",
+    "uses": 3
+   },
+   "X25519 (hybrid with ML-KEM-768)": {
+    "quantum": "safe while the PQ half holds",
+    "uses": 9
+   }
+  },
+  "key128_sites_before": [
+   "app/server/engine.py:88"
+  ],
+  "key128_sites_after": [],
+  "migration_years": 7,
+  "crqc_scenarios": {
+   "early (2032)": 6,
+   "middle (2035)": 9,
+   "late (2040)": 14
+  },
+  "mosca": [
+   {
+    "data": "Aadhaar number",
+    "shelf_life_years": 70,
+    "protected_by": "key exchange (TLS, key backup)",
+    "exposed_years_early (2032)": 71,
+    "exposed_years_middle (2035)": 68,
+    "exposed_years_late (2040)": 63
+   },
+   {
+    "data": "PAN",
+    "shelf_life_years": 70,
+    "protected_by": "key exchange (TLS, key backup)",
+    "exposed_years_early (2032)": 71,
+    "exposed_years_middle (2035)": 68,
+    "exposed_years_late (2040)": 63
+   },
+   {
+    "data": "Name and address",
+    "shelf_life_years": 30,
+    "protected_by": "key exchange (TLS, key backup)",
+    "exposed_years_early (2032)": 31,
+    "exposed_years_middle (2035)": 28,
+    "exposed_years_late (2040)": 23
+   },
+   {
+    "data": "Mobile number",
+    "shelf_life_years": 10,
+    "protected_by": "key exchange (TLS, key backup)",
+    "exposed_years_early (2032)": 11,
+    "exposed_years_middle (2035)": 8,
+    "exposed_years_late (2040)": 3
+   },
+   {
+    "data": "UPI ID",
+    "shelf_life_years": 10,
+    "protected_by": "key exchange (TLS, key backup)",
+    "exposed_years_early (2032)": 11,
+    "exposed_years_middle (2035)": 8,
+    "exposed_years_late (2040)": 3
+   },
+   {
+    "data": "Card number",
+    "shelf_life_years": 5,
+    "protected_by": "key exchange (TLS, key backup)",
+    "exposed_years_early (2032)": 6,
+    "exposed_years_middle (2035)": 3,
+    "exposed_years_late (2040)": 0.0
+   },
+   {
+    "data": "Erasure receipt (must stay unforgeable)",
+    "shelf_life_years": 10,
+    "protected_by": "signature (Ed25519)",
+    "exposed_years_early (2032)": 11,
+    "exposed_years_middle (2035)": 8,
+    "exposed_years_late (2040)": 3
+   },
+   {
+    "data": "OTP",
+    "shelf_life_years": 0.0001,
+    "protected_by": "key exchange (TLS)",
+    "exposed_years_early (2032)": 1.0,
+    "exposed_years_middle (2035)": 0.0,
+    "exposed_years_late (2040)": 0.0
+   }
+  ]
+ },
+ "environment": {
+  "python": "3.13.16",
+  "cryptography": "50.0.1",
+  "cpu": 4
+ }
+}

@@ -51,3 +51,20 @@ python3 experiment_registry.py      # E10 to E12, writes results_registry.json
 | `experiment_registry.py` | all | Experiments E10 to E12 |
 
 Results are written up in [docs/research/normaliser-and-registries.md](../docs/research/normaliser-and-registries.md).
+
+## Post-quantum upgrade
+
+```
+pip install "cryptography>=50"   # ships ML-KEM and ML-DSA
+python3 -m pytest test_pqc.py test_shredder.py
+python3 experiment_pqc.py        # writes results_pqc.json and pqc/cbom.json (about 1 minute)
+python3 -m pqc.cbom ..           # cryptographic bill of materials for the repo
+```
+
+| File | Owner pair | What it is |
+| --- | --- | --- |
+| `pqc/hybrid.py` | Inbathamizhan, Aasif | Hybrid signatures (Ed25519 + ML-DSA-65), hybrid key sealing (X25519 + ML-KEM-768, X-Wing style combiner), Mosca's inequality |
+| `pqc/cbom.py` | Inbathamizhan, Aasif | CBOM scanner: finds crypto primitives in Python code and marks what a quantum computer breaks; writes CycloneDX 1.6 |
+| `experiment_pqc.py` | Inbathamizhan, Aasif | E17 retroactive un-erasure, E18 cost, E19 CBOM and Mosca table |
+
+Report: [Post-quantum upgrade](../docs/research/post-quantum.md).

@@ -14,6 +14,7 @@ Repo copies: Markdown in `docs/`, PDFs in `artifacts/learning/` and `artifacts/r
 | Roadmap: what to research and build next | `docs/research/aran-roadmap.md` | (repo only) |
 | Normaliser, registries and typo repair | `docs/research/normaliser-and-registries.md` | `artifacts/research/Aran - Normaliser Registries and Typo Repair.pdf` |
 | Ledger, AI gateway and red team | `docs/research/ledger-gateway-redteam.md` | `artifacts/research/Aran - Ledger AI Gateway and Red Team.pdf` |
+| Post-quantum upgrade | `docs/research/post-quantum.md` | `artifacts/research/Aran - Post-Quantum Upgrade.pdf` |
 | Website design-system prompt | `artifacts/website/Aran-Website-Design-System-Prompt.md` | (repo only) |
 
 ## Learning docs (PDFs in `artifacts/learning/`)
@@ -30,6 +31,7 @@ Repo copies: Markdown in `docs/`, PDFs in `artifacts/learning/` and `artifacts/r
 | 9 | Aran Learn 9 - Transformers and Zero-Shot NER | `docs/learning/09-transformers-and-zero-shot-ner.md` |
 | 10 | Aran Learn 10 - OCR Basics | `docs/learning/10-ocr-basics.md` |
 | 12 | Aran Learn 12 - Leakage Ledger, AI Gateway and Red-Teaming | `docs/learning/12-ledger-ai-gateway-and-red-teaming.md` |
+| 13 | Aran Learn 13 - Post-Quantum Cryptography | `docs/learning/13-post-quantum-cryptography.md` |
 
 Learn 1 to 7 were expanded on 15 Oct; the repo Markdown and PDFs hold the expanded text.
 

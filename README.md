@@ -108,6 +108,20 @@ Roadmap items 3, 6, 9, the M4 leakage ledger, and a first step on items 7 and 12
 | Hiding tricks fully caught, of 26 (E15 red team) | 14 | 22; two detector bugs found and fixed (a number before a full stop; mixed-script numbers crashed the detector) |
 | Lines per second on the E9 run, same output (E16) | 274 | 654 |
 
+### Post-quantum upgrade (E17 to E19)
+
+Most of Aran is symmetric (FF1 on AES, AES-256-GCM, HMAC, SHA-256 Merkle log) and already quantum-safe. Three parts were not, and are now fixed with hybrid classical plus NIST post-quantum crypto. Full tables in [Post-quantum upgrade](docs/research/post-quantum.md); read [Learn 13](docs/learning/13-post-quantum-cryptography.md) first.
+
+| Test | Before | After |
+| --- | --- | --- |
+| Erased values recovered after a (simulated) quantum break of X25519, from one recorded night of key backups (E17, 1,200 values) | 100% | 0% with X25519 + ML-KEM-768 sealing |
+| Erasure receipts a quantum attacker can forge | Yes (Ed25519) | No: Ed25519 + ML-DSA-65, both required, downgrade blocked |
+| FF1 key strength against Grover's algorithm (live console) | 64 bits | 128 bits (AES-256, checked on NIST FF1 samples 7 and 8) |
+| Quantum-broken algorithms without a post-quantum partner (CBOM, E19) | Ed25519, 3 uses | 0 |
+| Receipt size / verifications per second (E18) | 904 B / 5,657 | 8,155 B / 1,930 |
+
+New finding: crypto-shredding (M5) only erases if the destroyed key never travelled under quantum-breakable key exchange; otherwise an attacker who recorded that traffic can un-erase the customer later. `python -m pqc.cbom` (from `research/`) writes a CycloneDX cryptographic bill of materials, which India's quantum-safe task force asks vendors for from 2027 to 2028.
+
 ## Live console
 
 `app/` is a working website that runs Aran's real code. It opens on a **guided tour**: twelve short chapters that explain the problem and every part of Aran in plain words for reviewers new to the topic, each with a live demo (false alarms on real logs, check digits step by step, tokens that fail the checksum, hidden numbers caught 12 ways, a leak traced to its source, erasure with a signed receipt). The rest of the console lets you send a bank request and watch it get protected, see why each value was caught, trace a leaked dump to the sink that leaked it, erase a customer's purpose key and verify the signed Merkle receipt, teach the immune layer normal traffic (real Loghub logs replayed) and run attack drills, and run the test suite on the server. No value on it is hard-coded; only the customers' identifiers are generated, because real ones must never be used.
@@ -117,7 +131,7 @@ Roadmap items 3, 6, 9, the M4 leakage ledger, and a first step on items 7 and 12
 | `app/server/engine.py` | Detector + normaliser + registries + firewall in vault mode + purpose vault + immune layer on live flow windows + real-log replay |
 | `app/server/main.py` | FastAPI routes the console calls (`/api/...`; interactive docs at `/docs`) |
 | `app/server/build_models.py` | Trains the detector once (same training as E5 to E7) and saves `app/server/models/detector.pkl` |
-| `research/firewall/shredder.py` | Purpose-bound crypto-shredding (M5): per-customer per-purpose AES-256-GCM keys, vault tokens that fail their checksum, RFC 6962 Merkle log, Ed25519-signed erasure receipts, KYC retention lock. Tests in `research/test_shredder.py` |
+| `research/firewall/shredder.py` | Purpose-bound crypto-shredding (M5): per-customer per-purpose AES-256-GCM keys, vault tokens that fail their checksum, RFC 6962 Merkle log, erasure receipts signed with Ed25519 + ML-DSA-65 (post-quantum), KYC retention lock. Tests in `research/test_shredder.py` |
 | `app/web/` | React + Vite frontend: guided tour plus seven console pages |
 | `Dockerfile` | Builds the frontend and serves everything from one container |
 
@@ -135,7 +149,7 @@ cd app/web && npm install && npm run dev            # frontend with live reload 
 ```
 docs/
   research/        Research document, AI and immune layers report, roadmap
-  learning/        Twelve beginner learning docs (Markdown, open in Obsidian or GitHub)
+  learning/        Thirteen beginner learning docs (Markdown, open in Obsidian or GitHub)
 artifacts/
   learning/        PDF copies of the learning docs, for printing or offline reading
   website/         Website design-system prompt
@@ -167,6 +181,10 @@ research/
   experiment_next.py      Experiments E13 to E16 (ledger, AI gateway, red team, speed) and E13b
   results_next.json       Raw results
   test_next.py            Tests for the ledger, AI gateway, red-team normaliser, NER gate and item 3 features
+  pqc/             Post-quantum upgrade: hybrid signatures and key sealing (hybrid.py), CBOM scanner (cbom.py)
+  experiment_pqc.py       Experiments E17 to E19 (un-erasure, cost, CBOM and Mosca table)
+  results_pqc.json        Raw results
+  test_pqc.py             Tests for the post-quantum upgrade
 ```
 
 ## Run it
@@ -194,6 +212,11 @@ python experiment_registry.py                       # about 15 minutes after exp
 pip install fastapi httpx
 python -m pytest test_next.py
 python experiment_next.py                           # about 15 minutes after experiment_ai.py
+
+# Post-quantum upgrade (needs cryptography 50 or newer)
+python -m pytest test_pqc.py test_shredder.py
+python experiment_pqc.py                            # about 1 minute
+python -m pqc.cbom ..                               # cryptographic bill of materials
 ```
 
 Step-by-step Windows setup, with fixes for common errors, is in [Learn 1](docs/learning/01-python-and-tools.md).
@@ -204,6 +227,7 @@ Step-by-step Windows setup, with fixes for common errors, is in [Learn 1](docs/l
 - [AI and immune layers](docs/research/ai-and-immune-layers.md): NER, OTP/UPI classifier, calibrated detector, artificial immune system and firewall wiring, with results on real data and the weak spots.
 - [Normaliser, registries and typo repair](docs/research/normaliser-and-registries.md): roadmap items 2 and 5, built and measured (E10 to E12). [PDF](artifacts/research/Aran%20-%20Normaliser%20Registries%20and%20Typo%20Repair.pdf)
 - [Ledger, AI gateway and red team](docs/research/ledger-gateway-redteam.md): roadmap items 3, 6 and 9, the M4 leakage ledger and a first speed-up, built and measured (E13 to E16). [PDF](artifacts/research/Aran%20-%20Ledger%20AI%20Gateway%20and%20Red%20Team.pdf)
+- [Post-quantum upgrade](docs/research/post-quantum.md): what a quantum computer breaks in Aran, retroactive un-erasure (E17), hybrid receipts and key sealing, cost (E18), CBOM and Mosca priority table (E19), plan. [PDF](artifacts/research/Aran%20-%20Post-Quantum%20Upgrade.pdf)
 - [Roadmap: what to research and build next](docs/research/aran-roadmap.md): what is designed but not yet built, and a prioritised list of 13 additions with effort, owners and the learning docs to read first.
 
 ### Learning path for the team
@@ -224,12 +248,14 @@ The team is new to this technology, so read these in order before starting any b
 | 10 | [OCR Basics](docs/learning/10-ocr-basics.md) | Bharadhwaj, Arun (roadmap item 10) | ~5 h | Read ID card images with Tesseract, use Verhoeff to catch misreads, measure OCR accuracy, mask the first 8 Aadhaar digits on the image | [PDF](artifacts/learning/Aran%20Learn%2010%20-%20OCR%20Basics.pdf) |
 | 11 | [Frontend Basics](docs/learning/11-frontend-basics.md) | Everyone (the live console) | ~5 h | Explain HTML, CSS and JavaScript, build React components with state and effects, call the Aran API with fetch, run the console locally and add a panel to it | [PDF](artifacts/learning/Aran%20Learn%2011%20-%20Frontend%20Basics.pdf) |
 | 12 | [Leakage Ledger, AI Gateway and Red-Teaming](docs/learning/12-ledger-ai-gateway-and-red-teaming.md) | Everyone (roadmap items 3, 6, 9 and M4) | ~5 h | Add model features for hard cases, count what joined systems learn in bits, hide identifiers from a chatbot with role-based placeholders and a hash-chained audit log, red-team your own detector with a fair judge, speed a model up with caching and a cascade | [PDF](artifacts/learning/Aran%20Learn%2012%20-%20Leakage%20Ledger%20AI%20Gateway%20and%20Red-Teaming.pdf) |
+| 13 | [Post-Quantum Cryptography](docs/learning/13-post-quantum-cryptography.md) | Inbathamizhan, Aasif (everyone reads sections 1 to 3) | ~5 h | Explain what Shor and Grover break, apply Mosca's inequality, run ML-KEM and ML-DSA in Python, explain hybrid key agreement and hybrid signatures and the downgrade trap, produce a CBOM | [PDF](artifacts/learning/Aran%20Learn%2013%20-%20Post-Quantum%20Cryptography.pdf) |
 
 ## Artifacts
 
 - [Learning docs as PDFs](artifacts/learning/): print-ready copies of the learning docs above.
 - [Normaliser, registries and typo repair (PDF)](artifacts/research/Aran%20-%20Normaliser%20Registries%20and%20Typo%20Repair.pdf): results report for roadmap items 2 and 5.
 - [Ledger, AI gateway and red team (PDF)](artifacts/research/Aran%20-%20Ledger%20AI%20Gateway%20and%20Red%20Team.pdf): results report for roadmap items 3, 6, 9 and M4, with Learn 12, also kept by thread in [artifacts/Ledger AI gateway and red team](artifacts/Ledger%20AI%20gateway%20and%20red%20team/).
+- [Post-quantum upgrade (PDF)](artifacts/research/Aran%20-%20Post-Quantum%20Upgrade.pdf): results report for E17 to E19, with Learn 13, also kept by thread in [artifacts/Post-quantum cryptography](artifacts/Post-quantum%20cryptography/).
 - [Website design-system prompt for the website design tool](artifacts/website/Aran-Website-Design-System-Prompt.md): brand, colours, typography, components and page content for the Aran website.
 - [Frontend guide with Claude Design](artifacts/Frontend%20with%20Claude%20Design/Aran%20-%20Frontend%20Guide%20with%20Claude%20Design.md): step-by-step guide, design-system and console prompts for restyling the live console, and the live API it uses.
 - [Artifacts index](artifacts/README.md): every artifact by thread, with live links. Older Markdown and PDF copies of the first docs are in [artifacts/Data-flow firewall research](artifacts/Data-flow%20firewall%20research/).
@@ -237,4 +263,4 @@ The team is new to this technology, so read these in order before starting any b
 
 ## Regulations addressed
 
-DPDP Act 2023 and DPDP Rules 2025 (safeguards, 72-hour breach report, erasure), CERT-In Directions 2022 (6-hour reporting, 180-day logs), UIDAI Aadhaar Data Vault, RBI payment data and card tokenisation rules, and PCI DSS. Treating crypto-shredding as DPDP erasure still needs legal confirmation.
+DPDP Act 2023 and DPDP Rules 2025 (safeguards, 72-hour breach report, erasure), CERT-In Directions 2022 (6-hour reporting, 180-day logs), UIDAI Aadhaar Data Vault, RBI payment data and card tokenisation rules, and PCI DSS. Treating crypto-shredding as DPDP erasure still needs legal confirmation. Post-quantum: NIST FIPS 203 and 204 (ML-KEM, ML-DSA), and India's DST quantum-safe task force report (February 2026: banking fully migrated by 2033, CBOMs from 2027 to 2028).

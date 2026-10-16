@@ -22,13 +22,14 @@ function Receipt({ r }) {
         <tr><td>Merkle leaf / tree size</td><td className="mono">{r.leaf_index} / {r.tree_size}</td></tr>
         <tr><td>Merkle root</td><td className="mono trunc">{r.root}</td></tr>
         <tr><td>Signature (Ed25519)</td><td className="mono trunc">{r.signature}</td></tr>
+        {r.pq_signature && <tr><td>Post-quantum signature (ML-DSA-65)</td><td className="mono trunc">{r.pq_signature}</td></tr>}
       </tbody></table>
       <div className="row">
         <button onClick={verify}>Verify receipt</button>
         <button className="secondary" onClick={tryTamper}>Try tampering with it</button>
         <button className="ghost" onClick={copy}>Copy JSON</button>
       </div>
-      {check && <div className={check.valid ? 'ok' : 'err'}>{check.valid ? '✓ Signature valid and the event is included in the signed Merkle root.' : '✗ Receipt does not verify.'}</div>}
+      {check && <div className={check.valid ? 'ok' : 'err'}>{check.valid ? '✓ ' + (check.post_quantum_valid ? 'Both signatures (Ed25519 and post-quantum ML-DSA-65) valid' : 'Signature valid') + ' and the event is included in the signed Merkle root.' : '✗ Receipt does not verify.'}</div>}
       {tamper && <div className={tamper.valid ? 'err' : 'ok'}>{tamper.valid ? 'Tampered receipt verified (unexpected).' : '✓ Changing one number (tokens made unreadable) broke it: signature ' + (tamper.signature_valid ? 'valid' : 'invalid') + ', inclusion ' + (tamper.included_in_log ? 'valid' : 'invalid') + '.'}</div>}
     </div>
   )

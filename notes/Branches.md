@@ -17,4 +17,6 @@ Every new git branch gets a row here when it is created.
 | claude/project-thread-m98ust | 2026-10-15 | main | Normaliser and registries ([[14 Normaliser and registries]]) | merged (tip `3944f75`, same as main) |
 | claude/project-thread-us9f9i | 2026-10-16 | main | Ledger, AI gateway, red team ([[16 Ledger AI gateway and red team]]) | merged into main |
 
+| claude/project-thread-qjb4zp | 2026-10-16 | main | Post-quantum upgrade ([[17 Post-quantum cryptography]]) | pushed, PR to main |
+
 All feature branches are fully merged; they can be deleted from GitHub whenever convenient.
