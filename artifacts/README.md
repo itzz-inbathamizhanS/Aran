@@ -13,22 +13,35 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Data-flow firewall research | Aran Learn 6 - Artificial Immune Systems | https://claude.ai/code/artifact/434f9864-f7e9-41a3-8177-6b88eee4f458 |
 | Data-flow firewall research | Aran Learn 7 - Data-Protection Law Basics | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/07-data-protection-law.md |
 | Data-flow firewall research | Aran Learn 7 - Data-Protection Law Basics | https://claude.ai/code/artifact/cdf79f63-0b72-4b2d-813c-66758a34ed5c |
-| Data-flow firewall research | Aran Learn 8 - Web APIs and Proxies (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/08-web-apis-and-proxies.md |
-| Data-flow firewall research | Aran Learn 9 - Transformers and Zero-Shot NER (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/09-transformers-and-zero-shot-ner.md |
-| Data-flow firewall research | Aran Learn 10 - OCR Basics (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/10-ocr-basics.md |
-| Normaliser and registries | Aran - Normaliser Registries and Typo Repair (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/research/normaliser-and-registries.md |
+| Data-flow firewall research | Aran Learn 8 - Web APIs and Proxies | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/08-web-apis-and-proxies.md |
+| Data-flow firewall research | Aran Learn 9 - Transformers and Zero-Shot NER | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/09-transformers-and-zero-shot-ner.md |
+| Data-flow firewall research | Aran Learn 10 - OCR Basics | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/10-ocr-basics.md |
+| Normaliser and registries | Aran - Normaliser Registries and Typo Repair | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/research/normaliser-and-registries.md |
 | Roadmap | Aran Roadmap - What to Build Next (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/research/aran-roadmap.md |
-| Website design prompt | Aran-Website-Design-System-Prompt (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/website/Aran-Website-Design-System-Prompt.md |
 | Frontend with Claude Design | Aran - Frontend Guide with Claude Design (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Frontend%20with%20Claude%20Design/Aran%20-%20Frontend%20Guide%20with%20Claude%20Design.md |
-| Ledger AI gateway and red team | Aran - Ledger AI Gateway and Red Team (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/research/ledger-gateway-redteam.md |
-| Ledger AI gateway and red team | Aran Learn 12 - Leakage Ledger, AI Gateway and Red-Teaming (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/12-ledger-ai-gateway-and-red-teaming.md |
-| Frontend with Claude Design | Aran Learn 11 - Frontend Basics (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/learning/Aran%20Learn%2011%20-%20Frontend%20Basics.pdf |
-| Animated tour | Aran Learn 13 - Animation and Visual Explainers (PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/learning/Aran%20Learn%2013%20-%20Animation%20and%20Visual%20Explainers.pdf |
-| Animated tour | Animated tour screenshots (packets, token rounds, false alarms, erasure receipt, immune radar, AI gateway) | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/Animated%20tour |
-| Frontend with Claude Design | Aran live console (code) | https://github.com/itzz-inbathamizhans/aran/tree/main/app |
-| Frontend with Claude Design | Guided tour screenshots (console overview, chapter 1, hidden numbers, erasure) | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/Frontend%20with%20Claude%20Design |
-| Post-quantum cryptography | Aran - Post-Quantum Upgrade (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/research/post-quantum.md |
-| Post-quantum cryptography | Aran Learn 14 - Post-Quantum Cryptography (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/14-post-quantum-cryptography.md |
+| Frontend with Claude Design | Aran Learn 11 - Frontend Basics | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/11-frontend-basics.md |
+| Frontend with Claude Design | console-overview.png (screenshot) | (saved here only) |
+| Ledger AI gateway and red team | Aran - Ledger AI Gateway and Red Team | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/research/ledger-gateway-redteam.md |
+| Ledger AI gateway and red team | Aran Learn 12 - Leakage Ledger AI Gateway and Red-Teaming | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/12-ledger-ai-gateway-and-red-teaming.md |
+| Frontend with Claude Design | tour-chapter-1.png, tour-erasure.png, tour-hidden-numbers.png (screenshots) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Frontend%20with%20Claude%20Design |
+| Animated tour | Aran Learn 13 - Animation and Visual Explainers | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/13-animation-and-visual-explainers.md |
+| Animated tour | tour-ai-gateway, tour-erasure-receipt, tour-false-alarms, tour-immune-radar, tour-packets, tour-token-rounds (PNG screenshots) | (saved here only) |
+| Post-quantum cryptography | Aran - Post-Quantum Upgrade | (saved here only) |
+| Post-quantum cryptography | Aran Learn 14 - Post-Quantum Cryptography | (saved here only) |
+| 3D tour | Aran Learn 16 - 3D Graphics with three.js (PDF; Markdown saved as 16-3d-graphics-with-threejs.md) | (saved here only) |
+| 3D tour | 3d-firewall-dark, 3d-firewall-light, 3d-immune-space-dark, 3d-immune-space-phone (PNG screenshots) | (saved here only) |
+| Live console (team design) | Aran Learn 17 - Wiring a Design to a Live API (PDF; Markdown saved as 17-wiring-a-design-to-a-live-api.md) | (saved here only) |
+| Live console (team design) | 01-hero to 07-phone-light-overview (7 PNG screenshots) | (saved here only) |
+| Standout features | Aran Learn 18 - Phones QR Codes and Speech Input (PDF; Markdown saved as 18-phone-arena-qr-and-speech.md) | (saved here only) |
+| Standout features | Aran Learn 19 - Translating a Website (PDF; Markdown saved as 19-translating-a-website.md) | (saved here only) |
+| Standout features | Aran Learn 20 - Presenter Mode and Offline Replay (PDF; Markdown saved as 20-presenter-mode-and-offline-replay.md) | (saved here only) |
+| Standout features | 01-versus to 10-hindi-ledger (10 PNG screenshots) | (saved here only) |
+| Standout frontend ideas | Aran - Standout Frontend Ideas (Markdown) | (saved here only) |
+| Website design prompt | Aran-Website-Design-System-Prompt (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/website/Aran-Website-Design-System-Prompt.md |
+| UI design spec | Aran - UI Design Spec (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/UI%20design%20spec/Aran%20-%20UI%20Design%20Spec.md |
+| UI design spec | Aran Learn 15 - UI Design Specs and Design Tokens (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/15-ui-design-specs-and-tokens.md |
+| UI design spec | Aran - Design References (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/UI%20design%20spec/Aran%20-%20Design%20References.md |
+| UI design spec | Overview style mockups A, B, C (PNG) | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/UI%20design%20spec |
 
 Note: the Markdown copy replaces the embedded architecture diagram with a text placeholder; the PDF keeps it.
 
