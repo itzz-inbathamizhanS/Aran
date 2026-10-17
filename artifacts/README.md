@@ -13,10 +13,10 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Data-flow firewall research | Aran Learn 6 - Artificial Immune Systems | https://claude.ai/code/artifact/434f9864-f7e9-41a3-8177-6b88eee4f458 |
 | Data-flow firewall research | Aran Learn 7 - Data-Protection Law Basics | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/07-data-protection-law.md |
 | Data-flow firewall research | Aran Learn 7 - Data-Protection Law Basics | https://claude.ai/code/artifact/cdf79f63-0b72-4b2d-813c-66758a34ed5c |
-| Data-flow firewall research | Aran Learn 8 - Web APIs and Proxies (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/08-web-apis-and-proxies.md |
-| Data-flow firewall research | Aran Learn 9 - Transformers and Zero-Shot NER (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/09-transformers-and-zero-shot-ner.md |
-| Data-flow firewall research | Aran Learn 10 - OCR Basics (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/10-ocr-basics.md |
-| Normaliser and registries | Aran - Normaliser Registries and Typo Repair (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/research/normaliser-and-registries.md |
+| Data-flow firewall research | Aran Learn 8 - Web APIs and Proxies | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/08-web-apis-and-proxies.md |
+| Data-flow firewall research | Aran Learn 9 - Transformers and Zero-Shot NER | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/09-transformers-and-zero-shot-ner.md |
+| Data-flow firewall research | Aran Learn 10 - OCR Basics | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/10-ocr-basics.md |
+| Normaliser and registries | Aran - Normaliser Registries and Typo Repair | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/research/normaliser-and-registries.md |
 | Roadmap | Aran Roadmap - What to Build Next (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/research/aran-roadmap.md |
 | Standout frontend ideas | Aran - Standout Frontend Ideas (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Standout%20frontend%20ideas/Aran%20-%20Standout%20Frontend%20Ideas.md |
 | Website design prompt | Aran-Website-Design-System-Prompt (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/website/Aran-Website-Design-System-Prompt.md |
@@ -30,6 +30,9 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Frontend with Claude Design | Guided tour screenshots (console overview, chapter 1, hidden numbers, erasure) | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/Frontend%20with%20Claude%20Design |
 | Post-quantum cryptography | Aran - Post-Quantum Upgrade (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/research/post-quantum.md |
 | Post-quantum cryptography | Aran Learn 14 - Post-Quantum Cryptography (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/14-post-quantum-cryptography.md |
+| Frontend with Claude Design | Aran Learn 11 - Frontend Basics (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/11-frontend-basics.md |
+| Frontend with Claude Design | console-overview.png (screenshot) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Frontend%20with%20Claude%20Design/console-overview.png |
+| Animated tour | Aran Learn 13 - Animation and Visual Explainers (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/13-animation-and-visual-explainers.md |
 | UI design spec | Aran - UI Design Spec (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/UI%20design%20spec/Aran%20-%20UI%20Design%20Spec.md |
 | UI design spec | Aran Learn 15 - UI Design Specs and Design Tokens (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/15-ui-design-specs-and-tokens.md |
 | UI design spec | Aran - Design References (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/UI%20design%20spec/Aran%20-%20Design%20References.md |
