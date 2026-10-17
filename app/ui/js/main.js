@@ -2,7 +2,7 @@
 (function (A) {
   const U = A.ui, T = A.tour, $ = U.$, $$ = U.$$;
   const NAV = [['tour', 'Guided tour'], ['overview', 'Overview'], ['traffic', 'Live traffic'], ['customers', 'Customers & erasure'], ['trace', 'Leak trace'], ['immune', 'Immune layer'], ['results', 'Results & tests'], ['about', 'How it works'], ['arena-live', 'Beat the firewall'], ['versus', 'With / without Aran'], ['ledger', 'Leakage ledger'], ['scan', 'Card photo scan'], ['quantum', 'Post-quantum'], ['me', 'My data']];
-  const t = A.t || ((x) => x), TITLES = Object.fromEntries(NAV.map(([id, l]) => [id, t(l)]));
+  const t = A.t || ((x) => x), TITLES = Object.fromEntries(NAV.map(([id, l]) => [id, t(l)]).concat([['arena', t('Beat the firewall')]]));
   const view = $('#view'), menu = $('#menu'), qs = new URLSearchParams(location.search);
   let cleanup = [], current = null, lenis = null;
   try { gsap.registerPlugin(ScrollTrigger); } catch (e) {}

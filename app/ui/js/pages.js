@@ -200,7 +200,7 @@ window.ARAN = window.ARAN || {};
           st.innerHTML = j.returncode === 0 ? `<span class="t-ok">✓ Passed in ${secs}s</span>` : `<span class="t-leak">✗ Exit code ${j.returncode} after ${secs}s</span>`; return true;
         };
         const watch = () => { const t = setInterval(async () => { try { const j = await A.job(id); if (show(j)) { clearInterval(t); j.returncode === 0 ? A.sound.chime() : A.sound.error(); if (id === 'e1-e4') { await A.refresh('results'); U.toast('Results updated'); } } } catch (e) { clearInterval(t); } }, 2000); timers.push(t); };
-        A.job(id).then((j) => { if (!show(j)) watch(); }).catch(() => {});
+        A.job(id).then((j) => { if (j && !show(j)) watch(); }).catch(() => {});
         run.onclick = async () => { try { show(await A.job(id, true)); watch(); A.sound.click(); } catch (e) { st.innerHTML = U.note('err', U.esc(e.message)); } };
       });
       return () => timers.forEach(clearInterval); } };

@@ -279,10 +279,9 @@ def start_job(name: str):
 
 @app.get("/api/jobs/{name}")
 def get_job(name: str):
-    j = eng().jobs.get(name)
-    if not j:
-        raise HTTPException(404, "not run yet")
-    return j
+    if name not in JOBS:
+        raise HTTPException(404, "unknown job")
+    return eng().jobs.get(name)  # null until it has been run once
 
 
 class DigitsIn(BaseModel):
