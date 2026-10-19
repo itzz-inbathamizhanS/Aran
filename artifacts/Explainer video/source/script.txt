@@ -1,0 +1,239 @@
+## intro | Welcome | Aran: a firewall for data
+This is Aran, explained from zero.
+Aran is a Tamil word. It means fortress, a protective wall.
+It was built by four students at Kalasalingam Academy of Research and Education.
+Inbathamizhan S leads the project, with Aasif Ahmed A on cybersecurity, and SN Arun Vijay and Bharadhwaj M on AI and machine learning.
+Every technical word you hear will be shown as a picture, so you do not need any background to follow along.
+We will go in order: the problem, the research, how Aran works, how it was built, the results, and what comes next.
+
+## problem | Chapter 1 | The problem
+Every day a bank handles huge amounts of customer data.
+That data travels through many paths: API calls between apps, log files, exports to other companies, support tools, and now AI chatbots.
+The problem statement asked for one thing: find sensitive customer data in API traffic and logs, and protect it before it is stored or shared.
+Leaks are not imaginary. In 2016 about 3.2 million Indian debit cards were exposed through malware at a payment processor.
+In 2020, 35 million records of masked card data from Juspay were found for sale on the dark web.
+In 2024, Star Health customer records were sold through Telegram bots.
+Even Meta was fined 91 million euros for writing passwords into its logs in plain text.
+In India, the DPDP Act can fine a company up to 250 crore rupees for failing to protect personal data.
+
+## identifiers | Chapter 2 | What we protect
+First, a word you will hear often: PII, personally identifiable information. It is any data that points to one real person.
+Aadhaar is India's 12 digit national ID. Its last digit is special. It is a check digit, and we will see why that matters.
+PAN is the income tax number. Ten characters: five letters, four digits, and one letter.
+A payment card number is usually 16 digits. The first six or eight digits name the bank that issued it, and the last digit is also a check digit.
+A UPI ID looks like an email address, such as ravi@oksbi. || A U P I I D looks like an email address, such as rah-vee, at, okay S B I.
+An OTP is a one time password: just a few random digits, with no pattern at all. That makes it the hardest thing to find.
+Mobile numbers, names and addresses complete the list.
+Every example number in this video is generated. None of them belongs to a real person, because using a real one would itself be a leak.
+
+## words | Chapter 3 | The basic words
+Data moves from a source, like the mobile app, to a sink. A sink is any place data ends up: a log platform, a CRM, a vendor, or an AI provider.
+That movement is called a data flow.
+A choke point is a place every flow must pass through, like a gate in a wall.
+A firewall normally blocks connections. Aran is a firewall for data. It lets the traffic through, but changes the sensitive values inside it.
+Masking hides part of a value, like showing only the last four digits. It cannot be undone.
+Tokenisation swaps the real value for a stand in called a token. The token has the same shape, so the bank's software keeps working.
+Only a system with permission can swap the token back. That is called detokenising, and Aran records every time it happens.
+
+## regex | Chapter 4 | Why simple search fails
+The obvious solution is a pattern search, called a regular expression, or regex. For example: find any run of six digits and call it an OTP.
+When a detector raises an alarm on something harmless, that is a false positive, or false alarm.
+When it misses something real, that is a false negative.
+To measure this honestly, the team used Loghub: 32,000 real lines of logs from 16 real systems.
+These logs contain no Indian identifiers at all. So every single hit is a false alarm.
+A plain OTP pattern fired 67,481 times on those 32,000 lines.
+The word OTP even matched inside the word hotplug.
+Aran's checks, which we will meet next, raised just 6.
+Too many false alarms make teams switch the detector off, and then the real leaks go through.
+
+## research | Chapter 5 | How the research was done
+The research followed six steps.
+First, reframe the problem. The real problem is not finding PII with regex. A bank cannot prove where each customer's identifiers are, who can read them, and which copy leaked.
+Second, write the obvious solution first, the baseline, so there is something concrete to beat.
+Third, a literature survey: the laws a bank must follow, real leaks, and research papers, about 40 sources in all.
+Fourth, measure the gaps on real data instead of just arguing about them.
+Fifth, for each gap, find a piece of mathematics that closes it, and prove what can be proven.
+Sixth, attack the design. Eleven weaknesses were found, and every fix became part of the design.
+The measurement found six research gaps.
+One: number detectors drown in false alarms. Two: a protected number and a leaked number look exactly the same.
+Three: nobody measures how much a mask still reveals. Four: when a leak appears outside, nobody can say which system leaked it.
+Five: erasure cannot reach logs, backups and vendors. And six: OTPs have no structure at all.
+Each gap became one of Aran's mechanisms. Let us see them, starting with the most important idea.
+
+## checkdigit | Chapter 6 | Check digits
+A check digit is one extra digit calculated from all the other digits.
+If you type one digit wrong, the calculation no longer matches, so the number is invalid. Testing this is called a checksum.
+Card numbers use the Luhn method, invented at IBM in 1960. Let us run it.
+Take the body 7992739871. Starting from the right, double every second digit. || Take the body 7, 9, 9, 2, 7, 3, 9, 8, 7, 1. Starting from the right, double every second digit.
+Any result above nine has nine taken away. So 16 becomes 7, and 18 becomes 9.
+Add everything up. The total is 67.
+The check digit is what brings the total to the next multiple of ten. That is 3.
+Aadhaar uses a stronger method, the Verhoeff algorithm, from 1969.
+It is built on the ten ways you can rotate or flip a pentagon. Mathematicians call this the dihedral group.
+In this group, the order of moves matters. Rotate then flip is not the same as flip then rotate. That is exactly why Verhoeff catches two swapped digits.
+So Verhoeff catches every single wrong digit and every swap of two neighbours. A real Aadhaar always passes.
+
+## tokens | Chapter 7 | Mechanism 1: tokens that always fail
+Here is Aran's key idea. Everyone uses check digits only to catch typing mistakes. Aran turns them around.
+Real numbers always pass the checksum. So Aran builds every token to always fail it.
+First, encryption. Encryption scrambles data with a secret number called a key. Only someone with the key can unscramble it.
+Aran uses AES, the world's standard cipher, inside a method called FF1, approved by NIST, the US standards body.
+FF1 is format preserving. Twelve digits go in, twelve digits come out.
+Inside, FF1 is a Feistel network. It splits the number into two halves, scrambles one half using the other and the key, swaps them, and repeats ten times. It can always be run backwards.
+Aran encrypts the first 11 digits, then calculates the correct check digit for the new body.
+Then it adds a secret offset between one and nine, so the last digit is always wrong.
+This gives Theorem 1. Every real Aadhaar passes Verhoeff, and no Aran token ever does.
+So anyone, anywhere, can tell protected data from leaked data, with zero ambiguity.
+In the test, 20,000 tokens were placed in real logs, and not one was flagged as real. All 20,000 real values were caught.
+
+## persink | Chapter 8 | Mechanism 3: tokens that name the leaker
+FF1 takes one more input, called a tweak. It changes the output without changing the key.
+Aran uses the sink's name as the tweak. So the same customer gets a different token in every destination.
+Here is one generated Aadhaar, and its three tokens: one for the CRM, one for the loan vendor, and one for the log platform.
+Think of marked banknotes. Each vendor gets differently marked copies.
+Now suppose a file with a token appears on Telegram.
+Anyone can check it fails Verhoeff, so it is a token, not a raw Aadhaar.
+And Aran's trace says this token was only ever issued to the loan vendor. The leaked file names its own source.
+Theorem 2 puts a number on it. For a bank with 50 million customers and 40 sinks, a dump of five tokens is wrongly traced at most 3 times in a billion.
+In the test, dumps were traced to the right sink 100 percent of the time.
+
+## detect | Chapter 9 | Mechanism 2: detection as evidence
+Detection is treated as a decision built from evidence, not a pattern match.
+Each clue has a likelihood ratio: how much more likely it is if the value is real than if it is noise.
+For example, passing the checksum is ten times more likely for a real number than for random digits.
+Bayes' rule multiplies the clues together, turning a starting guess into a probability.
+If that probability crosses a threshold, the value is treated as sensitive. Each sink can have its own threshold.
+The detector is also calibrated. When it says ninety percent sure, it is right ninety percent of the time.
+The strongest clues come from what the bank already owns.
+A hash is a one way fingerprint. The same input always gives the same fingerprint, but you cannot go backwards.
+An HMAC is a hash that needs a secret key, so only the bank can make the fingerprints.
+Aran keeps the fingerprints of its own customers' numbers in a cuckoo filter, a compact table that answers: have I seen this before? Unlike older designs, it can also delete entries.
+For OTPs, Aran remembers each OTP it issued, bound to the exact request it belongs to.
+Without that binding, a random six digit number would match some live OTP 7 percent of the time. With it, about one in a million.
+On 16,000 real log lines, false alarms fell from 2,506 with regex to just 60.
+
+## ai | Chapter 10 | The AI layer
+Some data has no checksum at all, like names and addresses. That is where AI comes in.
+Machine learning means a program learns patterns from examples, instead of being given rules.
+Training data teaches the model. Test data, kept separate, checks it on things it has never seen.
+NER, named entity recognition, finds names and places in text.
+Aran uses a CRF, a fast model that labels each word while looking at its neighbours. It runs on a normal laptop.
+It works in English, in Hindi, and in Hinglish, where both languages mix in one sentence.
+For OTPs and UPI IDs, a second classifier reads slices of characters around the number, to tell an OTP from a port number, or a UPI ID from an email.
+Scores are measured with precision, how much of what was flagged was real, and recall, how much of what was real got flagged.
+AI is used exactly where maths cannot give an exact answer, and nowhere else. This part is owned by the AI and machine learning pair.
+
+## normaliser | Chapter 11 | Disguises and typos
+Attackers and careless code can hide a number. Tamil or Hindi digits, dots between digits, spaces, invisible characters, web escapes, or base64 encoding.
+The normaliser undoes 12 kinds of disguise before detection, and remembers where each character came from.
+Hidden identifiers caught went from 8.3 percent to 100 percent.
+What about a real Aadhaar with one typo? It now fails Verhoeff, just like a token.
+Typo repair tries all 108 single digit edits and all 11 swaps of neighbours, and checks each one against the bank's own customer list.
+One typo identifiers caught went from zero to 99.2 percent, with no tokens mistaken for typos.
+A red team then attacked Aran with 26 hiding tricks. 22 of them are now fully caught.
+
+## ledger | Chapter 12 | Mechanism 4: the leakage ledger
+Masks look safe, but they leak. Information is measured in bits. Each bit is one yes or no answer.
+If one thousand possible numbers remain, that is about 10 bits. A computer can try them all in seconds.
+Min-entropy measures exactly this: how hard the best single guess is.
+Showing the first eight and the last four digits of a card leaves only 1,000 candidates.
+The bigger danger is joining. Send the first six digits to one system, and the last four to another system of the same vendor.
+Together they leave only 100,000 candidates.
+Aran's ledger remembers what each group of connected systems has already seen, called a trust domain.
+It refuses any disclosure that would leave a customer below 20 bits, about one million candidates.
+In the test, 14,175 customers could be narrowed down by joining. The ledger brought that to zero.
+
+## erasure | Chapter 13 | Mechanism 5: erasure with proof
+The law gives people the right to have their data erased. But copies live in logs, backups and vendor systems.
+Aran keeps a vault: a protected table linking each random token to its real value, locked with a key.
+There is one key per customer, per purpose: servicing, marketing, loans, and KYC.
+Crypto-shredding means destroying the key. Every copy of that customer's tokens, everywhere, becomes meaningless at once.
+Some data must be kept by law. KYC records have a legal hold. So the KYC key is time locked, and Aran refuses to erase it early, then destroys it automatically when retention ends.
+Theorem 3 says that once the key is destroyed, the tokens reveal nothing about the customer.
+Every erasure is written into a Merkle tree. Each record becomes a hash, and each pair of hashes is hashed again, up to a single root.
+Change any record and the root changes, so the log cannot be secretly edited.
+The customer gets a receipt with an inclusion proof: the few hashes needed to rebuild the root.
+The receipt is also digitally signed with a private key, so anyone with the public key can check it was not forged.
+Even the customer's phone can check the receipt by itself.
+
+## immune | Chapter 14 | The immune layer
+Even a perfect detector cannot see an insider who detokenises thousands of records at 2 a.m. For this, Aran borrows from biology.
+In your body, the thymus trains immune cells. Any cell that attacks your own body is destroyed. Only cells that ignore self survive.
+This is called negative selection.
+Aran describes each data flow with seven numbers: volume, hour, how much raw data, how often it is detokenised, and so on. Each flow is a point in space.
+Normal flows form the self region.
+Aran scatters random detectors, deletes every one that touches self, and keeps the rest.
+Now the insider's 2 a.m. flow lands inside a detector, and an alert fires.
+On simulated attacks, the immune layer caught all six attack types, with only 0.6 percent false alarms. A standard method, Isolation Forest, caught 20 percent.
+And like real immunity, it remembers. A repeat attack scored 0.71 instead of 0.37.
+This layer was the team lead's biology plan, owned by the cybersecurity pair.
+
+## gateway | Chapter 15 | The AI gateway
+Bank staff now paste customer details into AI chatbots, called large language models, or LLMs.
+The text you send to one is called a prompt.
+The AI gateway sits between staff and the AI provider.
+Each identifier becomes a typed placeholder, like Aadhaar one, before the provider ever sees it.
+The model answers using the placeholders. Then real values are filled back only for staff whose role allows it.
+Every fill back is written to a hash chain, where each entry contains the hash of the one before. Editing any old entry breaks the chain.
+Prompt injection tries to trick the model into revealing data. Five such attacks were tested, and none leaked a value.
+Raw values reaching the provider fell from 100 percent to 7.8 percent, and every type of number went to zero.
+
+## quantum | Chapter 16 | Post-quantum security
+A future quantum computer could break today's public key cryptography.
+Shor's algorithm breaks the key exchange and signatures used across the internet today.
+Grover's algorithm only halves the strength of keys like AES, so Aran moved to AES-256.
+Attackers can record encrypted traffic today and decrypt it later. This is called harvest now, decrypt later.
+That led to a new finding. If a customer's key was ever backed up using classical key exchange, a recording of that traffic could bring the key back after erasure.
+In the simulation, 100 percent of erased values came back from the classical backups.
+The fix is hybrid cryptography: a classical method and a new post quantum method together, so the result is safe if either one holds.
+Aran pairs X25519 with ML-KEM, and Ed25519 with ML-DSA, the new NIST standards from 2024. || Aran pairs X twenty-five five nineteen with M L kem, and Ed twenty-five five nineteen with M L D S A, the new NIST standards from 2024.
+With the hybrid, zero percent of erased values came back.
+Aran also produces a CBOM, a list of every cryptographic algorithm it uses, as India's banking roadmap asks for.
+
+## walkthrough | Chapter 17 | One request, start to finish
+Let us follow one request. Ravi, a made up customer, applies for a loan in the mobile app.
+The message holds Ravi's name, Aadhaar, PAN, mobile, address and an OTP. It is going to a loan vendor.
+Step one, normalise: undo any disguises.
+Step two, detect: checksums, AI models and registries find every sensitive value, each with a calibrated probability.
+Step three, decide: the leakage ledger checks what this vendor has already seen.
+Step four, protect. The Aadhaar becomes a token issued only to this vendor. PAN, mobile, name and address become keyed labels. The OTP is destroyed.
+Step five, record: the flow goes to the immune layer.
+The vendor still gets data in exactly the right shape, so its systems keep working.
+If the vendor leaks, the token names it. If Ravi asks for erasure, Ravi's keys are destroyed and a signed receipt follows. If an insider misbehaves, the immune layer raises an alert.
+
+## built | Chapter 18 | How it was built
+Most of the work happened in about 43 hours, from just after midnight on 16 October to the evening of 17 October 2026.
+The team lead set the working rules first. Work locally on the laptop, commit only under the lead's own name, and record everything in notes.
+Before any new plan, the team gets beginner learning docs, one per topic. There are now 20.
+Every artifact is saved in the repository, linked from the README, and pushed to GitHub.
+Within the first hour, the research document was written, with the first prototype and experiments on real logs.
+Next came the AI layer and the immune layer, then the normaliser and registries.
+On the afternoon of 16 October, a live console was built: a FastAPI server running the real firewall, and a website where every number comes from the server.
+Then a guided tour of 13 animated chapters, 3D scenes, the leakage ledger, the AI gateway, the red team, and post quantum security.
+Finally the team lead's own design became the real site, with demo features like Beat the Firewall, where judges try to sneak an Aadhaar past Aran from their phones.
+
+## results | Chapter 19 | Results
+Every result comes from an experiment script, so anyone can run it again.
+On 16,000 real log lines from 8 systems the models never saw, plain regex removed 46.1 percent of sensitive values.
+The AI layers reached 83.5 percent. The normaliser and registries took it to 89.7. The mobile and OTP fixes reached 91 percent, without any registries.
+Aadhaar, card, PAN and UPI have been at 100 percent since the first AI run.
+OTP false alarms fell from 67,481 to 6. Tokens wrongly flagged as real: zero out of 20,000. Leaked dumps traced correctly: 100 percent.
+Customers exposed by joining systems: 14,175 down to zero. Raw values reaching an AI provider: 100 percent down to 7.8.
+
+## limits | Chapter 20 | Honest limits and next steps
+Good research states its weak spots plainly.
+Names are the weakest type, at about 77 percent. A transformer model, the technology behind modern AI, is the planned fix.
+Two new mistakes appeared after the mobile and OTP fix, and must be repaired.
+Speed is 654 lines per second in Python. A bank needs thousands per core, so a faster port is planned.
+The flow attacks were simulated, the AI gateway has not been tested with a real model yet, and erasure by key destruction needs a lawyer's view.
+Next, the cybersecurity pair will make the vault survive restarts, build the raw dump tracer, and add post quantum encryption in front of the server.
+The AI and machine learning pair will fix the two mistakes, add the transformer model for names, and test the gateway with a real model.
+Later come Tamil name detection, reading ID card photos, and a research paper.
+
+## close | Summary | Aran in thirty seconds
+Banks leak customer data through logs, vendors and AI chatbots, not just databases.
+Aran is a firewall for data that sits on those paths, and swaps every identifier for a look alike token before anything is stored or shared.
+Its tokens always fail the check digit, so anyone can prove whether a number is protected or leaked.
+Each destination gets different tokens, so a leaked file names its source.
+And each customer's data is locked under its own key, so erasing a customer is one key deletion, with a signed receipt.
+Aran: protection you can prove. Thank you for watching.

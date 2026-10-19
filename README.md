@@ -4,6 +4,8 @@
 
 **New to Aran? Start here:** [The full project story, from zero to now](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.md) ([PDF](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.pdf)): every technical word explained, the research and papers used, how the solution was derived, what was built, every result, and what comes next.
 
+**Prefer to watch?** [The 24-minute explainer video](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.mp4) ([subtitles](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.srt)): 22 animated chapters with voice-over, from the problem to the results, where every technical word gets its own picture and a plain-words card on screen. How it is made: [Learn 21](docs/learning/21-making-the-explainer-video.md).
+
 **Domain:** Banking, Financial Services & FinTech
 **Team (KARE, Kalasalingam Academy of Research and Education):** Inbathamizhan S (lead, cybersecurity), Aasif Ahmed A (cybersecurity), Bharadhwaj M (AI/ML), SN Arun Vijay (AI/ML)
 
@@ -230,6 +232,7 @@ Step-by-step Windows setup, with fixes for common errors, is in [Learn 1](docs/l
 
 ## Documents
 
+- [Explainer video (MP4, 24 min, 1080p)](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.mp4) with [English subtitles](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.srt): the whole project explained from zero with animation and voice-over. Source (script, voice and animation code) in [artifacts/Explainer video/source](artifacts/Explainer%20video/source/).
 - [The full project story, from zero to now](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.md) ([PDF](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.pdf)): one long explainer for the whole team. A technical foundation (every term in plain words), the story in order from the first message, the research and how each paper was used, how the solution was derived, the architecture, every experiment (E1 to E19), the live console, what is not done, and how to explain Aran to judges.
 - [Research document](docs/research/aran-research.md): problem analysis, baseline, literature survey, research gaps, novel design with theorems, critical review, results, plan and sources.
 - [AI and immune layers](docs/research/ai-and-immune-layers.md): NER, OTP/UPI classifier, calibrated detector, artificial immune system and firewall wiring, with results on real data and the weak spots.
@@ -265,9 +268,11 @@ The team is new to this technology, so read these in order before starting any b
 | 18 | [Phones, QR Codes and Speech Input](docs/learning/18-phone-arena-qr-and-speech.md) | Everyone (the phone arena) | ~2 h | Let phones reach the laptop server, draw QR codes, poll a shared board, use browser speech recognition and its secure-context rule, score an attack honestly against a challenge | [PDF](artifacts/learning/Aran%20Learn%2018%20-%20Phones%20QR%20Codes%20and%20Speech%20Input.pdf) |
 | 19 | [Translating a Website](docs/learning/19-translating-a-website.md) | Everyone, translators especially | ~1.5 h | Use English text as the translation key with fallback, handle Tamil and Hindi letters and fonts, run the check that keeps English complete and finds missing or stale lines | [PDF](artifacts/learning/Aran%20Learn%2019%20-%20Translating%20a%20Website.pdf) |
 | 20 | [Presenter Mode and Offline Replay](docs/learning/20-presenter-mode-and-offline-replay.md) | Whoever presents | ~1 h | Run the 3-minute demo path with a clicker, record and replay server answers honestly, use localStorage and a service worker, follow the demo-day checklist | [PDF](artifacts/learning/Aran%20Learn%2020%20-%20Presenter%20Mode%20and%20Offline%20Replay.pdf) |
+| 21 | [How the Explainer Video Is Made](docs/learning/21-making-the-explainer-video.md) | Anyone changing the video | ~1 h | Turn a script into a local neural voice-over, time every animation to the spoken line, draw a frame as a function of time, render with a headless browser and ffmpeg, check frames and sync | [PDF](artifacts/learning/Aran%20Learn%2021%20-%20How%20the%20Explainer%20Video%20Is%20Made.pdf) |
 
 ## Artifacts
 
+- [Explainer video (MP4)](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.mp4) and [subtitles (SRT)](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.srt): 24 minutes, 22 chapters, voice-over and animation for every technical word, with its [source](artifacts/Explainer%20video/source/).
 - [Full project story (Markdown)](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.md) and [PDF](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.pdf): the whole project from zero, for the team.
 - [Learning docs as PDFs](artifacts/learning/): print-ready copies of the learning docs above.
 - [Normaliser, registries and typo repair (PDF)](artifacts/research/Aran%20-%20Normaliser%20Registries%20and%20Typo%20Repair.pdf): results report for roadmap items 2 and 5.

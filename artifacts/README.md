@@ -47,6 +47,10 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Standout features | Aran Learn 19 - Translating a Website (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/19-translating-a-website.md |
 | Standout features | Aran Learn 20 - Presenter Mode and Offline Replay (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/20-presenter-mode-and-offline-replay.md |
 | Project Story | Aran - Full Project Story from Zero (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.md |
+| Explainer video | Aran - Explainer Video (MP4, 24 min, 1080p, voice-over) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.mp4 |
+| Explainer video | Aran - Explainer Video subtitles (SRT) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.srt |
+| Explainer video | Video source: script, voice and animation code | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/Explainer%20video/source |
+| Explainer video | Aran Learn 21 - How the Explainer Video Is Made (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/21-making-the-explainer-video.md |
 
 Note: the Markdown copy replaces the embedded architecture diagram with a text placeholder; the PDF keeps it.
 

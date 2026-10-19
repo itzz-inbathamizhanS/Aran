@@ -1,0 +1,23 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Aran explainer</title>
+<style>
+html,body{margin:0;padding:0;background:#0b1220;overflow:hidden}
+#wrap{position:relative;width:1920px;height:1080px;background:radial-gradient(1200px 700px at 50% 40%,#111b30 0%,#0b1220 70%)}
+svg{position:absolute;inset:0}
+.an{transform-box:fill-box;transform-origin:center}
+#sub{position:absolute;left:0;right:0;bottom:44px;display:flex;justify-content:center;opacity:0}
+#subtxt{max-width:1560px;background:rgba(5,9,18,.82);color:#f4f7fc;font:500 38px/1.32 Inter,'Noto Sans Tamil','Noto Sans Devanagari',sans-serif;padding:14px 30px;border-radius:14px;text-align:center}
+</style></head>
+<body><div id="wrap">
+<svg id="stage" width="1920" height="1080" viewBox="0 0 1920 1080"></svg>
+<div id="sub"><div id="subtxt"></div></div>
+</div>
+<script src="../timing.js"></script>
+<script src="../data.js"></script>
+<script src="engine.js"></script>
+<script src="scenes.js"></script>
+<script src="scenes2.js"></script>
+<script src="scenes3.js"></script>
+<script src="scenes4.js"></script>
+<script>document.fonts.ready.then(()=>{init();seek(0);window.READY=true;});</script>
+</body></html>

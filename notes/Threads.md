@@ -27,6 +27,7 @@ Every project thread for Aran, oldest first.
 | 17 | [[17 Post-quantum cryptography]] | done (roadmap item 14, E17 to E19, Learn 14) |
 | 18 | [[18 UI design spec]] | done (full page-by-page design spec, Learn 15) |
 | 19 | [[19 Full project story]] | done (one explainer of the whole project, Markdown and PDF) |
+| 20 | [[20 Explainer video]] | done (24-minute animated video with voice-over and subtitles) |
 
 ## Decisions
 - All work happens locally in `D:\Aran`; nothing goes to GitHub until **save** or **push**.
