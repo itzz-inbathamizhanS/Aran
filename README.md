@@ -2,6 +2,8 @@
 
 > An algebraic data-flow firewall for Indian banks. It detects Aadhaar, PAN, card numbers, UPI IDs and OTPs in APIs, logs and AI tools, protects them before they are stored or shared, traces any leak back to its source, and supports DPDP-compliant erasure.
 
+**New to Aran? Start here:** [The full project story, from zero to now](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.md) ([PDF](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.pdf)): every technical word explained, the research and papers used, how the solution was derived, what was built, every result, and what comes next.
+
 **Domain:** Banking, Financial Services & FinTech
 **Team (KARE, Kalasalingam Academy of Research and Education):** Inbathamizhan S (lead, cybersecurity), Aasif Ahmed A (cybersecurity), Bharadhwaj M (AI/ML), SN Arun Vijay (AI/ML)
 
@@ -228,6 +230,7 @@ Step-by-step Windows setup, with fixes for common errors, is in [Learn 1](docs/l
 
 ## Documents
 
+- [The full project story, from zero to now](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.md) ([PDF](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.pdf)): one long explainer for the whole team. A technical foundation (every term in plain words), the story in order from the first message, the research and how each paper was used, how the solution was derived, the architecture, every experiment (E1 to E19), the live console, what is not done, and how to explain Aran to judges.
 - [Research document](docs/research/aran-research.md): problem analysis, baseline, literature survey, research gaps, novel design with theorems, critical review, results, plan and sources.
 - [AI and immune layers](docs/research/ai-and-immune-layers.md): NER, OTP/UPI classifier, calibrated detector, artificial immune system and firewall wiring, with results on real data and the weak spots.
 - [Normaliser, registries and typo repair](docs/research/normaliser-and-registries.md): roadmap items 2 and 5, built and measured (E10 to E12). [PDF](artifacts/research/Aran%20-%20Normaliser%20Registries%20and%20Typo%20Repair.pdf)
@@ -265,6 +268,7 @@ The team is new to this technology, so read these in order before starting any b
 
 ## Artifacts
 
+- [Full project story (Markdown)](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.md) and [PDF](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.pdf): the whole project from zero, for the team.
 - [Learning docs as PDFs](artifacts/learning/): print-ready copies of the learning docs above.
 - [Normaliser, registries and typo repair (PDF)](artifacts/research/Aran%20-%20Normaliser%20Registries%20and%20Typo%20Repair.pdf): results report for roadmap items 2 and 5.
 - [Ledger, AI gateway and red team (PDF)](artifacts/research/Aran%20-%20Ledger%20AI%20Gateway%20and%20Red%20Team.pdf): results report for roadmap items 3, 6, 9 and M4, with Learn 12, also kept by thread in [artifacts/Ledger AI gateway and red team](artifacts/Ledger%20AI%20gateway%20and%20red%20team/).

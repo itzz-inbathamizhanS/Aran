@@ -1,6 +1,6 @@
 ---
 tags: [index, artifacts]
-updated: 2026-10-16
+updated: 2026-10-19
 ---
 # Artifacts
 
@@ -46,3 +46,6 @@ Reading order: Learn 1 to 4 and 7 for everyone, then Learn 5 and 9 (AI/ML pair) 
 
 ## Standout features
 - [Standout features](../artifacts/Standout%20features/): arena (QR, phones, speech), without/with Aran, leakage ledger page, card photo scan, post-quantum page, customer view, Tamil/Hindi switch, presenter mode. Ideas list: [Standout frontend ideas](../artifacts/Standout%20frontend%20ideas/Aran%20-%20Standout%20Frontend%20Ideas.md).
+
+## Project story
+- [Aran - Full Project Story from Zero](../artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.md) (Markdown and PDF): the whole project from zero for the team. Thread: [[19 Full project story]].

@@ -46,6 +46,7 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Standout features | Aran Learn 18 - Phones, QR Codes and Speech Input (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/18-phone-arena-qr-and-speech.md |
 | Standout features | Aran Learn 19 - Translating a Website (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/19-translating-a-website.md |
 | Standout features | Aran Learn 20 - Presenter Mode and Offline Replay (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/20-presenter-mode-and-offline-replay.md |
+| Project Story | Aran - Full Project Story from Zero (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.md |
 
 Note: the Markdown copy replaces the embedded architecture diagram with a text placeholder; the PDF keeps it.
 
