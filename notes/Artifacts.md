@@ -51,4 +51,5 @@ Reading order: Learn 1 to 4 and 7 for everyone, then Learn 5 and 9 (AI/ML pair) 
 - [Aran - Full Project Story from Zero](../artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.md) (Markdown and PDF): the whole project from zero for the team. Thread: [[19 Full project story]].
 
 ## Explainer video
-- [Aran - Explainer Video](../artifacts/Explainer%20video/README.md) (MP4 and SRT): about 24 minutes, 22 animated chapters with voice-over, every technical word drawn and explained. Thread: [[20 Explainer video]]. How it is made: [Learn 21](../docs/learning/21-making-the-explainer-video.md).
+- [Aran - Explainer Video v2, full course](../artifacts/Explainer%20video%20v2/README.md) (6 parts as MP4 in the repo, Part 4 in two files, with SRT): 76.6 minutes, 61 chapters, light paper style, characters and a moving camera, plain words with an everyday example before every technical term, real Indian and world incidents, and a recap after every chapter. Thread: [[20 Explainer video]].
+- [Aran - Explainer Video, quick tour (v1)](../artifacts/Explainer%20video/README.md) (MP4 and SRT): about 24 minutes, 22 animated chapters with voice-over, every technical word drawn and explained. Thread: [[20 Explainer video]]. How it is made: [Learn 21](../docs/learning/21-making-the-explainer-video.md).

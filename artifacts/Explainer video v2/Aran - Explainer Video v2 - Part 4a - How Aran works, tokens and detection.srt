@@ -1,0 +1,500 @@
+1
+00:00:01,009 --> 00:00:03,191
+Part four. How Aran works.
+
+2
+00:00:06,290 --> 00:00:10,381
+Before we look inside Aran, let us see where it sits in a bank.
+
+3
+00:00:10,881 --> 00:00:17,140
+On the left are the sources: the mobile app, core banking, the loan system, and log files.
+
+4
+00:00:17,640 --> 00:00:23,890
+On the right are the sinks: the log platform, the CRM, vendors, and AI companies.
+
+5
+00:00:24,390 --> 00:00:29,930
+Aran sits in the middle, on the choke points, so every message passes through it.
+
+6
+00:00:30,430 --> 00:00:38,070
+Inside Aran, every message goes through five steps: normalise, detect, decide, protect and record.
+
+7
+00:00:38,571 --> 00:00:44,224
+Below Aran sits the vault, which holds the keys: one per customer, per purpose.
+
+8
+00:00:44,724 --> 00:00:49,654
+Next to it is the erasure record, which gives customers signed receipts.
+
+9
+00:00:50,154 --> 00:00:56,516
+Customers never see Aran. The bank's IT team installs it, like any other firewall.
+
+10
+00:00:57,016 --> 00:01:05,158
+In the next chapters, we will open each part, one at a time, starting with the most important idea: the check digit.
+
+11
+00:01:05,658 --> 00:01:14,076
+Recap. Sources on the left, sinks on the right, Aran on the choke points in the middle, and the vault with the keys underneath.
+
+12
+00:01:16,576 --> 00:01:21,408
+Look closely at the last digit of an Aadhaar number. It is not random.
+
+13
+00:01:21,908 --> 00:01:27,015
+It is calculated from the other eleven digits, using a fixed recipe.
+
+14
+00:01:27,515 --> 00:01:31,436
+This last digit has a name. It is called a check digit.
+
+15
+00:01:31,936 --> 00:01:38,852
+Think of it as a lock and a key. The first eleven digits are the key. The last digit is the lock.
+
+16
+00:01:39,353 --> 00:01:43,624
+When the number is correct, the key always fits, and the lock opens.
+
+17
+00:01:44,123 --> 00:01:50,140
+Now suppose a bank clerk types just one digit wrong. Here, the seven became a one.
+
+18
+00:01:50,640 --> 00:01:55,157
+The key has changed, so it no longer fits. The lock stays shut.
+
+19
+00:01:55,658 --> 00:02:00,849
+So the computer knows straight away that this number is wrong, and asks for it again.
+
+20
+00:02:01,348 --> 00:02:07,104
+Checking a number like this, by redoing the recipe and comparing, is called a checksum.
+
+21
+00:02:07,604 --> 00:02:15,235
+Recap. The check digit is a lock, and the other digits are the key. One wrong digit, and the lock stays shut.
+
+22
+00:02:17,735 --> 00:02:22,792
+Different numbers use different recipes. Card numbers use one called Luhn.
+
+23
+00:02:23,292 --> 00:02:31,799
+It was created at IBM, and patented in 1960. Almost every payment card in the world uses it.
+
+24
+00:02:32,299 --> 00:02:41,231
+Let us run it together on a short example. Here is a number: 7 9 9 2 7 3 9 8 7 1.
+
+25
+00:02:41,731 --> 00:02:54,115
+Start from the right, and double every second digit. The 1 becomes 2. The 8 becomes 16. The 3 becomes 6. The 2 becomes 4. And the 9 becomes 18.
+
+26
+00:02:54,615 --> 00:03:02,394
+If a doubled number is bigger than nine, take nine away. So 16 becomes 7, and 18 becomes 9.
+
+27
+00:03:02,894 --> 00:03:06,770
+Now add up all the digits. The total is 67.
+
+28
+00:03:07,270 --> 00:03:14,841
+The check digit is whatever brings the total up to the next round ten. From 67 to 70, we need 3.
+
+29
+00:03:15,342 --> 00:03:22,655
+So the full card number ends in 3. Change any single digit, and the total no longer ends in zero.
+
+30
+00:03:23,155 --> 00:03:25,737
+That is how a card number checks itself.
+
+31
+00:03:26,237 --> 00:03:33,874
+Recap. Luhn doubles every second digit, adds everything up, and the check digit makes the total a round ten.
+
+32
+00:03:36,374 --> 00:03:44,497
+Aadhaar uses a stronger recipe, called Verhoeff, created by a Dutch mathematician in 1969.
+
+33
+00:03:44,997 --> 00:03:48,811
+Why stronger? Think about the most common typing mistakes.
+
+34
+00:03:49,312 --> 00:03:57,483
+The first is one wrong digit. The second is swapping two neighbours, like typing 54 instead of 45.
+
+35
+00:03:57,982 --> 00:04:02,496
+Luhn catches every single wrong digit, but it misses some swaps.
+
+36
+00:04:02,997 --> 00:04:08,327
+Verhoeff catches every single wrong digit, and every swap of two neighbours.
+
+37
+00:04:08,827 --> 00:04:13,615
+Its secret comes from a shape: a pentagon, a five-sided figure.
+
+38
+00:04:14,115 --> 00:04:23,752
+You can turn a pentagon in five ways, and flip it over in five ways. That is ten moves in total, one for each digit from 0 to 9.
+
+39
+00:04:24,252 --> 00:04:31,573
+Here is the clever part. With these moves, the order matters. Turn then flip is not the same as flip then turn.
+
+40
+00:04:32,073 --> 00:04:38,024
+Watch. The same two moves, in a different order, leave the pentagon in a different position.
+
+41
+00:04:38,523 --> 00:04:44,381
+Because the order matters, swapping two digits changes the answer. So the swap is caught.
+
+42
+00:04:44,881 --> 00:04:51,556
+Mathematicians call this family of moves the dihedral group. You do not need to remember the name.
+
+43
+00:04:52,056 --> 00:04:57,668
+What matters is this: every real Aadhaar number always passes the Verhoeff check.
+
+44
+00:04:58,167 --> 00:05:10,164
+Recap. Verhoeff is built from turning and flipping a pentagon. The order matters, so it catches every wrong digit and every swap. And every real Aadhaar passes it.
+
+45
+00:05:12,664 --> 00:05:18,893
+Now comes Aran's key idea. It is simple, and nobody had used it this way before.
+
+46
+00:05:19,393 --> 00:05:24,076
+Everyone uses check digits for one thing: to catch typing mistakes.
+
+47
+00:05:24,577 --> 00:05:26,702
+Aran turns the idea around.
+
+48
+00:05:27,202 --> 00:05:34,339
+A real Aadhaar always passes the check. So Aran makes every token always fail it, on purpose.
+
+49
+00:05:34,839 --> 00:05:41,583
+Here is how. Aran takes the first eleven digits, and scrambles them into eleven new digits.
+
+50
+00:05:42,083 --> 00:05:45,368
+Then it works out the correct check digit for the new number.
+
+51
+00:05:45,868 --> 00:05:52,313
+And then it adds a small secret amount, between one and nine, so the last digit is always wrong.
+
+52
+00:05:52,813 --> 00:06:04,238
+Let us see it with Ravi's made-up Aadhaar, 2345 6789 0124, going to the loan vendor.
+
+53
+00:06:04,738 --> 00:06:11,740
+The first eleven digits are scrambled into 0982 6158 641.
+
+54
+00:06:12,240 --> 00:06:22,210
+The correct check digit for these would be 9. Aran adds a secret 3, and writes 2 instead. So the token is 0982 6158 6412.
+
+55
+00:06:22,710 --> 00:06:27,060
+Run the check on the token. It fails, exactly as planned.
+
+56
+00:06:27,560 --> 00:06:35,722
+Remember the lock and key. A real number is a key that always fits. An Aran token is a key that never fits.
+
+57
+00:06:36,222 --> 00:06:40,972
+So now anyone, anywhere, can tell them apart, with one simple test.
+
+58
+00:06:41,472 --> 00:06:50,723
+If it passes the check, it is a real Aadhaar, and it is exposed. If it fails the check, it is an Aran token, and it is safe.
+
+59
+00:06:51,224 --> 00:06:59,821
+The team proved this as a mathematical rule, called Theorem 1. A theorem is a statement that is proved to be always true.
+
+60
+00:07:00,321 --> 00:07:08,255
+Then they tested it. 20,000 tokens were hidden in real logs. Not one was mistaken for a real number.
+
+61
+00:07:08,755 --> 00:07:12,978
+And all 20,000 real numbers mixed in with them were caught.
+
+62
+00:07:13,478 --> 00:07:23,437
+Recap. Real numbers always pass the check. Aran tokens always fail it. So protected and leaked numbers can finally be told apart.
+
+63
+00:07:25,937 --> 00:07:31,500
+How does Aran scramble eleven digits into eleven new digits? With encryption.
+
+64
+00:07:32,000 --> 00:07:38,342
+It uses AES, the encryption standard used by banks and governments all over the world.
+
+65
+00:07:38,842 --> 00:07:47,384
+But normal encryption turns twelve digits into a long string of random-looking symbols. That would break the bank's programs.
+
+66
+00:07:47,884 --> 00:07:55,954
+So Aran uses a special method called FF1. It is approved by NIST, the American standards body.
+
+67
+00:07:56,454 --> 00:08:03,017
+FF1 is format preserving. Digits go in, and the same number of digits come out.
+
+68
+00:08:03,517 --> 00:08:12,472
+Inside FF1 is a clever trick called a Feistel network. Think of shuffling a deck of cards in a fixed, secret way.
+
+69
+00:08:12,971 --> 00:08:15,721
+First, the number is cut into two halves.
+
+70
+00:08:16,222 --> 00:08:21,824
+The right half is mixed with the secret key, and the result is added onto the left half.
+
+71
+00:08:22,324 --> 00:08:24,506
+Then the two halves swap places.
+
+72
+00:08:25,006 --> 00:08:32,149
+That is one round. FF1 repeats it ten times. Watch the numbers change with every round.
+
+73
+00:08:32,649 --> 00:08:39,957
+After ten rounds, the result looks completely random. But with the key, every step can be run backwards.
+
+74
+00:08:40,457 --> 00:08:45,350
+So the bank, and only the bank, can turn the token back into the real number.
+
+75
+00:08:45,849 --> 00:08:57,626
+Recap. FF1 scrambles digits into digits, using the bank's secret key. It shuffles two halves ten times. And with the key, it can always be reversed.
+
+76
+00:09:00,126 --> 00:09:07,500
+FF1 has one more input, called a tweak. A tweak changes the result, without changing the key.
+
+77
+00:09:08,000 --> 00:09:11,997
+Aran uses the name of the destination as the tweak.
+
+78
+00:09:12,497 --> 00:09:17,542
+So the same customer gets a different token in every place the data goes.
+
+79
+00:09:18,042 --> 00:09:28,218
+Here is Ravi's made-up Aadhaar. And here are three tokens for it: one for the CRM, one for the loan vendor, and one for the log platform.
+
+80
+00:09:28,718 --> 00:09:33,409
+All three fail the check. All three are safe. But each one is different.
+
+81
+00:09:33,909 --> 00:09:41,877
+Think of marked banknotes. Police sometimes mark banknotes before handing them over, so they can recognise them later.
+
+82
+00:09:42,377 --> 00:09:47,274
+Aran does the same. Each destination gets its own marked copy.
+
+83
+00:09:47,774 --> 00:09:54,377
+Recap. Each destination gets its own token for the same customer, like marked banknotes.
+
+84
+00:09:56,877 --> 00:10:03,118
+Now imagine a bad day. A file with customer numbers appears for sale on Telegram.
+
+85
+00:10:03,618 --> 00:10:07,110
+The bank's security team checks the numbers in the file.
+
+86
+00:10:07,610 --> 00:10:17,718
+First, the check digit test. The numbers fail. So they are Aran tokens, not real Aadhaar numbers. No real number was exposed.
+
+87
+00:10:18,218 --> 00:10:25,443
+Second, the trace. Aran looks at each token, and asks: which destination was this token made for?
+
+88
+00:10:25,943 --> 00:10:32,195
+The answer comes back: the loan vendor. These tokens were only ever given to the loan vendor.
+
+89
+00:10:32,695 --> 00:10:35,439
+The leaked file has named its own source.
+
+90
+00:10:35,939 --> 00:10:40,100
+The team proved how reliable this is. This is Theorem 2.
+
+91
+00:10:40,600 --> 00:10:51,578
+For a bank with 50 million customers and 40 destinations, a leaked file with just five tokens points to the wrong place at most 3 times in a billion.
+
+92
+00:10:52,078 --> 00:10:58,159
+In testing, every leaked file was traced to the right destination. 100 percent.
+
+93
+00:10:58,659 --> 00:11:05,584
+Recap. A failed check proves that no real number leaked. And the token's mark shows who leaked it.
+
+94
+00:11:08,084 --> 00:11:16,477
+Sometimes the bank really does need the real number. For example, a loan officer may need to confirm a customer's Aadhaar.
+
+95
+00:11:16,977 --> 00:11:21,580
+Swapping a token back for the real value is called detokenising.
+
+96
+00:11:22,080 --> 00:11:28,491
+Only systems with permission can do it. Each one must say who it is, and why it is asking.
+
+97
+00:11:28,991 --> 00:11:33,235
+Aran checks the permission, and then gives back the real value.
+
+98
+00:11:33,735 --> 00:11:40,936
+And every single request is written into a log: who asked, when, for which customer, and for what reason.
+
+99
+00:11:41,436 --> 00:11:47,855
+This record matters. If something goes wrong later, the bank can see exactly who looked at what.
+
+100
+00:11:48,355 --> 00:11:55,531
+It also feeds the immune layer. A sudden rush of these requests is a warning sign, as we will see.
+
+101
+00:11:56,031 --> 00:12:02,427
+Recap. Only allowed systems can get the real number back, and every request is recorded.
+
+102
+00:12:04,927 --> 00:12:12,439
+Before Aran can protect a detail, it must find it. So how does Aran decide that a number is an Aadhaar?
+
+103
+00:12:12,939 --> 00:12:17,883
+Not by shape alone. Aran thinks like a detective, collecting clues.
+
+104
+00:12:18,383 --> 00:12:22,670
+Clue one: does it pass the Verhoeff check? That is strong evidence.
+
+105
+00:12:23,170 --> 00:12:26,666
+Clue two: does the word Aadhaar appear just before it?
+
+106
+00:12:27,165 --> 00:12:32,782
+Clue three: is it written in groups of four, the way people usually write an Aadhaar?
+
+107
+00:12:33,282 --> 00:12:42,353
+Each clue has a strength. Passing the check digit test is about ten times more likely for a real number than for random digits.
+
+108
+00:12:42,853 --> 00:12:51,616
+Experts call this strength a likelihood ratio. It just means: how much more likely is this clue, if the value is real?
+
+109
+00:12:52,116 --> 00:12:57,535
+Aran combines all the clues using a rule from probability, called Bayes' rule.
+
+110
+00:12:58,035 --> 00:13:05,503
+The result is one number, a probability. For example: 97 percent sure that this is an Aadhaar.
+
+111
+00:13:06,003 --> 00:13:10,252
+If it is above a line, called the threshold, Aran protects it.
+
+112
+00:13:10,752 --> 00:13:21,063
+And the probabilities are honest. When Aran says 90 percent sure, it is right about 90 percent of the time. This is called being calibrated.
+
+113
+00:13:21,563 --> 00:13:30,659
+On 16,000 real log lines, false alarms fell from 2,506 with pattern search, to just 60.
+
+114
+00:13:31,159 --> 00:13:41,605
+Recap. Aran gathers clues, weighs each one, and combines them into an honest probability. Only values above the threshold are protected.
+
+115
+00:13:44,105 --> 00:13:50,137
+The strongest clue of all comes from something the bank already has: its own customer list.
+
+116
+00:13:50,637 --> 00:13:56,000
+If a number belongs to one of the bank's own customers, it is almost certainly real.
+
+117
+00:13:56,500 --> 00:14:03,796
+But keeping a plain list of every customer's number inside the firewall would be dangerous. It could leak too.
+
+118
+00:14:04,296 --> 00:14:07,926
+So Aran keeps fingerprints instead, using a hash.
+
+119
+00:14:08,426 --> 00:14:17,692
+It uses a special kind called an HMAC. It is a hash that also needs a secret key, so only the bank can make these fingerprints.
+
+120
+00:14:18,191 --> 00:14:26,922
+The fingerprints are kept in a cuckoo filter, a very compact table that answers one question, fast: have I seen this before?
+
+121
+00:14:27,422 --> 00:14:37,636
+800,000 fingerprints fit in just 4 megabytes. And unlike older designs, it can also delete fingerprints, when a customer leaves.
+
+122
+00:14:38,136 --> 00:14:42,118
+OTPs need a different trick, because they are random.
+
+123
+00:14:42,618 --> 00:14:52,745
+When the bank sends an OTP, Aran remembers it, tied to the exact request it belongs to. Every request has its own trace number.
+
+124
+00:14:53,245 --> 00:15:03,503
+Without that tie, a random six-digit number would match some live OTP about 7 percent of the time. With it, about once in a million.
+
+125
+00:15:04,003 --> 00:15:13,415
+Recap. Aran checks numbers against fingerprints of the bank's own customers, and remembers each OTP together with its request.
+

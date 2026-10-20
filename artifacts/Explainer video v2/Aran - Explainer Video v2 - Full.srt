@@ -1,0 +1,2408 @@
+1
+00:00:01,000 --> 00:00:07,357
+Hello, and welcome. This video explains a project called Aran, from the very beginning.
+
+2
+00:00:07,857 --> 00:00:14,394
+Aran is a Tamil word. It means a fortress, a strong wall that protects what is inside.
+
+3
+00:00:14,894 --> 00:00:20,007
+Aran protects one thing: the private details of people who bank with a bank.
+
+4
+00:00:20,508 --> 00:00:27,136
+It was built by four students at Kalasalingam Academy of Research and Education, called KARE.
+
+5
+00:00:27,635 --> 00:00:34,754
+Inbathamizhan S leads the project and works on cybersecurity, together with Aasif Ahmed A.
+
+6
+00:00:35,254 --> 00:00:41,345
+SN Arun Vijay and Bharadhwaj M work on the artificial intelligence part.
+
+7
+00:00:41,845 --> 00:00:47,524
+You do not need to know anything about computers or security to follow this video.
+
+8
+00:00:48,023 --> 00:00:54,184
+Whenever a new word appears, a small card in the top right corner explains it in plain words.
+
+9
+00:00:54,685 --> 00:00:56,035
+Like this one.
+
+10
+00:00:56,535 --> 00:01:01,262
+And everything that is spoken is always written at the bottom of the screen.
+
+11
+00:01:01,762 --> 00:01:07,092
+The video is long, so it is split into six parts. You can pause at any time.
+
+12
+00:01:07,591 --> 00:01:12,723
+At the end of every chapter, there is a short recap of the most important points.
+
+13
+00:01:13,223 --> 00:01:14,626
+Let us begin.
+
+14
+00:01:17,127 --> 00:01:19,194
+Here is the plan for the video.
+
+15
+00:01:19,693 --> 00:01:24,983
+Part one is the problem: how a bank's customer data leaks, and why it matters.
+
+16
+00:01:25,484 --> 00:01:30,987
+Part two teaches the basic words, one at a time, with everyday examples.
+
+17
+00:01:31,487 --> 00:01:37,584
+Part three shows why the simple way of finding data fails, and how the research was done.
+
+18
+00:01:38,084 --> 00:01:42,932
+Part four is the heart of the video: how Aran works, step by step.
+
+19
+00:01:43,432 --> 00:01:46,679
+Part five shows how Aran was built and tested.
+
+20
+00:01:47,179 --> 00:01:52,170
+And part six shares the results, the honest weak spots, and what comes next.
+
+21
+00:01:54,671 --> 00:01:56,607
+Part one. The problem.
+
+22
+00:01:59,706 --> 00:02:03,716
+Meet Ravi. Ravi is a made-up customer of a bank.
+
+23
+00:02:04,216 --> 00:02:09,886
+One morning, Ravi opens the bank's app on the phone to apply for a small loan.
+
+24
+00:02:10,386 --> 00:02:16,562
+Ravi types in a name, an Aadhaar number, a PAN number, a mobile number and a home address.
+
+25
+00:02:17,063 --> 00:02:23,408
+Then the bank sends a one-time password, called an OTP, and Ravi types that in too.
+
+26
+00:02:23,908 --> 00:02:27,948
+Ravi presses Apply. For Ravi, the story ends here.
+
+27
+00:02:28,448 --> 00:02:32,078
+But for Ravi's data, the story is only beginning.
+
+28
+00:02:32,579 --> 00:02:37,585
+The message travels from the phone to the bank's big computers, called servers.
+
+29
+00:02:38,085 --> 00:02:44,580
+The server writes a note about the request into a log file, so engineers can fix problems later.
+
+30
+00:02:45,080 --> 00:02:50,487
+A copy goes to the CRM, the screen bank staff use to look up customers.
+
+31
+00:02:50,988 --> 00:02:57,741
+Another copy goes to an outside loan company, called a vendor, which checks Ravi's credit history.
+
+32
+00:02:58,240 --> 00:03:05,194
+And a staff member may even paste Ravi's details into an AI chatbot, to help write a reply.
+
+33
+00:03:05,694 --> 00:03:12,396
+So one message from Ravi has quietly become five copies, sitting in five different places.
+
+34
+00:03:12,896 --> 00:03:16,698
+And every copy is a new door that a leak can come through.
+
+35
+00:03:19,197 --> 00:03:22,099
+Think about a photocopy of your ID card.
+
+36
+00:03:22,599 --> 00:03:29,489
+When you give a photocopy to a shop, a hotel, or a SIM card seller, you lose control of it.
+
+37
+00:03:29,990 --> 00:03:34,698
+You do not know where it is kept, who looks at it, or when it is thrown away.
+
+38
+00:03:35,198 --> 00:03:38,609
+A bank's data is the same, but on a huge scale.
+
+39
+00:03:39,109 --> 00:03:45,515
+A big bank serves millions of customers, and handles millions of requests every single day.
+
+40
+00:03:46,015 --> 00:03:52,309
+Each request can leave copies in logs, in reports, in backups and in other companies.
+
+41
+00:03:52,809 --> 00:03:58,922
+A backup is a spare copy kept in case something breaks. Backups are often kept for years.
+
+42
+00:03:59,422 --> 00:04:09,269
+Logs are the biggest surprise. Programmers write logs to find bugs, and they often write whole messages into them, private details and all.
+
+43
+00:04:09,770 --> 00:04:16,482
+Logs are then sent to other teams, to monitoring tools, and sometimes to outside companies.
+
+44
+00:04:16,982 --> 00:04:21,700
+So the most private details often sit in the least protected places.
+
+45
+00:04:22,200 --> 00:04:33,659
+Recap. One customer action makes many copies. The copies end up in logs, backups, vendors and chatbots. And logs are usually the least protected.
+
+46
+00:04:36,159 --> 00:04:42,063
+This is not just a theory. Let us look at real cases from India, one at a time.
+
+47
+00:04:42,564 --> 00:04:58,383
+October 2016. About 3.2 million Indian debit cards were exposed. Harmful software had got into the systems of Hitachi Payment Services, a company that runs ATM networks for banks.
+
+48
+00:04:58,883 --> 00:05:06,649
+Banks had to block and replace cards in a hurry, and some customers saw money taken from their accounts in other countries.
+
+49
+00:05:07,149 --> 00:05:19,942
+January 2019. A news site, TechCrunch, reported that a server used by SBI, India's largest bank, had been left open on the internet without a password.
+
+50
+00:05:20,442 --> 00:05:35,045
+It stored text messages sent to customers, with phone numbers, partial account numbers and bank balances. SBI said its core systems were not breached. But anyone who found the server could read the messages.
+
+51
+00:05:35,544 --> 00:05:49,559
+August 2020. Attackers got into Juspay, a company that processes card payments for many apps. Data on about 35 million accounts later appeared for sale on the dark web.
+
+52
+00:05:50,060 --> 00:05:55,574
+The dark web is a hidden part of the internet, where stolen data is bought and sold.
+
+53
+00:05:56,074 --> 00:06:04,161
+The card numbers were masked. But masked data, joined with emails and phone numbers, can still point to real people.
+
+54
+00:06:04,661 --> 00:06:21,369
+February 2021. SITA, a vendor that runs passenger systems for airlines, was attacked. Air India said data on 4.5 million passengers was stolen, including passport and credit card details.
+
+55
+00:06:21,869 --> 00:06:28,428
+Air India's own systems were not the ones broken into. Its vendor's were. That is a side door.
+
+56
+00:06:28,928 --> 00:06:43,463
+June 2023. A Telegram bot was found that returned a person's name, Aadhaar and PAN, when you typed in their phone number. The data was linked to people registered for COVID vaccination.
+
+57
+00:06:43,963 --> 00:06:59,300
+September 2024. Data on about 31 million Star Health insurance customers was sold through Telegram chatbots: names, phone numbers, addresses, tax numbers and medical reports.
+
+58
+00:06:59,800 --> 00:07:11,973
+Recap. In India, card data, bank messages, passport details, Aadhaar numbers and health records have all leaked. And again and again, the leak came through a side door.
+
+59
+00:07:14,473 --> 00:07:18,888
+The same side doors exist at the biggest companies in the world.
+
+60
+00:07:19,388 --> 00:07:28,758
+May 2018. Twitter found a bug. Passwords were being written into an internal log in plain text, before being protected.
+
+61
+00:07:29,258 --> 00:07:36,833
+Twitter asked all its users, more than 330 million people, to think about changing their passwords.
+
+62
+00:07:37,333 --> 00:07:53,069
+In 2019, Facebook found that hundreds of millions of user passwords had been stored in plain, readable text on its internal systems. In 2024, Meta was fined 91 million euros for it.
+
+63
+00:07:53,570 --> 00:08:00,054
+Notice that no hacker was needed. The data simply sat in a place nobody thought to protect.
+
+64
+00:08:00,554 --> 00:08:10,232
+April 2023. Engineers at Samsung pasted secret company source code into ChatGPT, to get help with it.
+
+65
+00:08:10,732 --> 00:08:20,049
+That code went to an outside AI company. A few weeks later, Samsung banned staff from using such AI tools on work devices.
+
+66
+00:08:20,549 --> 00:08:26,181
+Banks face the same risk today, when staff paste customer details into chatbots.
+
+67
+00:08:26,681 --> 00:08:35,134
+Recap. Logs, internal systems and AI chatbots are side doors everywhere, even at the world's biggest companies.
+
+68
+00:08:37,634 --> 00:08:47,776
+India now has a law about this. It is called the Digital Personal Data Protection Act, or DPDP Act, from 2023.
+
+69
+00:08:48,275 --> 00:08:54,043
+It says a company that holds personal data must protect it with reasonable safeguards.
+
+70
+00:08:54,543 --> 00:09:01,531
+If a company fails to protect the data, the fine can be as high as 250 crore rupees.
+
+71
+00:09:02,031 --> 00:09:07,000
+The law also gives people rights. One of them is the right to erasure.
+
+72
+00:09:07,500 --> 00:09:13,993
+Erasure means that when you ask, the company must delete your data, once it no longer needs it.
+
+73
+00:09:14,493 --> 00:09:24,048
+But think back to the copies. Deleting one database is easy. Deleting every copy, in every log, backup and vendor, is very hard.
+
+74
+00:09:24,549 --> 00:09:30,533
+The detailed rules of this law start applying on 13 May 2027.
+
+75
+00:09:31,033 --> 00:09:41,005
+And the Reserve Bank of India, the RBI, which watches over all banks, also asks banks to control the data they send into AI tools.
+
+76
+00:09:41,505 --> 00:09:55,103
+Recap. The DPDP Act requires safeguards, with fines of up to 250 crore rupees. People can ask for their data to be erased. And copies make that very hard.
+
+77
+00:09:57,603 --> 00:10:00,461
+So this was the challenge given to the team.
+
+78
+00:10:00,960 --> 00:10:08,854
+Find sensitive customer data in a bank's API traffic and logs, and protect it before it is stored or shared.
+
+79
+00:10:09,354 --> 00:10:17,385
+API traffic simply means the messages that bank programs send to each other. We will explain it properly soon.
+
+80
+00:10:17,885 --> 00:10:20,486
+The team also asked a bigger question.
+
+81
+00:10:20,986 --> 00:10:27,112
+Can a bank prove where each customer's details went, who could read them, and which copy leaked?
+
+82
+00:10:27,612 --> 00:10:30,135
+Aran is the answer the team built.
+
+83
+00:10:30,635 --> 00:10:34,314
+In one sentence: Aran is a firewall for data.
+
+84
+00:10:34,814 --> 00:10:44,295
+It sits on the paths where data travels, and swaps every sensitive detail for a harmless look-alike, before anything is stored or shared.
+
+85
+00:10:44,795 --> 00:10:54,688
+Recap. The goal is to find sensitive data in traffic and logs, protect it before it is stored or shared, and be able to prove what happened.
+
+86
+00:10:57,188 --> 00:10:59,477
+Part two. The basic words.
+
+87
+00:11:02,577 --> 00:11:07,131
+Before we go further, let us learn the basic words, one at a time.
+
+88
+00:11:07,631 --> 00:11:14,311
+Data simply means information. A name is data. A number is data. A photo is data.
+
+89
+00:11:14,811 --> 00:11:18,803
+Personal data is information about a real person.
+
+90
+00:11:19,303 --> 00:11:28,294
+Some personal data points straight at one single person. Experts call it PII, personally identifiable information.
+
+91
+00:11:28,794 --> 00:11:34,034
+Your Aadhaar number is PII. Only one person in the whole country has it.
+
+92
+00:11:34,534 --> 00:11:39,443
+The word sensitive means that, in the wrong hands, it can hurt the person.
+
+93
+00:11:39,942 --> 00:11:46,612
+With someone's Aadhaar and mobile number, a criminal might pretend to be them, or trick them on the phone.
+
+94
+00:11:47,112 --> 00:11:52,734
+An identifier is any number or code that points to one person, or one account.
+
+95
+00:11:53,234 --> 00:12:03,456
+Recap. Data is information. PII points to one real person. And identifiers like Aadhaar are among the most sensitive kind.
+
+96
+00:12:05,957 --> 00:12:10,766
+Now let us meet the main identifiers Aran protects, one by one.
+
+97
+00:12:11,265 --> 00:12:17,291
+First, Aadhaar. It is India's national identity number, and it has twelve digits.
+
+98
+00:12:17,791 --> 00:12:23,840
+Remember its last digit. It is special, and it will become the key to the whole project.
+
+99
+00:12:24,340 --> 00:12:29,299
+Second, PAN, the Permanent Account Number. It is used for income tax.
+
+100
+00:12:29,799 --> 00:12:35,244
+A PAN has ten characters: five letters, then four digits, then one more letter.
+
+101
+00:12:35,744 --> 00:12:42,241
+Third, the payment card number, on a debit or credit card. It usually has sixteen digits.
+
+102
+00:12:42,741 --> 00:12:49,389
+Its first six or eight digits tell you which bank issued the card. And its last digit is special too.
+
+103
+00:12:49,889 --> 00:13:01,595
+Fourth, the UPI ID. You use it to pay with apps like Google Pay or PhonePe. It looks like an email address, such as ravi@oksbi.
+
+104
+00:13:02,096 --> 00:13:10,334
+Fifth, the OTP, the one-time password the bank sends by SMS. It is usually six random digits.
+
+105
+00:13:10,834 --> 00:13:16,977
+An OTP has no pattern at all. That makes it the hardest one to find in text.
+
+106
+00:13:17,477 --> 00:13:21,401
+And finally, mobile numbers, names and home addresses.
+
+107
+00:13:21,901 --> 00:13:27,715
+One important promise. Every number shown in this video is made up by a computer.
+
+108
+00:13:28,215 --> 00:13:36,795
+They follow all the rules of real numbers, but they belong to nobody. Showing a real person's number would itself be a leak.
+
+109
+00:13:37,295 --> 00:13:51,095
+Recap. Aran protects Aadhaar, PAN, card numbers, UPI IDs, OTPs, mobile numbers, names and addresses. And Aadhaar and card numbers have a special last digit.
+
+110
+00:13:53,595 --> 00:13:58,942
+A bank is not one program. It is many programs, talking to each other all day.
+
+111
+00:13:59,443 --> 00:14:04,986
+They talk through APIs. API stands for Application Programming Interface.
+
+112
+00:14:05,486 --> 00:14:13,530
+Think of a waiter in a restaurant. You do not walk into the kitchen. You tell the waiter, and the waiter brings back your food.
+
+113
+00:14:14,030 --> 00:14:21,572
+An API is the waiter between two programs. One program sends a request, and a reply comes back.
+
+114
+00:14:22,072 --> 00:14:27,458
+These requests and replies, flowing all the time, are called API traffic.
+
+115
+00:14:27,959 --> 00:14:33,185
+Now, logs. A log is like a diary that a program writes about itself.
+
+116
+00:14:33,684 --> 00:14:41,487
+Every time something happens, the program writes a line: the time, what happened, and often the details involved.
+
+117
+00:14:41,987 --> 00:14:47,210
+Here is a log line. Can you see the customer's mobile number sitting inside it?
+
+118
+00:14:47,710 --> 00:14:54,830
+Logs are very useful when something breaks. But they are often kept for years, and read by many people.
+
+119
+00:14:55,330 --> 00:15:05,364
+Recap. Programs talk through APIs, like waiters. Programs write logs, like diaries. And both can carry customers' private details.
+
+120
+00:15:07,865 --> 00:15:11,729
+Now picture the bank's data as water moving through pipes.
+
+121
+00:15:12,229 --> 00:15:15,391
+Water comes from a source, and ends up in a sink.
+
+122
+00:15:15,891 --> 00:15:21,087
+A source is where data starts, like the mobile app, or the core banking system.
+
+123
+00:15:21,587 --> 00:15:30,537
+A sink is any place where data ends up and stays: a log store, a CRM, a vendor, a backup, or an AI company.
+
+124
+00:15:31,037 --> 00:15:34,659
+The path from a source to a sink is called a data flow.
+
+125
+00:15:35,159 --> 00:15:40,351
+In a big bank there are thousands of these pipes, carrying millions of messages.
+
+126
+00:15:40,851 --> 00:15:45,927
+But many pipes pass through a few shared points, like the main gate of a building.
+
+127
+00:15:46,427 --> 00:15:50,535
+A point that many flows must pass through is called a choke point.
+
+128
+00:15:51,035 --> 00:15:58,002
+If you guard the choke points, you can watch everything that flows, without changing every single program.
+
+129
+00:15:58,501 --> 00:16:07,449
+Recap. Data flows from sources to sinks. Choke points are where many flows meet. Guarding them protects everything downstream.
+
+130
+00:16:09,949 --> 00:16:12,160
+You may have heard the word firewall.
+
+131
+00:16:12,660 --> 00:16:20,226
+A normal firewall is like a security guard at a gate. It decides who may come in, and who must be stopped.
+
+132
+00:16:20,726 --> 00:16:25,510
+But a normal firewall looks at who is talking, not at what they are saying.
+
+133
+00:16:26,010 --> 00:16:29,787
+Aran is different. Aran is a firewall for data.
+
+134
+00:16:30,287 --> 00:16:34,572
+It sits at the choke points, and reads every message as it passes.
+
+135
+00:16:35,071 --> 00:16:38,947
+It does not block the message. The bank's work must go on.
+
+136
+00:16:39,448 --> 00:16:45,380
+Instead, it finds the sensitive details inside, and swaps them for safe look-alikes.
+
+137
+00:16:45,880 --> 00:16:52,983
+The message carries on to its sink. The sink gets what it needs to work, but no real private details.
+
+138
+00:16:53,483 --> 00:17:02,876
+Recap. A normal firewall stops connections. Aran lets messages through, but replaces the sensitive details inside them.
+
+139
+00:17:05,376 --> 00:17:09,788
+There are two main ways to hide a detail. The first is masking.
+
+140
+00:17:10,288 --> 00:17:17,366
+Masking is like a black marker. You cover part of the number, and show only, say, the last four digits.
+
+141
+00:17:17,866 --> 00:17:23,491
+Masking is simple, but it cannot be undone. The covered digits are gone forever.
+
+142
+00:17:23,991 --> 00:17:30,271
+And sometimes the bank really does need the full number later, for example to collect a loan payment.
+
+143
+00:17:30,770 --> 00:17:33,439
+The second way is called tokenisation.
+
+144
+00:17:33,940 --> 00:17:40,717
+Think of the cloakroom at a wedding hall. You hand over your bag, and you get a small token with a number on it.
+
+145
+00:17:41,217 --> 00:17:46,984
+The token is worthless to a thief. But at the counter, the token gets your bag back.
+
+146
+00:17:47,484 --> 00:17:57,298
+Tokenisation swaps a real value for a stand-in, called a token. The token has the same shape: twelve digits stay twelve digits.
+
+147
+00:17:57,798 --> 00:18:02,035
+So the bank's programs keep working, as if nothing had changed.
+
+148
+00:18:02,536 --> 00:18:09,991
+Only a system with permission can swap the token back for the real value. This is called detokenising.
+
+149
+00:18:10,491 --> 00:18:15,150
+And Aran writes down every single time that happens, and who asked.
+
+150
+00:18:15,650 --> 00:18:26,675
+Recap. Masking covers digits forever. Tokenisation swaps a value for a look-alike token, which can be swapped back, with permission, and with a record.
+
+151
+00:18:29,175 --> 00:18:34,155
+Three more words, and then we have all the basics: encryption, key, and hash.
+
+152
+00:18:34,655 --> 00:18:38,387
+Encryption scrambles data so that nobody can read it.
+
+153
+00:18:38,887 --> 00:18:46,963
+Think of a box with a lock. You put a letter inside and lock it. Anyone can see the box, but nobody can read the letter.
+
+154
+00:18:47,464 --> 00:18:54,635
+The key is a secret that locks and unlocks the box. Without the key, the scrambled data is useless.
+
+155
+00:18:55,135 --> 00:19:02,678
+In computers, a key is a very long secret number. Guessing it would take longer than the age of the universe.
+
+156
+00:19:03,177 --> 00:19:06,988
+A hash is different. It is like a fingerprint for data.
+
+157
+00:19:07,488 --> 00:19:11,467
+You feed any text into a hash, and out comes a short code.
+
+158
+00:19:11,967 --> 00:19:18,235
+The same text always gives the same fingerprint. But you cannot rebuild the text from the fingerprint.
+
+159
+00:19:18,735 --> 00:19:24,474
+It is like a meat grinder. Grinding is easy. Un-grinding is impossible.
+
+160
+00:19:24,974 --> 00:19:32,774
+Recap. Encryption locks data in a box. A key opens the box. And a hash is a one-way fingerprint.
+
+161
+00:19:35,273 --> 00:19:40,430
+Hashes and keys give us one more useful tool: the digital signature.
+
+162
+00:19:40,930 --> 00:19:50,379
+Think of the wax seal on an old royal letter. Only the king had the seal. But anyone could look at the seal, and know the letter was real.
+
+163
+00:19:50,879 --> 00:19:54,116
+A digital signature works with a pair of keys.
+
+164
+00:19:54,616 --> 00:19:58,908
+The private key is kept secret by its owner, like the king's seal.
+
+165
+00:19:59,408 --> 00:20:04,246
+The public key is shared with everyone, so anyone can check a signature.
+
+166
+00:20:04,746 --> 00:20:10,417
+To sign a document, the owner uses the private key to make a short signature for it.
+
+167
+00:20:10,917 --> 00:20:18,558
+Anyone with the public key can check that signature. If even one letter of the document changes, the check fails.
+
+168
+00:20:19,058 --> 00:20:25,517
+So a signature proves two things: who made the document, and that nobody changed it afterwards.
+
+169
+00:20:26,017 --> 00:20:32,255
+Aran uses signatures on erasure receipts, so a customer can prove what the bank promised.
+
+170
+00:20:32,755 --> 00:20:41,241
+Recap. A private key signs. A public key checks. A signature proves who made something, and that nobody changed it.
+
+171
+00:20:43,741 --> 00:20:48,192
+One last idea. Any detector can make two kinds of mistakes.
+
+172
+00:20:48,692 --> 00:20:51,162
+Think of the smoke alarm in a kitchen.
+
+173
+00:20:51,662 --> 00:20:58,809
+If it rings when you are only making toast, that is a false alarm. Experts call it a false positive.
+
+174
+00:20:59,309 --> 00:21:05,588
+If it stays quiet during a real fire, that is a miss. Experts call it a false negative.
+
+175
+00:21:06,088 --> 00:21:08,921
+Both mistakes are bad, in different ways.
+
+176
+00:21:09,420 --> 00:21:11,930
+A miss lets a real leak go through.
+
+177
+00:21:12,430 --> 00:21:21,421
+And too many false alarms are dangerous too. People get annoyed, and switch the alarm off. Then every real fire is missed.
+
+178
+00:21:21,922 --> 00:21:28,990
+A good data detector must do both: catch nearly everything real, and ring very rarely by mistake.
+
+179
+00:21:29,490 --> 00:21:37,954
+Recap. A false positive is a false alarm. A false negative is a miss. A good detector keeps both very low.
+
+180
+00:21:40,454 --> 00:21:45,716
+Aran often has to say how sure it is. For that, we use probability.
+
+181
+00:21:46,216 --> 00:21:52,686
+Probability is a number between zero and one hundred percent. It says how likely something is.
+
+182
+00:21:53,186 --> 00:22:01,801
+Think of a weather forecast. Seventy percent chance of rain means: on days like this, it rains about seven times out of ten.
+
+183
+00:22:02,301 --> 00:22:09,961
+A good forecaster is honest. When they say seventy percent, it really does rain about seventy percent of the time.
+
+184
+00:22:10,461 --> 00:22:14,637
+Being honest like this has a name. It is called being calibrated.
+
+185
+00:22:15,138 --> 00:22:18,540
+Probabilities can change when you learn something new.
+
+186
+00:22:19,039 --> 00:22:25,316
+If you see dark clouds, your guess about rain goes up. If the sky is clear, it goes down.
+
+187
+00:22:25,816 --> 00:22:32,105
+Updating a guess with new evidence is exactly what Aran does with every number it finds.
+
+188
+00:22:32,605 --> 00:22:40,742
+Recap. Probability says how likely something is. Calibrated means honest. And new evidence changes the guess.
+
+189
+00:22:43,242 --> 00:22:47,851
+Part three. Why the simple way fails, and how the research was done.
+
+190
+00:22:50,951 --> 00:22:57,376
+So how would most people find an Aadhaar or an OTP inside a log? With a pattern search.
+
+191
+00:22:57,875 --> 00:23:04,116
+A pattern search looks for a shape. For example: any twelve digits in a row might be an Aadhaar.
+
+192
+00:23:04,616 --> 00:23:08,126
+And any six digits in a row might be an OTP.
+
+193
+00:23:08,626 --> 00:23:14,853
+Programmers write these patterns in a short code, called a regular expression, or regex.
+
+194
+00:23:15,353 --> 00:23:20,268
+It sounds sensible. So the team tested it, honestly, on real data.
+
+195
+00:23:20,768 --> 00:23:31,000
+They used Loghub, a public collection of real logs from real computer systems: 32,000 lines, from 16 different systems.
+
+196
+00:23:31,500 --> 00:23:40,091
+These logs come from places like supercomputers, phones and web servers. They contain no Indian identifiers at all.
+
+197
+00:23:40,591 --> 00:23:43,933
+So any hit in these logs must be a false alarm.
+
+198
+00:23:44,432 --> 00:23:54,732
+Watch what happens. The simple OTP pattern fired 67,481 times. That is more than twice per line.
+
+199
+00:23:55,232 --> 00:24:02,221
+It matched times, file sizes, block numbers and memory addresses. Anything with six digits.
+
+200
+00:24:02,721 --> 00:24:07,020
+It even matched the letters O T P inside the word hotplug.
+
+201
+00:24:07,520 --> 00:24:13,429
+Aran's checks, which you will meet soon, raised just 6 false alarms on the same lines.
+
+202
+00:24:13,929 --> 00:24:27,874
+Recap. Pattern search looks only at shape. On 32,000 real log lines, it raised 67,481 false OTP alarms. Aran raised 6.
+
+203
+00:24:30,374 --> 00:24:35,611
+So the team did proper research before building anything. It followed six steps.
+
+204
+00:24:36,110 --> 00:24:41,838
+Step one: ask the right question. The real problem is not just finding numbers.
+
+205
+00:24:42,338 --> 00:24:50,245
+The real problem is that a bank cannot prove where each customer's details are, who can read them, and which copy leaked.
+
+206
+00:24:50,745 --> 00:24:58,324
+Step two: build the obvious solution first. This is called a baseline. It gives you something real to beat.
+
+207
+00:24:58,824 --> 00:25:04,315
+Step three: read what others have already done. This is called a literature survey.
+
+208
+00:25:04,815 --> 00:25:12,367
+The team studied the laws banks must follow, real leaks, and research papers. About forty sources in total.
+
+209
+00:25:12,867 --> 00:25:17,805
+Step four: measure the weak spots on real data, instead of just guessing.
+
+210
+00:25:18,305 --> 00:25:25,867
+Step five: for each weak spot, find a piece of mathematics that fixes it, and prove that it works, where possible.
+
+211
+00:25:26,367 --> 00:25:35,593
+Step six: attack your own design, the way an enemy would. Eleven weaknesses were found, and every fix became part of Aran.
+
+212
+00:25:36,094 --> 00:25:45,642
+Recap. Ask the right question, build a baseline, read the research, measure the gaps, fix each one with maths, and then attack your own design.
+
+213
+00:25:48,142 --> 00:25:54,144
+The measurements found six gaps. A gap is a problem that existing tools leave open.
+
+214
+00:25:54,643 --> 00:25:59,601
+Gap one: number detectors drown in false alarms, as we just saw.
+
+215
+00:26:00,101 --> 00:26:07,008
+Gap two: a protected number and a leaked number look exactly the same. Nobody can tell them apart.
+
+216
+00:26:07,508 --> 00:26:11,533
+Gap three: nobody measures how much a mask still gives away.
+
+217
+00:26:12,033 --> 00:26:17,915
+Gap four: when a leaked file shows up on the internet, nobody can tell which system leaked it.
+
+218
+00:26:18,414 --> 00:26:23,755
+Gap five: erasure cannot reach the copies in logs, backups and vendors.
+
+219
+00:26:24,255 --> 00:26:30,589
+Gap six: OTPs have no structure at all, so they cannot be checked like other numbers.
+
+220
+00:26:31,089 --> 00:26:33,799
+Each gap became one of Aran's ideas.
+
+221
+00:26:34,299 --> 00:26:45,983
+Recap. Six gaps: false alarms, look-alike leaks, leaky masks, unknown leakers, erasure that cannot reach copies, and OTPs with no structure.
+
+222
+00:26:48,484 --> 00:26:54,488
+Here is how each gap is closed. Each of Aran's main ideas is called a mechanism.
+
+223
+00:26:54,987 --> 00:27:02,949
+Gap one, false alarms, is closed by detection as evidence: check digits, clues, and the bank's own lists.
+
+224
+00:27:03,449 --> 00:27:09,209
+Gap two, look-alike leaks, is closed by tokens that always fail the check digit.
+
+225
+00:27:09,709 --> 00:27:13,914
+Gap three, leaky masks, is closed by the leakage ledger.
+
+226
+00:27:14,414 --> 00:27:20,447
+Gap four, unknown leakers, is closed by a different token for every destination.
+
+227
+00:27:20,947 --> 00:27:27,360
+Gap five, erasure, is closed by one key per customer, per purpose, with signed receipts.
+
+228
+00:27:27,860 --> 00:27:35,605
+Gap six, OTPs, is closed by remembering every OTP the bank sends, tied to its request.
+
+229
+00:27:36,105 --> 00:27:44,265
+And on top of these, Aran adds an AI layer, a normaliser, an immune layer, an AI gateway, and quantum-safe locks.
+
+230
+00:27:44,766 --> 00:27:53,109
+Recap. Six gaps, closed by Aran's mechanisms, with extra layers on top. Now let us see how each one works.
+
+231
+00:27:55,609 --> 00:27:57,791
+Part four. How Aran works.
+
+232
+00:28:00,890 --> 00:28:04,981
+Before we look inside Aran, let us see where it sits in a bank.
+
+233
+00:28:05,481 --> 00:28:11,740
+On the left are the sources: the mobile app, core banking, the loan system, and log files.
+
+234
+00:28:12,240 --> 00:28:18,490
+On the right are the sinks: the log platform, the CRM, vendors, and AI companies.
+
+235
+00:28:18,990 --> 00:28:24,530
+Aran sits in the middle, on the choke points, so every message passes through it.
+
+236
+00:28:25,030 --> 00:28:32,670
+Inside Aran, every message goes through five steps: normalise, detect, decide, protect and record.
+
+237
+00:28:33,171 --> 00:28:38,824
+Below Aran sits the vault, which holds the keys: one per customer, per purpose.
+
+238
+00:28:39,324 --> 00:28:44,254
+Next to it is the erasure record, which gives customers signed receipts.
+
+239
+00:28:44,754 --> 00:28:51,116
+Customers never see Aran. The bank's IT team installs it, like any other firewall.
+
+240
+00:28:51,616 --> 00:28:59,758
+In the next chapters, we will open each part, one at a time, starting with the most important idea: the check digit.
+
+241
+00:29:00,258 --> 00:29:08,676
+Recap. Sources on the left, sinks on the right, Aran on the choke points in the middle, and the vault with the keys underneath.
+
+242
+00:29:11,176 --> 00:29:16,008
+Look closely at the last digit of an Aadhaar number. It is not random.
+
+243
+00:29:16,508 --> 00:29:21,615
+It is calculated from the other eleven digits, using a fixed recipe.
+
+244
+00:29:22,115 --> 00:29:26,036
+This last digit has a name. It is called a check digit.
+
+245
+00:29:26,536 --> 00:29:33,452
+Think of it as a lock and a key. The first eleven digits are the key. The last digit is the lock.
+
+246
+00:29:33,953 --> 00:29:38,224
+When the number is correct, the key always fits, and the lock opens.
+
+247
+00:29:38,723 --> 00:29:44,740
+Now suppose a bank clerk types just one digit wrong. Here, the seven became a one.
+
+248
+00:29:45,240 --> 00:29:49,757
+The key has changed, so it no longer fits. The lock stays shut.
+
+249
+00:29:50,258 --> 00:29:55,449
+So the computer knows straight away that this number is wrong, and asks for it again.
+
+250
+00:29:55,948 --> 00:30:01,704
+Checking a number like this, by redoing the recipe and comparing, is called a checksum.
+
+251
+00:30:02,204 --> 00:30:09,835
+Recap. The check digit is a lock, and the other digits are the key. One wrong digit, and the lock stays shut.
+
+252
+00:30:12,335 --> 00:30:17,392
+Different numbers use different recipes. Card numbers use one called Luhn.
+
+253
+00:30:17,892 --> 00:30:26,399
+It was created at IBM, and patented in 1960. Almost every payment card in the world uses it.
+
+254
+00:30:26,899 --> 00:30:35,831
+Let us run it together on a short example. Here is a number: 7 9 9 2 7 3 9 8 7 1.
+
+255
+00:30:36,331 --> 00:30:48,715
+Start from the right, and double every second digit. The 1 becomes 2. The 8 becomes 16. The 3 becomes 6. The 2 becomes 4. And the 9 becomes 18.
+
+256
+00:30:49,215 --> 00:30:56,994
+If a doubled number is bigger than nine, take nine away. So 16 becomes 7, and 18 becomes 9.
+
+257
+00:30:57,494 --> 00:31:01,370
+Now add up all the digits. The total is 67.
+
+258
+00:31:01,870 --> 00:31:09,441
+The check digit is whatever brings the total up to the next round ten. From 67 to 70, we need 3.
+
+259
+00:31:09,942 --> 00:31:17,255
+So the full card number ends in 3. Change any single digit, and the total no longer ends in zero.
+
+260
+00:31:17,755 --> 00:31:20,337
+That is how a card number checks itself.
+
+261
+00:31:20,837 --> 00:31:28,474
+Recap. Luhn doubles every second digit, adds everything up, and the check digit makes the total a round ten.
+
+262
+00:31:30,974 --> 00:31:39,097
+Aadhaar uses a stronger recipe, called Verhoeff, created by a Dutch mathematician in 1969.
+
+263
+00:31:39,597 --> 00:31:43,411
+Why stronger? Think about the most common typing mistakes.
+
+264
+00:31:43,912 --> 00:31:52,083
+The first is one wrong digit. The second is swapping two neighbours, like typing 54 instead of 45.
+
+265
+00:31:52,582 --> 00:31:57,096
+Luhn catches every single wrong digit, but it misses some swaps.
+
+266
+00:31:57,597 --> 00:32:02,927
+Verhoeff catches every single wrong digit, and every swap of two neighbours.
+
+267
+00:32:03,427 --> 00:32:08,215
+Its secret comes from a shape: a pentagon, a five-sided figure.
+
+268
+00:32:08,715 --> 00:32:18,352
+You can turn a pentagon in five ways, and flip it over in five ways. That is ten moves in total, one for each digit from 0 to 9.
+
+269
+00:32:18,852 --> 00:32:26,173
+Here is the clever part. With these moves, the order matters. Turn then flip is not the same as flip then turn.
+
+270
+00:32:26,673 --> 00:32:32,624
+Watch. The same two moves, in a different order, leave the pentagon in a different position.
+
+271
+00:32:33,123 --> 00:32:38,981
+Because the order matters, swapping two digits changes the answer. So the swap is caught.
+
+272
+00:32:39,481 --> 00:32:46,156
+Mathematicians call this family of moves the dihedral group. You do not need to remember the name.
+
+273
+00:32:46,656 --> 00:32:52,268
+What matters is this: every real Aadhaar number always passes the Verhoeff check.
+
+274
+00:32:52,767 --> 00:33:04,764
+Recap. Verhoeff is built from turning and flipping a pentagon. The order matters, so it catches every wrong digit and every swap. And every real Aadhaar passes it.
+
+275
+00:33:07,264 --> 00:33:13,493
+Now comes Aran's key idea. It is simple, and nobody had used it this way before.
+
+276
+00:33:13,993 --> 00:33:18,676
+Everyone uses check digits for one thing: to catch typing mistakes.
+
+277
+00:33:19,177 --> 00:33:21,302
+Aran turns the idea around.
+
+278
+00:33:21,802 --> 00:33:28,939
+A real Aadhaar always passes the check. So Aran makes every token always fail it, on purpose.
+
+279
+00:33:29,439 --> 00:33:36,183
+Here is how. Aran takes the first eleven digits, and scrambles them into eleven new digits.
+
+280
+00:33:36,683 --> 00:33:39,968
+Then it works out the correct check digit for the new number.
+
+281
+00:33:40,468 --> 00:33:46,913
+And then it adds a small secret amount, between one and nine, so the last digit is always wrong.
+
+282
+00:33:47,413 --> 00:33:58,838
+Let us see it with Ravi's made-up Aadhaar, 2345 6789 0124, going to the loan vendor.
+
+283
+00:33:59,338 --> 00:34:06,340
+The first eleven digits are scrambled into 0982 6158 641.
+
+284
+00:34:06,840 --> 00:34:16,810
+The correct check digit for these would be 9. Aran adds a secret 3, and writes 2 instead. So the token is 0982 6158 6412.
+
+285
+00:34:17,310 --> 00:34:21,660
+Run the check on the token. It fails, exactly as planned.
+
+286
+00:34:22,160 --> 00:34:30,322
+Remember the lock and key. A real number is a key that always fits. An Aran token is a key that never fits.
+
+287
+00:34:30,822 --> 00:34:35,572
+So now anyone, anywhere, can tell them apart, with one simple test.
+
+288
+00:34:36,072 --> 00:34:45,323
+If it passes the check, it is a real Aadhaar, and it is exposed. If it fails the check, it is an Aran token, and it is safe.
+
+289
+00:34:45,824 --> 00:34:54,421
+The team proved this as a mathematical rule, called Theorem 1. A theorem is a statement that is proved to be always true.
+
+290
+00:34:54,921 --> 00:35:02,855
+Then they tested it. 20,000 tokens were hidden in real logs. Not one was mistaken for a real number.
+
+291
+00:35:03,355 --> 00:35:07,578
+And all 20,000 real numbers mixed in with them were caught.
+
+292
+00:35:08,078 --> 00:35:18,037
+Recap. Real numbers always pass the check. Aran tokens always fail it. So protected and leaked numbers can finally be told apart.
+
+293
+00:35:20,537 --> 00:35:26,100
+How does Aran scramble eleven digits into eleven new digits? With encryption.
+
+294
+00:35:26,600 --> 00:35:32,942
+It uses AES, the encryption standard used by banks and governments all over the world.
+
+295
+00:35:33,442 --> 00:35:41,984
+But normal encryption turns twelve digits into a long string of random-looking symbols. That would break the bank's programs.
+
+296
+00:35:42,484 --> 00:35:50,554
+So Aran uses a special method called FF1. It is approved by NIST, the American standards body.
+
+297
+00:35:51,054 --> 00:35:57,617
+FF1 is format preserving. Digits go in, and the same number of digits come out.
+
+298
+00:35:58,117 --> 00:36:07,072
+Inside FF1 is a clever trick called a Feistel network. Think of shuffling a deck of cards in a fixed, secret way.
+
+299
+00:36:07,571 --> 00:36:10,321
+First, the number is cut into two halves.
+
+300
+00:36:10,822 --> 00:36:16,424
+The right half is mixed with the secret key, and the result is added onto the left half.
+
+301
+00:36:16,924 --> 00:36:19,106
+Then the two halves swap places.
+
+302
+00:36:19,606 --> 00:36:26,749
+That is one round. FF1 repeats it ten times. Watch the numbers change with every round.
+
+303
+00:36:27,249 --> 00:36:34,557
+After ten rounds, the result looks completely random. But with the key, every step can be run backwards.
+
+304
+00:36:35,057 --> 00:36:39,950
+So the bank, and only the bank, can turn the token back into the real number.
+
+305
+00:36:40,449 --> 00:36:52,226
+Recap. FF1 scrambles digits into digits, using the bank's secret key. It shuffles two halves ten times. And with the key, it can always be reversed.
+
+306
+00:36:54,726 --> 00:37:02,100
+FF1 has one more input, called a tweak. A tweak changes the result, without changing the key.
+
+307
+00:37:02,600 --> 00:37:06,597
+Aran uses the name of the destination as the tweak.
+
+308
+00:37:07,097 --> 00:37:12,142
+So the same customer gets a different token in every place the data goes.
+
+309
+00:37:12,642 --> 00:37:22,818
+Here is Ravi's made-up Aadhaar. And here are three tokens for it: one for the CRM, one for the loan vendor, and one for the log platform.
+
+310
+00:37:23,318 --> 00:37:28,009
+All three fail the check. All three are safe. But each one is different.
+
+311
+00:37:28,509 --> 00:37:36,477
+Think of marked banknotes. Police sometimes mark banknotes before handing them over, so they can recognise them later.
+
+312
+00:37:36,977 --> 00:37:41,874
+Aran does the same. Each destination gets its own marked copy.
+
+313
+00:37:42,374 --> 00:37:48,977
+Recap. Each destination gets its own token for the same customer, like marked banknotes.
+
+314
+00:37:51,477 --> 00:37:57,718
+Now imagine a bad day. A file with customer numbers appears for sale on Telegram.
+
+315
+00:37:58,218 --> 00:38:01,710
+The bank's security team checks the numbers in the file.
+
+316
+00:38:02,210 --> 00:38:12,318
+First, the check digit test. The numbers fail. So they are Aran tokens, not real Aadhaar numbers. No real number was exposed.
+
+317
+00:38:12,818 --> 00:38:20,043
+Second, the trace. Aran looks at each token, and asks: which destination was this token made for?
+
+318
+00:38:20,543 --> 00:38:26,795
+The answer comes back: the loan vendor. These tokens were only ever given to the loan vendor.
+
+319
+00:38:27,295 --> 00:38:30,039
+The leaked file has named its own source.
+
+320
+00:38:30,539 --> 00:38:34,700
+The team proved how reliable this is. This is Theorem 2.
+
+321
+00:38:35,200 --> 00:38:46,178
+For a bank with 50 million customers and 40 destinations, a leaked file with just five tokens points to the wrong place at most 3 times in a billion.
+
+322
+00:38:46,678 --> 00:38:52,759
+In testing, every leaked file was traced to the right destination. 100 percent.
+
+323
+00:38:53,259 --> 00:39:00,184
+Recap. A failed check proves that no real number leaked. And the token's mark shows who leaked it.
+
+324
+00:39:02,684 --> 00:39:11,077
+Sometimes the bank really does need the real number. For example, a loan officer may need to confirm a customer's Aadhaar.
+
+325
+00:39:11,577 --> 00:39:16,180
+Swapping a token back for the real value is called detokenising.
+
+326
+00:39:16,680 --> 00:39:23,091
+Only systems with permission can do it. Each one must say who it is, and why it is asking.
+
+327
+00:39:23,591 --> 00:39:27,835
+Aran checks the permission, and then gives back the real value.
+
+328
+00:39:28,335 --> 00:39:35,536
+And every single request is written into a log: who asked, when, for which customer, and for what reason.
+
+329
+00:39:36,036 --> 00:39:42,455
+This record matters. If something goes wrong later, the bank can see exactly who looked at what.
+
+330
+00:39:42,955 --> 00:39:50,131
+It also feeds the immune layer. A sudden rush of these requests is a warning sign, as we will see.
+
+331
+00:39:50,631 --> 00:39:57,027
+Recap. Only allowed systems can get the real number back, and every request is recorded.
+
+332
+00:39:59,527 --> 00:40:07,039
+Before Aran can protect a detail, it must find it. So how does Aran decide that a number is an Aadhaar?
+
+333
+00:40:07,539 --> 00:40:12,483
+Not by shape alone. Aran thinks like a detective, collecting clues.
+
+334
+00:40:12,983 --> 00:40:17,270
+Clue one: does it pass the Verhoeff check? That is strong evidence.
+
+335
+00:40:17,770 --> 00:40:21,266
+Clue two: does the word Aadhaar appear just before it?
+
+336
+00:40:21,765 --> 00:40:27,382
+Clue three: is it written in groups of four, the way people usually write an Aadhaar?
+
+337
+00:40:27,882 --> 00:40:36,953
+Each clue has a strength. Passing the check digit test is about ten times more likely for a real number than for random digits.
+
+338
+00:40:37,453 --> 00:40:46,216
+Experts call this strength a likelihood ratio. It just means: how much more likely is this clue, if the value is real?
+
+339
+00:40:46,716 --> 00:40:52,135
+Aran combines all the clues using a rule from probability, called Bayes' rule.
+
+340
+00:40:52,635 --> 00:41:00,103
+The result is one number, a probability. For example: 97 percent sure that this is an Aadhaar.
+
+341
+00:41:00,603 --> 00:41:04,852
+If it is above a line, called the threshold, Aran protects it.
+
+342
+00:41:05,352 --> 00:41:15,663
+And the probabilities are honest. When Aran says 90 percent sure, it is right about 90 percent of the time. This is called being calibrated.
+
+343
+00:41:16,163 --> 00:41:25,259
+On 16,000 real log lines, false alarms fell from 2,506 with pattern search, to just 60.
+
+344
+00:41:25,759 --> 00:41:36,205
+Recap. Aran gathers clues, weighs each one, and combines them into an honest probability. Only values above the threshold are protected.
+
+345
+00:41:38,705 --> 00:41:44,737
+The strongest clue of all comes from something the bank already has: its own customer list.
+
+346
+00:41:45,237 --> 00:41:50,600
+If a number belongs to one of the bank's own customers, it is almost certainly real.
+
+347
+00:41:51,100 --> 00:41:58,396
+But keeping a plain list of every customer's number inside the firewall would be dangerous. It could leak too.
+
+348
+00:41:58,896 --> 00:42:02,526
+So Aran keeps fingerprints instead, using a hash.
+
+349
+00:42:03,026 --> 00:42:12,292
+It uses a special kind called an HMAC. It is a hash that also needs a secret key, so only the bank can make these fingerprints.
+
+350
+00:42:12,791 --> 00:42:21,522
+The fingerprints are kept in a cuckoo filter, a very compact table that answers one question, fast: have I seen this before?
+
+351
+00:42:22,022 --> 00:42:32,236
+800,000 fingerprints fit in just 4 megabytes. And unlike older designs, it can also delete fingerprints, when a customer leaves.
+
+352
+00:42:32,736 --> 00:42:36,718
+OTPs need a different trick, because they are random.
+
+353
+00:42:37,218 --> 00:42:47,345
+When the bank sends an OTP, Aran remembers it, tied to the exact request it belongs to. Every request has its own trace number.
+
+354
+00:42:47,845 --> 00:42:58,103
+Without that tie, a random six-digit number would match some live OTP about 7 percent of the time. With it, about once in a million.
+
+355
+00:42:58,603 --> 00:43:08,015
+Recap. Aran checks numbers against fingerprints of the bank's own customers, and remembers each OTP together with its request.
+
+356
+00:43:10,515 --> 00:43:16,150
+Some details have no check digit at all. Names and home addresses, for example.
+
+357
+00:43:16,650 --> 00:43:24,593
+No maths can prove that Ravi Kumar is a name. This is where artificial intelligence, or AI, comes in.
+
+358
+00:43:25,093 --> 00:43:32,584
+The kind of AI used here is called machine learning. Instead of being given rules, the program learns from examples.
+
+359
+00:43:33,084 --> 00:43:40,248
+Think of how a child learns what a dog is. Nobody gives the child a rule. The child just sees many dogs.
+
+360
+00:43:40,749 --> 00:43:44,441
+The examples used for learning are called training data.
+
+361
+00:43:44,940 --> 00:43:53,782
+Aran uses a model for named entity recognition, or NER. It finds the names of people and places in text.
+
+362
+00:43:54,282 --> 00:43:59,950
+The model is a CRF. It labels each word, while looking at the words around it.
+
+363
+00:44:00,451 --> 00:44:08,519
+For example, a word that comes after Mr is probably a name. A word before Street is probably part of an address.
+
+364
+00:44:09,019 --> 00:44:15,028
+It is small and fast. It runs on a normal laptop, with no expensive hardware.
+
+365
+00:44:15,527 --> 00:44:23,321
+It reads English, Hindi, and Hinglish, where both languages mix in one sentence, the way many people really type.
+
+366
+00:44:23,821 --> 00:44:34,085
+A second AI model reads the characters around a number, to tell an OTP from a port number, or a UPI ID from an email address.
+
+367
+00:44:34,586 --> 00:44:43,613
+AI is used exactly where maths cannot give a sure answer, and nowhere else. The AI pair, Arun and Bharadhwaj, own this part.
+
+368
+00:44:44,113 --> 00:44:54,811
+Recap. AI learns from examples. It finds names and addresses, and tells OTPs and UPI IDs apart from look-alikes.
+
+369
+00:44:57,311 --> 00:45:01,920
+How do you know an AI has really learned, and has not just memorised?
+
+370
+00:45:02,420 --> 00:45:10,459
+Think of a school exam. If the exam has the same questions as the homework, a student can pass from memory alone.
+
+371
+00:45:10,959 --> 00:45:13,506
+A fair exam uses new questions.
+
+372
+00:45:14,006 --> 00:45:18,387
+So the team kept the test data completely separate from the training data.
+
+373
+00:45:18,888 --> 00:45:25,867
+The models learned from the logs of eight systems, and were tested on eight other systems they had never seen.
+
+374
+00:45:26,367 --> 00:45:31,506
+Two scores tell us how well a detector does. The first is called precision.
+
+375
+00:45:32,006 --> 00:45:40,208
+Precision asks: of everything it flagged, how much was really sensitive? High precision means few false alarms.
+
+376
+00:45:40,708 --> 00:45:49,339
+The second is called recall. Recall asks: of everything sensitive, how much did it catch? High recall means few misses.
+
+377
+00:45:49,838 --> 00:46:00,148
+For OTPs, Aran's model reached a precision of 1.0, meaning no false alarms in the test, with a recall of 0.8.
+
+378
+00:46:00,648 --> 00:46:09,539
+For names, the combined score was about 0.85 on English news text, and about 0.76 on Hindi.
+
+379
+00:46:10,040 --> 00:46:17,837
+Recap. Test on unseen data, like a fair exam. Precision counts false alarms. Recall counts misses.
+
+380
+00:46:20,337 --> 00:46:24,269
+Sometimes a number is hidden, by accident or on purpose.
+
+381
+00:46:24,769 --> 00:46:31,479
+It might be written in Tamil or Hindi digits. It might have dots or spaces between the digits.
+
+382
+00:46:31,979 --> 00:46:40,183
+It might be split into pieces, wrapped in web codes, or turned into base64, a way of writing data as letters.
+
+383
+00:46:40,683 --> 00:46:47,332
+So Aran has a normaliser. It undoes twelve kinds of disguise, before looking for anything.
+
+384
+00:46:47,832 --> 00:46:51,921
+Think of wiping the fog off a window before reading a sign.
+
+385
+00:46:52,421 --> 00:46:58,979
+And it remembers where every character came from, so the right part of the original message gets replaced.
+
+386
+00:46:59,479 --> 00:47:08,092
+Without the normaliser, only 8.3 percent of hidden numbers were caught. With it, and the bank's lists, 100 percent.
+
+387
+00:47:08,592 --> 00:47:16,353
+Now, typos. A real Aadhaar with one typo fails the check, just like a token. That could fool Aran.
+
+388
+00:47:16,853 --> 00:47:26,338
+So Aran tries every possible one-digit fix, and every swap of neighbours, and checks each one against the bank's customer fingerprints.
+
+389
+00:47:26,838 --> 00:47:35,240
+If a fix matches a real customer, the number is caught. 99.2 percent of one-typo numbers were caught this way.
+
+390
+00:47:35,739 --> 00:47:40,751
+And Aran makes sure it never mistakes one of its own tokens for a typo.
+
+391
+00:47:41,252 --> 00:47:53,258
+Then the team attacked Aran with 26 hiding tricks, the way a real attacker would. This is called red teaming. 22 of the 26 are now fully caught.
+
+392
+00:47:53,758 --> 00:48:04,669
+Recap. The normaliser wipes away disguises. Typo repair catches mistyped real numbers. And red teaming tests Aran the way an attacker would.
+
+393
+00:48:07,169 --> 00:48:13,254
+Remember masking, the black marker? Masks look safe. But they can leak more than you think.
+
+394
+00:48:13,754 --> 00:48:18,115
+To measure a leak, we count how many possible numbers are still left.
+
+395
+00:48:18,615 --> 00:48:26,231
+Think of guessing a lock code. If only a thousand codes are possible, a computer can try them all in a second.
+
+396
+00:48:26,731 --> 00:48:34,676
+Experts measure this in bits. Each bit is one yes-or-no question. A thousand choices is about ten bits.
+
+397
+00:48:35,176 --> 00:48:43,564
+Showing the first eight and the last four digits of a card leaves only a thousand possible numbers. That is far too few.
+
+398
+00:48:44,064 --> 00:48:48,503
+The bigger danger is joining pieces together, like a jigsaw puzzle.
+
+399
+00:48:49,003 --> 00:48:57,572
+Suppose one system of a vendor sees the first six digits of a card. Another system of the same vendor sees the last four.
+
+400
+00:48:58,071 --> 00:49:04,245
+Each piece looks harmless. But put them together, and only a hundred thousand numbers remain.
+
+401
+00:49:04,745 --> 00:49:08,659
+So Aran keeps a ledger. A ledger is a record book.
+
+402
+00:49:09,159 --> 00:49:15,244
+For every group of connected systems, it writes down what they have already seen of each customer.
+
+403
+00:49:15,744 --> 00:49:23,854
+Before showing any part of a number, it asks: would this leave fewer than about a million possibilities? That is 20 bits.
+
+404
+00:49:24,355 --> 00:49:29,005
+If yes, Aran refuses, and shows less, or a token instead.
+
+405
+00:49:29,505 --> 00:49:38,951
+In the test, 14,175 customers could be narrowed down by joining pieces. With the ledger, zero.
+
+406
+00:49:39,451 --> 00:49:50,832
+Recap. Masks leak, and joined pieces leak more. The leakage ledger remembers what each group has seen, and refuses anything that would leave too few possibilities.
+
+407
+00:49:53,332 --> 00:50:00,159
+Now, the right to erasure. How do you delete a customer from every log, backup and vendor at once?
+
+408
+00:50:00,660 --> 00:50:04,889
+Aran's answer: do not chase the copies. Destroy the key.
+
+409
+00:50:05,388 --> 00:50:12,267
+Aran keeps a vault. It is a protected table that links each token back to its real value.
+
+410
+00:50:12,767 --> 00:50:20,349
+Each customer's entries are locked with that customer's own key. In fact, one key per customer, per purpose.
+
+411
+00:50:20,849 --> 00:50:30,784
+A purpose is the reason the bank holds the data: servicing the account, marketing, loans, or KYC, which means know your customer.
+
+412
+00:50:31,284 --> 00:50:35,883
+When Ravi asks for erasure, Aran destroys Ravi's keys.
+
+413
+00:50:36,383 --> 00:50:45,338
+Instantly, every one of Ravi's tokens, in every log, every backup, and every vendor, points to nothing. They become meaningless.
+
+414
+00:50:45,838 --> 00:50:55,557
+This is called crypto-shredding. It is like destroying the only key to a safe. The safe still exists, but nobody can ever open it.
+
+415
+00:50:56,057 --> 00:51:02,644
+But some data must be kept by law. Banks must keep KYC records for a number of years.
+
+416
+00:51:03,144 --> 00:51:12,259
+So the KYC key has a time lock. If Ravi asks to erase it early, Aran politely refuses, and gives the reason.
+
+417
+00:51:12,759 --> 00:51:17,408
+When the legal period ends, Aran destroys that key automatically.
+
+418
+00:51:17,908 --> 00:51:25,368
+The team proved that once a key is gone, its tokens reveal nothing about Ravi. This is Theorem 3.
+
+419
+00:51:25,868 --> 00:51:36,166
+Recap. Each customer has a key per purpose. Destroying the keys erases every copy at once. And keys the law requires are time-locked.
+
+420
+00:51:38,666 --> 00:51:43,600
+How can Ravi trust that his data was really erased? He gets a receipt.
+
+421
+00:51:44,100 --> 00:51:51,762
+But a receipt is only useful if nobody can secretly change the records. So Aran uses a Merkle tree.
+
+422
+00:51:52,263 --> 00:51:58,663
+Each erasure is written down as a record, and each record gets a fingerprint, using a hash.
+
+423
+00:51:59,163 --> 00:52:03,650
+Then each pair of fingerprints is joined, and given a new fingerprint.
+
+424
+00:52:04,150 --> 00:52:09,426
+This repeats until a single fingerprint is left at the top. It is called the root.
+
+425
+00:52:09,927 --> 00:52:14,358
+Now watch what happens if someone secretly edits an old record.
+
+426
+00:52:14,858 --> 00:52:20,576
+Its fingerprint changes. So the fingerprint above it changes. And so does the root.
+
+427
+00:52:21,076 --> 00:52:26,089
+One small change anywhere changes the root, so cheating is easy to spot.
+
+428
+00:52:26,589 --> 00:52:33,160
+Ravi's receipt holds a proof: the few fingerprints needed to rebuild the root from his own record.
+
+429
+00:52:33,660 --> 00:52:40,667
+The receipt is also signed with a digital signature. Only the bank can make it, but anyone can check it.
+
+430
+00:52:41,167 --> 00:52:46,431
+Even Ravi's phone can check the receipt by itself, without trusting anyone.
+
+431
+00:52:46,931 --> 00:52:57,173
+Recap. A Merkle tree joins fingerprints up to one root, so any change shows. And Ravi's signed receipt proves his erasure is in the record.
+
+432
+00:52:59,673 --> 00:53:04,845
+Even a perfect detector cannot stop one danger: a trusted insider.
+
+433
+00:53:05,345 --> 00:53:13,847
+Imagine a staff member who uses a real login, at 2 a.m., to swap thousands of tokens back into real numbers.
+
+434
+00:53:14,348 --> 00:53:23,651
+Each request looks normal on its own. Only the pattern is strange. For this, the team lead borrowed an idea from biology.
+
+435
+00:53:24,150 --> 00:53:30,630
+Your body has an immune system. It learns what belongs to your own body, which is called self.
+
+436
+00:53:31,130 --> 00:53:38,771
+In an organ called the thymus, new immune cells are tested. Any cell that attacks your own body is removed.
+
+437
+00:53:39,271 --> 00:53:47,473
+Only cells that ignore self survive. So whatever they attack must be foreign. This is called negative selection.
+
+438
+00:53:47,973 --> 00:53:58,821
+Aran does the same with data flows. It describes each flow with seven numbers, like how much data, what hour, and how often tokens are swapped back.
+
+439
+00:53:59,322 --> 00:54:05,749
+Each flow becomes a dot in space. Normal flows cluster together. That cluster is self.
+
+440
+00:54:06,249 --> 00:54:12,916
+Aran scatters random detectors, removes any detector that touches self, and keeps the rest.
+
+441
+00:54:13,416 --> 00:54:20,224
+Now the insider's 2 a.m. flow appears. It lands inside a detector, and an alert goes off.
+
+442
+00:54:20,724 --> 00:54:30,071
+In testing on simulated attacks, the immune layer caught all six kinds of attack, with only 0.6 percent false alarms.
+
+443
+00:54:30,571 --> 00:54:35,465
+A standard method, called Isolation Forest, caught only 20 percent.
+
+444
+00:54:35,964 --> 00:54:46,834
+And like your body, it remembers. When the same attack came back, it scored 0.71 instead of 0.37, so it stood out much more.
+
+445
+00:54:47,334 --> 00:54:52,645
+This layer is owned by the cybersecurity pair, Inbathamizhan and Aasif.
+
+446
+00:54:53,145 --> 00:55:03,327
+Recap. The immune layer learns what normal looks like, keeps only detectors that ignore normal, and raises an alert when something strange appears.
+
+447
+00:55:05,827 --> 00:55:13,340
+Bank staff now use AI chatbots at work. These are called large language models, or LLMs.
+
+448
+00:55:13,840 --> 00:55:17,429
+The message you type into a chatbot is called a prompt.
+
+449
+00:55:17,929 --> 00:55:24,466
+A staff member might paste a customer's whole complaint, with Aadhaar and phone number, into a prompt.
+
+450
+00:55:24,966 --> 00:55:29,262
+That sends the customer's details to an outside AI company.
+
+451
+00:55:29,762 --> 00:55:37,855
+This is exactly what happened at Samsung in 2023, with company code instead of customer details.
+
+452
+00:55:38,355 --> 00:55:46,899
+Aran's AI gateway sits between the staff and the AI company. A gateway is a gate that every message must pass through.
+
+453
+00:55:47,399 --> 00:55:54,241
+Before the prompt leaves, each detail is replaced by a labelled placeholder, like Aadhaar number one.
+
+454
+00:55:54,741 --> 00:56:02,361
+The AI company only ever sees the placeholders. It can still understand the question, and write a good answer.
+
+455
+00:56:02,861 --> 00:56:10,799
+When the answer comes back, Aran puts the real details back in, but only for staff whose role allows them to see it.
+
+456
+00:56:11,299 --> 00:56:20,429
+Every time a real value is put back, it is written into a hash chain. Each entry includes the fingerprint of the one before it.
+
+457
+00:56:20,929 --> 00:56:25,392
+So if anyone edits an old entry, the chain breaks, and it shows.
+
+458
+00:56:25,892 --> 00:56:36,425
+The team also tried prompt injection: messages that try to trick the AI into revealing data. Five kinds were tried. None leaked a value.
+
+459
+00:56:36,925 --> 00:56:46,265
+Raw details reaching the AI company fell from 100 percent to 7.8 percent. And every kind of number fell to zero.
+
+460
+00:56:46,764 --> 00:56:55,472
+Recap. The AI gateway swaps details for placeholders, puts them back only for the right people, and records every step.
+
+461
+00:56:57,973 --> 00:57:01,960
+One more danger is still in the future: quantum computers.
+
+462
+00:57:02,459 --> 00:57:09,887
+A quantum computer uses the strange rules of tiny particles to solve certain problems much faster.
+
+463
+00:57:10,387 --> 00:57:14,835
+A big enough one could break some of the locks that protect the internet today.
+
+464
+00:57:15,335 --> 00:57:22,547
+One method, called Shor's algorithm, could break the way computers agree on keys and sign messages.
+
+465
+00:57:23,047 --> 00:57:32,851
+Another, called Grover's algorithm, only weakens other locks, and longer keys are enough. So Aran moved to AES-256.
+
+466
+00:57:33,352 --> 00:57:41,354
+Here is the scary part. An attacker can record locked traffic today, and keep it until a quantum computer exists.
+
+467
+00:57:41,853 --> 00:57:44,820
+This is called harvest now, decrypt later.
+
+468
+00:57:45,320 --> 00:57:55,851
+The team found something new. If a customer's key was ever backed up using today's key exchange, a recording could bring the key back, even after erasure.
+
+469
+00:57:56,351 --> 00:58:03,166
+In a simulation, 100 percent of erased values came back. The erasure would be undone.
+
+470
+00:58:03,666 --> 00:58:12,594
+The fix is called hybrid cryptography. It uses an old lock and a new quantum-safe lock together. A thief must break both.
+
+471
+00:58:13,094 --> 00:58:27,675
+Aran pairs X25519 with ML-KEM, and Ed25519 with ML-DSA. The new ones are quantum-safe standards, published in 2024.
+
+472
+00:58:28,176 --> 00:58:32,205
+With the hybrid, zero percent of erased values came back.
+
+473
+00:58:32,704 --> 00:58:42,760
+Aran also lists every lock it uses in a CBOM, a cryptography bill of materials, as India's banking roadmap asks.
+
+474
+00:58:43,260 --> 00:58:55,069
+Recap. Quantum computers could break today's key exchange, and recorded traffic could undo erasure. Aran uses hybrid locks, so erasure stays permanent.
+
+475
+00:58:57,569 --> 00:59:03,072
+Now let us put everything together, and follow Ravi's loan request all the way.
+
+476
+00:59:03,573 --> 00:59:11,472
+The message holds Ravi's name, Aadhaar, PAN, mobile, address and OTP. It is going to the loan vendor.
+
+477
+00:59:11,972 --> 00:59:17,184
+Step one: normalise. Aran wipes away any disguises in the message.
+
+478
+00:59:17,684 --> 00:59:27,206
+Step two: detect. Check digits, fingerprints and AI models find every sensitive detail, each with an honest probability.
+
+479
+00:59:27,706 --> 00:59:34,921
+Step three: decide. The leakage ledger checks what the loan vendor's systems have already seen of Ravi.
+
+480
+00:59:35,421 --> 00:59:43,987
+Step four: protect. The Aadhaar becomes a token made only for the loan vendor. It fails the check digit, on purpose.
+
+481
+00:59:44,487 --> 00:59:54,261
+The PAN, mobile, name and address become keyed labels. And the OTP is removed completely. Nobody downstream ever needs it.
+
+482
+00:59:54,761 --> 01:00:00,972
+Step five: record. The flow is added to the immune layer's picture of normal traffic.
+
+483
+01:00:01,472 --> 01:00:09,873
+The vendor gets a message in exactly the right shape, so its systems keep working. But it holds nothing that can hurt Ravi.
+
+484
+01:00:10,372 --> 01:00:14,046
+Later, if the vendor leaks, the tokens name the vendor.
+
+485
+01:00:14,546 --> 01:00:21,004
+If Ravi asks for erasure, Ravi's keys are destroyed, and a signed receipt follows.
+
+486
+01:00:21,505 --> 01:00:25,965
+And if an insider misbehaves, the immune layer raises an alert.
+
+487
+01:00:26,465 --> 01:00:34,423
+Recap. Normalise, detect, decide, protect, record. Five steps, in a fraction of a second, for every message.
+
+488
+01:00:36,922 --> 01:00:42,771
+Now let us go back to the real cases, and ask honestly: what would Aran have changed?
+
+489
+01:00:43,272 --> 01:00:55,854
+The SBI text messages. If the stored copies had passed through Aran, the account numbers in them would have been tokens, and the leakage ledger would have stopped partial numbers from adding up.
+
+490
+01:00:56,354 --> 01:01:12,639
+The Juspay case. Masked card data was joined with emails and phone numbers. Aran's ledger counts exactly this kind of joining. And its card tokens fail the Luhn check, so a dump of them proves no real card number left.
+
+491
+01:01:13,139 --> 01:01:25,989
+The Air India vendor case. With Aran, the vendor would have held tokens made only for that vendor. Stolen tokens are useless to criminals, and the trace names the vendor at once.
+
+492
+01:01:26,488 --> 01:01:40,059
+The Star Health and vaccination data sold on Telegram. If that data had held Aran tokens, buyers would have got worthless look-alikes, and each token would point back to the system that leaked it.
+
+493
+01:01:40,559 --> 01:01:51,663
+And if an insider pulled out real records in bulk, every request to swap tokens back would be logged with a name, and the immune layer would flag the unusual rush.
+
+494
+01:01:52,163 --> 01:02:07,167
+The Twitter and Facebook passwords in logs. Aran is built for identifiers like Aadhaar and cards, not passwords. But the lesson is the one Aran is built on: clean the data before the log stores it.
+
+495
+01:02:07,667 --> 01:02:20,952
+The Samsung chatbot case. For a bank, the same mistake with customer details is exactly what the AI gateway stops. Details become placeholders before anything leaves the bank.
+
+496
+01:02:21,452 --> 01:02:39,892
+And the 2016 card malware? Harmful software inside a payment system that needs real card numbers is a different problem, and Aran does not claim to stop it. What it does is make sure that every copy outside that system holds only tokens.
+
+497
+01:02:40,392 --> 01:02:48,738
+Recap. Most of these leaks came through side doors that Aran guards. And where Aran cannot help, it says so plainly.
+
+498
+01:02:51,238 --> 01:02:54,304
+Part five. How Aran was built and tested.
+
+499
+01:02:57,404 --> 01:03:08,417
+Most of the work happened in about 43 hours, from just after midnight on 16 October, to the evening of 17 October 2026.
+
+500
+01:03:08,917 --> 01:03:11,991
+First, the team lead set clear working rules.
+
+501
+01:03:12,491 --> 01:03:19,801
+Work locally on the laptop. Save every change under the lead's own name. And record everything in notes.
+
+502
+01:03:20,302 --> 01:03:27,847
+Before any new plan, the team gets beginner learning documents, one per topic. There are now 21 of them.
+
+503
+01:03:28,346 --> 01:03:34,720
+Every result is saved in the project's repository on GitHub, and linked from the main page.
+
+504
+01:03:35,220 --> 01:03:41,255
+A repository is a shared folder for code that remembers every change ever made.
+
+505
+01:03:41,756 --> 01:03:50,122
+In the first hour, the research document was written, along with a first working version and the first tests on real logs.
+
+506
+01:03:50,621 --> 01:03:56,564
+Next came the AI layer and the immune layer. Then the normaliser, and the bank's own lists.
+
+507
+01:03:57,064 --> 01:04:07,017
+On the afternoon of 16 October, a live website was built. A server runs the real firewall, and every number on screen comes from it.
+
+508
+01:04:07,517 --> 01:04:16,420
+Then came a guided tour with animation, 3D scenes, the leakage ledger, the AI gateway, red teaming, and quantum safety.
+
+509
+01:04:16,920 --> 01:04:21,327
+Finally, the team lead's own design became the real website.
+
+510
+01:04:21,826 --> 01:04:31,027
+Recap. Built in about 43 hours, with clear rules, learning documents for every topic, and every result saved and linked.
+
+511
+01:04:33,528 --> 01:04:37,422
+Aran was built by a team of four, working in two pairs.
+
+512
+01:04:37,922 --> 01:04:50,993
+Inbathamizhan S leads the project. With Aasif Ahmed A, the cybersecurity pair owns the tokens, the vault, erasure, the ledger, the immune layer and the quantum-safe locks.
+
+513
+01:04:51,493 --> 01:05:03,876
+SN Arun Vijay and Bharadhwaj M are the AI and machine learning pair. They own the name finder, the OTP and UPI model, and the honest probabilities.
+
+514
+01:05:04,376 --> 01:05:07,369
+The AI gateway is shared by both pairs.
+
+515
+01:05:07,869 --> 01:05:13,947
+Every topic has a beginner learning document, so any team member can understand any part.
+
+516
+01:05:14,447 --> 01:05:21,034
+All work is saved, with notes, in one shared place, so nothing depends on one person's memory.
+
+517
+01:05:21,534 --> 01:05:27,928
+Recap. Two pairs, cybersecurity and AI, with shared learning documents and shared notes.
+
+518
+01:05:30,428 --> 01:05:33,693
+Let us look at the live website, called the console.
+
+519
+01:05:34,193 --> 01:05:42,836
+Nothing on it is made up. Every number, token, receipt and alert comes from Aran's real code, running at that moment.
+
+520
+01:05:43,336 --> 01:05:51,046
+A guided tour walks through thirteen chapters, with real requests flying into Aran and coming out as tokens.
+
+521
+01:05:51,546 --> 01:05:58,948
+On the Without Aran and With Aran screen, the same requests play side by side, so you can see the difference.
+
+522
+01:05:59,447 --> 01:06:04,176
+In Beat the Firewall, judges scan a QR code with their own phones.
+
+523
+01:06:04,677 --> 01:06:12,831
+They try to sneak an Aadhaar, a card or a mobile number past Aran, by typing it, pasting it, or even speaking it.
+
+524
+01:06:13,331 --> 01:06:17,568
+A live scoreboard shows every attempt, and whether Aran caught it.
+
+525
+01:06:18,068 --> 01:06:24,782
+On the card scan page, Aran reads a sample ID card photo, and covers the numbers on it.
+
+526
+01:06:25,282 --> 01:06:32,206
+A My Data page shows a customer, on a phone, where their data went, and lets them ask for erasure.
+
+527
+01:06:32,706 --> 01:06:38,043
+The site also speaks Tamil and Hindi, and has a presenter mode for giving the demo.
+
+528
+01:06:38,543 --> 01:06:46,059
+Recap. The live console runs Aran's real code, and judges can try to beat it from their own phones.
+
+529
+01:06:48,559 --> 01:06:54,466
+Good research is honest about what is real, what is generated, and what is simulated.
+
+530
+01:06:54,966 --> 01:07:08,565
+Real: the Loghub logs, 32,000 lines from 16 real systems. Real public collections of names in English, Hindi and Hinglish. And real public text messages.
+
+531
+01:07:09,065 --> 01:07:18,335
+Generated: every Aadhaar, card, PAN, mobile, OTP and UPI value. They follow every rule, but belong to no one.
+
+532
+01:07:18,834 --> 01:07:24,781
+Simulated: the bank's data flows for the immune layer, because no bank publishes them.
+
+533
+01:07:25,281 --> 01:07:31,506
+Also simulated: the quantum attack, because no big enough quantum computer exists yet.
+
+534
+01:07:32,005 --> 01:07:37,324
+Every result comes from a script that anyone can run again, to get the same numbers.
+
+535
+01:07:37,825 --> 01:07:43,128
+The team ran nineteen experiments in total, numbered E1 to E19.
+
+536
+01:07:43,628 --> 01:07:51,275
+Recap. Real logs, made-up numbers, simulated flows, and every result can be checked again by anyone.
+
+537
+01:07:53,774 --> 01:07:57,135
+Part six. Results, limits, and what comes next.
+
+538
+01:08:00,235 --> 01:08:03,081
+Now, the results. Here is the main one.
+
+539
+01:08:03,581 --> 01:08:14,115
+On 16,000 real log lines, from eight systems the models had never seen, the team hid 1,895 sensitive values.
+
+540
+01:08:14,615 --> 01:08:18,800
+Plain pattern search removed 46.1 percent of them.
+
+541
+01:08:19,300 --> 01:08:23,700
+With the AI layers, Aran removed 83.5 percent.
+
+542
+01:08:24,200 --> 01:08:29,075
+With the normaliser and the bank's own lists, 89.7 percent.
+
+543
+01:08:29,575 --> 01:08:37,263
+With the latest fixes for mobile numbers and OTPs, 91 percent, even without the bank's lists.
+
+544
+01:08:37,764 --> 01:08:44,334
+Aadhaar, card, PAN and UPI have been at 100 percent since the first AI version.
+
+545
+01:08:44,833 --> 01:08:54,311
+False OTP alarms on 32,000 real lines: from 67,481 down to 6.
+
+546
+01:08:54,812 --> 01:08:59,252
+Tokens wrongly flagged as real: zero out of 20,000.
+
+547
+01:08:59,752 --> 01:09:04,294
+Leaked files traced to the right destination: 100 percent.
+
+548
+01:09:04,794 --> 01:09:12,989
+Customers who could be narrowed down by joining systems: from 14,175 down to zero.
+
+549
+01:09:13,489 --> 01:09:19,936
+Raw details reaching an AI company: from 100 percent down to 7.8 percent.
+
+550
+01:09:20,435 --> 01:09:32,351
+Recap. Aran removes over 90 percent of sensitive values on unseen real logs, with very few false alarms, and every number type is fully protected.
+
+551
+01:09:34,851 --> 01:09:39,368
+What is truly new in Aran? Good research answers this carefully.
+
+552
+01:09:39,868 --> 01:09:46,873
+Card tokens that fail the Luhn check already exist in some products. That part alone is not new.
+
+553
+01:09:47,373 --> 01:09:56,833
+What is new is turning it into a proven rule for Aadhaar and cards, in Theorem 1, so anyone can tell protected numbers from leaked ones.
+
+554
+01:09:57,332 --> 01:10:02,323
+New: tokens that name the leaker, with a proven error rate, in Theorem 2.
+
+555
+01:10:02,823 --> 01:10:06,677
+New: the OTP registry, tied to each request.
+
+556
+01:10:07,177 --> 01:10:12,110
+New: the leakage ledger, which counts what joined systems can work out.
+
+557
+01:10:12,610 --> 01:10:19,571
+New: one key per customer, per purpose, with signed receipts and legal time locks, in Theorem 3.
+
+558
+01:10:20,071 --> 01:10:28,810
+And new: the finding that recorded traffic and a future quantum computer could undo erasure, together with the hybrid fix.
+
+559
+01:10:29,310 --> 01:10:36,171
+Recap. Some single pieces exist elsewhere. Putting them together, with proofs and measurements, is new.
+
+560
+01:10:38,672 --> 01:10:43,828
+Good research says plainly where it is still weak. Here are Aran's weak spots.
+
+561
+01:10:44,328 --> 01:10:53,639
+Names are the weakest. About 77 percent are caught. A newer kind of AI model, called a transformer, is the planned fix.
+
+562
+01:10:54,139 --> 01:11:02,839
+A transformer is the technology behind modern AI chatbots. It reads a whole sentence at once, to understand its meaning.
+
+563
+01:11:03,339 --> 01:11:12,784
+After the latest fix, two new mistakes appeared. For example, a cheque number was sometimes taken for a mobile number. These must be fixed.
+
+564
+01:11:13,283 --> 01:11:23,512
+Speed. Aran handles 654 log lines per second today. A big bank needs thousands per second. A faster version is planned.
+
+565
+01:11:24,012 --> 01:11:31,920
+The attacks on data flows were simulated. And the AI gateway has not yet been tested with a real chatbot.
+
+566
+01:11:32,421 --> 01:11:40,794
+Four of the 26 hiding tricks are still open, on purpose, because undoing them on every line would cause false alarms.
+
+567
+01:11:41,294 --> 01:11:47,052
+And whether destroying a key counts as legal erasure needs a lawyer's opinion.
+
+568
+01:11:47,552 --> 01:11:54,815
+Recap. Names, two new mistakes, speed, and real-world testing are the main things still to improve.
+
+569
+01:11:57,315 --> 01:11:58,966
+So what comes next?
+
+570
+01:11:59,466 --> 01:12:12,343
+The cybersecurity pair, Inbathamizhan and Aasif, will make the vault survive restarts, build a tracer for leaked raw numbers, and add quantum-safe connections in front of the server.
+
+571
+01:12:12,843 --> 01:12:23,283
+The AI pair, Arun and Bharadhwaj, will fix the two new mistakes, add the transformer model for names, and test the gateway with a real chatbot.
+
+572
+01:12:23,784 --> 01:12:30,304
+Later come Tamil name detection, reading ID card photos properly, and a research paper.
+
+573
+01:12:30,803 --> 01:12:39,673
+As a product, a bank would install Aran on its own servers: as a gateway, a log cleaner, an AI gateway and a dashboard.
+
+574
+01:12:40,173 --> 01:12:45,031
+It could also be offered as a service for smaller banks and finance companies.
+
+575
+01:12:45,532 --> 01:12:56,248
+The timing is right. The DPDP rules begin in May 2027, and India's banking roadmap asks banks to become quantum-safe.
+
+576
+01:12:56,747 --> 01:13:04,871
+Recap. Fix the weak spots, make it faster, test it in the real world, and turn it into a product banks can install.
+
+577
+01:13:07,372 --> 01:13:12,068
+Here are questions people often ask about Aran, with short answers.
+
+578
+01:13:12,568 --> 01:13:23,416
+Is this just a pattern search? No. Pattern search raised 67,481 false OTP alarms. Aran raised 6.
+
+579
+01:13:23,916 --> 01:13:35,455
+Where is the AI? In finding names and addresses, telling OTPs and UPI IDs apart from look-alikes, and making every probability honest.
+
+580
+01:13:35,955 --> 01:13:45,496
+Did you use real customer data? Never. The logs are real and public. Every identifier is made up, with valid check digits.
+
+581
+01:13:45,996 --> 01:13:54,693
+Does tokenising break the bank's apps? No. Tokens keep the exact shape, and allowed systems can get the real value back.
+
+582
+01:13:55,193 --> 01:14:03,322
+What if someone hides the number? Twelve kinds of disguise are fully caught, and 22 of 26 red team tricks.
+
+583
+01:14:03,822 --> 01:14:10,518
+What if there is a typo? Typo repair catches 99.2 percent of one-typo numbers.
+
+584
+01:14:11,018 --> 01:14:21,838
+How can erasure be legal, if KYC records must be kept? KYC keys are time-locked, and destroyed automatically when the legal period ends.
+
+585
+01:14:22,338 --> 01:14:27,378
+Is it fast enough? Not yet, for a big bank. A faster version is planned.
+
+586
+01:14:27,878 --> 01:14:34,539
+Is it a product? Yes. A bank can install it on its own servers, or use it as a service.
+
+587
+01:14:35,039 --> 01:14:42,939
+Recap. Aran is not just pattern search, never uses real people's data, and says plainly where it is still weak.
+
+588
+01:14:45,438 --> 01:14:48,456
+Let us bring everything together in ten points.
+
+589
+01:14:48,957 --> 01:14:56,003
+One. Banks leak customer data through side doors: logs, vendors, backups and AI chatbots.
+
+590
+01:14:56,503 --> 01:15:08,960
+Two. Pattern search drowns in false alarms. On real logs it raised 67,481 false OTP alarms. Aran raised 6.
+
+591
+01:15:09,460 --> 01:15:17,761
+Three. Aran is a firewall for data. It sits at choke points, and swaps sensitive details for look-alike tokens.
+
+592
+01:15:18,261 --> 01:15:29,578
+Four. Real Aadhaar and card numbers always pass their check digit. Aran's tokens always fail it. So protected and leaked numbers can be told apart.
+
+593
+01:15:30,078 --> 01:15:35,907
+Five. Every destination gets its own tokens, so a leaked file names its leaker.
+
+594
+01:15:36,407 --> 01:15:45,256
+Six. Detection works like a detective, combining clues into an honest probability, with AI for names and addresses.
+
+595
+01:15:45,756 --> 01:15:51,125
+Seven. The leakage ledger stops the pieces of a number from being joined together.
+
+596
+01:15:51,624 --> 01:15:59,232
+Eight. One key per customer, per purpose. Destroying the keys erases every copy, with a signed receipt.
+
+597
+01:15:59,732 --> 01:16:05,229
+Nine. The immune layer spots strange behaviour, like an insider at 2 a.m.
+
+598
+01:16:05,729 --> 01:16:11,324
+Ten. Hybrid, quantum-safe locks keep erasure permanent, even in the future.
+
+599
+01:16:13,824 --> 01:16:21,514
+Aran means fortress. Not a wall that stops the bank's work, but one that protects every customer inside it.
+
+600
+01:16:22,014 --> 01:16:24,431
+Aran: protection you can prove.
+
+601
+01:16:24,931 --> 01:16:31,961
+Built by Inbathamizhan S, Aasif Ahmed A, SN Arun Vijay and Bharadhwaj M, at KARE.
+
+602
+01:16:32,460 --> 01:16:34,133
+Thank you for watching.
+

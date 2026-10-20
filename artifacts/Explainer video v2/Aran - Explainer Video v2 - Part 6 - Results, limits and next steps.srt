@@ -1,0 +1,264 @@
+1
+00:00:01,007 --> 00:00:04,368
+Part six. Results, limits, and what comes next.
+
+2
+00:00:07,468 --> 00:00:10,314
+Now, the results. Here is the main one.
+
+3
+00:00:10,814 --> 00:00:21,348
+On 16,000 real log lines, from eight systems the models had never seen, the team hid 1,895 sensitive values.
+
+4
+00:00:21,848 --> 00:00:26,033
+Plain pattern search removed 46.1 percent of them.
+
+5
+00:00:26,533 --> 00:00:30,933
+With the AI layers, Aran removed 83.5 percent.
+
+6
+00:00:31,433 --> 00:00:36,308
+With the normaliser and the bank's own lists, 89.7 percent.
+
+7
+00:00:36,808 --> 00:00:44,496
+With the latest fixes for mobile numbers and OTPs, 91 percent, even without the bank's lists.
+
+8
+00:00:44,997 --> 00:00:51,567
+Aadhaar, card, PAN and UPI have been at 100 percent since the first AI version.
+
+9
+00:00:52,066 --> 00:01:01,544
+False OTP alarms on 32,000 real lines: from 67,481 down to 6.
+
+10
+00:01:02,045 --> 00:01:06,485
+Tokens wrongly flagged as real: zero out of 20,000.
+
+11
+00:01:06,985 --> 00:01:11,527
+Leaked files traced to the right destination: 100 percent.
+
+12
+00:01:12,027 --> 00:01:20,222
+Customers who could be narrowed down by joining systems: from 14,175 down to zero.
+
+13
+00:01:20,722 --> 00:01:27,169
+Raw details reaching an AI company: from 100 percent down to 7.8 percent.
+
+14
+00:01:27,668 --> 00:01:39,584
+Recap. Aran removes over 90 percent of sensitive values on unseen real logs, with very few false alarms, and every number type is fully protected.
+
+15
+00:01:42,084 --> 00:01:46,601
+What is truly new in Aran? Good research answers this carefully.
+
+16
+00:01:47,101 --> 00:01:54,106
+Card tokens that fail the Luhn check already exist in some products. That part alone is not new.
+
+17
+00:01:54,606 --> 00:02:04,066
+What is new is turning it into a proven rule for Aadhaar and cards, in Theorem 1, so anyone can tell protected numbers from leaked ones.
+
+18
+00:02:04,565 --> 00:02:09,556
+New: tokens that name the leaker, with a proven error rate, in Theorem 2.
+
+19
+00:02:10,056 --> 00:02:13,910
+New: the OTP registry, tied to each request.
+
+20
+00:02:14,410 --> 00:02:19,343
+New: the leakage ledger, which counts what joined systems can work out.
+
+21
+00:02:19,843 --> 00:02:26,804
+New: one key per customer, per purpose, with signed receipts and legal time locks, in Theorem 3.
+
+22
+00:02:27,304 --> 00:02:36,043
+And new: the finding that recorded traffic and a future quantum computer could undo erasure, together with the hybrid fix.
+
+23
+00:02:36,543 --> 00:02:43,404
+Recap. Some single pieces exist elsewhere. Putting them together, with proofs and measurements, is new.
+
+24
+00:02:45,905 --> 00:02:51,061
+Good research says plainly where it is still weak. Here are Aran's weak spots.
+
+25
+00:02:51,561 --> 00:03:00,872
+Names are the weakest. About 77 percent are caught. A newer kind of AI model, called a transformer, is the planned fix.
+
+26
+00:03:01,372 --> 00:03:10,072
+A transformer is the technology behind modern AI chatbots. It reads a whole sentence at once, to understand its meaning.
+
+27
+00:03:10,572 --> 00:03:20,017
+After the latest fix, two new mistakes appeared. For example, a cheque number was sometimes taken for a mobile number. These must be fixed.
+
+28
+00:03:20,516 --> 00:03:30,745
+Speed. Aran handles 654 log lines per second today. A big bank needs thousands per second. A faster version is planned.
+
+29
+00:03:31,245 --> 00:03:39,153
+The attacks on data flows were simulated. And the AI gateway has not yet been tested with a real chatbot.
+
+30
+00:03:39,654 --> 00:03:48,027
+Four of the 26 hiding tricks are still open, on purpose, because undoing them on every line would cause false alarms.
+
+31
+00:03:48,527 --> 00:03:54,285
+And whether destroying a key counts as legal erasure needs a lawyer's opinion.
+
+32
+00:03:54,785 --> 00:04:02,048
+Recap. Names, two new mistakes, speed, and real-world testing are the main things still to improve.
+
+33
+00:04:04,548 --> 00:04:06,199
+So what comes next?
+
+34
+00:04:06,699 --> 00:04:19,576
+The cybersecurity pair, Inbathamizhan and Aasif, will make the vault survive restarts, build a tracer for leaked raw numbers, and add quantum-safe connections in front of the server.
+
+35
+00:04:20,076 --> 00:04:30,516
+The AI pair, Arun and Bharadhwaj, will fix the two new mistakes, add the transformer model for names, and test the gateway with a real chatbot.
+
+36
+00:04:31,017 --> 00:04:37,537
+Later come Tamil name detection, reading ID card photos properly, and a research paper.
+
+37
+00:04:38,036 --> 00:04:46,906
+As a product, a bank would install Aran on its own servers: as a gateway, a log cleaner, an AI gateway and a dashboard.
+
+38
+00:04:47,406 --> 00:04:52,264
+It could also be offered as a service for smaller banks and finance companies.
+
+39
+00:04:52,765 --> 00:05:03,481
+The timing is right. The DPDP rules begin in May 2027, and India's banking roadmap asks banks to become quantum-safe.
+
+40
+00:05:03,980 --> 00:05:12,104
+Recap. Fix the weak spots, make it faster, test it in the real world, and turn it into a product banks can install.
+
+41
+00:05:14,605 --> 00:05:19,301
+Here are questions people often ask about Aran, with short answers.
+
+42
+00:05:19,801 --> 00:05:30,649
+Is this just a pattern search? No. Pattern search raised 67,481 false OTP alarms. Aran raised 6.
+
+43
+00:05:31,149 --> 00:05:42,688
+Where is the AI? In finding names and addresses, telling OTPs and UPI IDs apart from look-alikes, and making every probability honest.
+
+44
+00:05:43,188 --> 00:05:52,729
+Did you use real customer data? Never. The logs are real and public. Every identifier is made up, with valid check digits.
+
+45
+00:05:53,229 --> 00:06:01,926
+Does tokenising break the bank's apps? No. Tokens keep the exact shape, and allowed systems can get the real value back.
+
+46
+00:06:02,426 --> 00:06:10,555
+What if someone hides the number? Twelve kinds of disguise are fully caught, and 22 of 26 red team tricks.
+
+47
+00:06:11,055 --> 00:06:17,751
+What if there is a typo? Typo repair catches 99.2 percent of one-typo numbers.
+
+48
+00:06:18,251 --> 00:06:29,071
+How can erasure be legal, if KYC records must be kept? KYC keys are time-locked, and destroyed automatically when the legal period ends.
+
+49
+00:06:29,571 --> 00:06:34,611
+Is it fast enough? Not yet, for a big bank. A faster version is planned.
+
+50
+00:06:35,111 --> 00:06:41,772
+Is it a product? Yes. A bank can install it on its own servers, or use it as a service.
+
+51
+00:06:42,272 --> 00:06:50,172
+Recap. Aran is not just pattern search, never uses real people's data, and says plainly where it is still weak.
+
+52
+00:06:52,671 --> 00:06:55,689
+Let us bring everything together in ten points.
+
+53
+00:06:56,190 --> 00:07:03,236
+One. Banks leak customer data through side doors: logs, vendors, backups and AI chatbots.
+
+54
+00:07:03,736 --> 00:07:16,193
+Two. Pattern search drowns in false alarms. On real logs it raised 67,481 false OTP alarms. Aran raised 6.
+
+55
+00:07:16,693 --> 00:07:24,994
+Three. Aran is a firewall for data. It sits at choke points, and swaps sensitive details for look-alike tokens.
+
+56
+00:07:25,494 --> 00:07:36,811
+Four. Real Aadhaar and card numbers always pass their check digit. Aran's tokens always fail it. So protected and leaked numbers can be told apart.
+
+57
+00:07:37,311 --> 00:07:43,140
+Five. Every destination gets its own tokens, so a leaked file names its leaker.
+
+58
+00:07:43,640 --> 00:07:52,489
+Six. Detection works like a detective, combining clues into an honest probability, with AI for names and addresses.
+
+59
+00:07:52,989 --> 00:07:58,358
+Seven. The leakage ledger stops the pieces of a number from being joined together.
+
+60
+00:07:58,857 --> 00:08:06,465
+Eight. One key per customer, per purpose. Destroying the keys erases every copy, with a signed receipt.
+
+61
+00:08:06,965 --> 00:08:12,462
+Nine. The immune layer spots strange behaviour, like an insider at 2 a.m.
+
+62
+00:08:12,962 --> 00:08:18,557
+Ten. Hybrid, quantum-safe locks keep erasure permanent, even in the future.
+
+63
+00:08:21,057 --> 00:08:28,747
+Aran means fortress. Not a wall that stops the bank's work, but one that protects every customer inside it.
+
+64
+00:08:29,247 --> 00:08:31,664
+Aran: protection you can prove.
+
+65
+00:08:32,164 --> 00:08:39,194
+Built by Inbathamizhan S, Aasif Ahmed A, SN Arun Vijay and Bharadhwaj M, at KARE.
+
+66
+00:08:39,693 --> 00:08:41,366
+Thank you for watching.
+

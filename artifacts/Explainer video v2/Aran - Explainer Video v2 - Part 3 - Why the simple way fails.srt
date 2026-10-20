@@ -1,0 +1,168 @@
+1
+00:00:01,009 --> 00:00:05,618
+Part three. Why the simple way fails, and how the research was done.
+
+2
+00:00:08,718 --> 00:00:15,143
+So how would most people find an Aadhaar or an OTP inside a log? With a pattern search.
+
+3
+00:00:15,642 --> 00:00:21,883
+A pattern search looks for a shape. For example: any twelve digits in a row might be an Aadhaar.
+
+4
+00:00:22,383 --> 00:00:25,893
+And any six digits in a row might be an OTP.
+
+5
+00:00:26,393 --> 00:00:32,620
+Programmers write these patterns in a short code, called a regular expression, or regex.
+
+6
+00:00:33,120 --> 00:00:38,035
+It sounds sensible. So the team tested it, honestly, on real data.
+
+7
+00:00:38,535 --> 00:00:48,767
+They used Loghub, a public collection of real logs from real computer systems: 32,000 lines, from 16 different systems.
+
+8
+00:00:49,267 --> 00:00:57,858
+These logs come from places like supercomputers, phones and web servers. They contain no Indian identifiers at all.
+
+9
+00:00:58,358 --> 00:01:01,700
+So any hit in these logs must be a false alarm.
+
+10
+00:01:02,199 --> 00:01:12,499
+Watch what happens. The simple OTP pattern fired 67,481 times. That is more than twice per line.
+
+11
+00:01:12,999 --> 00:01:19,988
+It matched times, file sizes, block numbers and memory addresses. Anything with six digits.
+
+12
+00:01:20,488 --> 00:01:24,787
+It even matched the letters O T P inside the word hotplug.
+
+13
+00:01:25,287 --> 00:01:31,196
+Aran's checks, which you will meet soon, raised just 6 false alarms on the same lines.
+
+14
+00:01:31,696 --> 00:01:45,641
+Recap. Pattern search looks only at shape. On 32,000 real log lines, it raised 67,481 false OTP alarms. Aran raised 6.
+
+15
+00:01:48,141 --> 00:01:53,378
+So the team did proper research before building anything. It followed six steps.
+
+16
+00:01:53,877 --> 00:01:59,605
+Step one: ask the right question. The real problem is not just finding numbers.
+
+17
+00:02:00,105 --> 00:02:08,012
+The real problem is that a bank cannot prove where each customer's details are, who can read them, and which copy leaked.
+
+18
+00:02:08,512 --> 00:02:16,091
+Step two: build the obvious solution first. This is called a baseline. It gives you something real to beat.
+
+19
+00:02:16,591 --> 00:02:22,082
+Step three: read what others have already done. This is called a literature survey.
+
+20
+00:02:22,582 --> 00:02:30,134
+The team studied the laws banks must follow, real leaks, and research papers. About forty sources in total.
+
+21
+00:02:30,634 --> 00:02:35,572
+Step four: measure the weak spots on real data, instead of just guessing.
+
+22
+00:02:36,072 --> 00:02:43,634
+Step five: for each weak spot, find a piece of mathematics that fixes it, and prove that it works, where possible.
+
+23
+00:02:44,134 --> 00:02:53,360
+Step six: attack your own design, the way an enemy would. Eleven weaknesses were found, and every fix became part of Aran.
+
+24
+00:02:53,861 --> 00:03:03,409
+Recap. Ask the right question, build a baseline, read the research, measure the gaps, fix each one with maths, and then attack your own design.
+
+25
+00:03:05,909 --> 00:03:11,911
+The measurements found six gaps. A gap is a problem that existing tools leave open.
+
+26
+00:03:12,410 --> 00:03:17,368
+Gap one: number detectors drown in false alarms, as we just saw.
+
+27
+00:03:17,868 --> 00:03:24,775
+Gap two: a protected number and a leaked number look exactly the same. Nobody can tell them apart.
+
+28
+00:03:25,275 --> 00:03:29,300
+Gap three: nobody measures how much a mask still gives away.
+
+29
+00:03:29,800 --> 00:03:35,682
+Gap four: when a leaked file shows up on the internet, nobody can tell which system leaked it.
+
+30
+00:03:36,181 --> 00:03:41,522
+Gap five: erasure cannot reach the copies in logs, backups and vendors.
+
+31
+00:03:42,022 --> 00:03:48,356
+Gap six: OTPs have no structure at all, so they cannot be checked like other numbers.
+
+32
+00:03:48,856 --> 00:03:51,566
+Each gap became one of Aran's ideas.
+
+33
+00:03:52,066 --> 00:04:03,750
+Recap. Six gaps: false alarms, look-alike leaks, leaky masks, unknown leakers, erasure that cannot reach copies, and OTPs with no structure.
+
+34
+00:04:06,251 --> 00:04:12,255
+Here is how each gap is closed. Each of Aran's main ideas is called a mechanism.
+
+35
+00:04:12,754 --> 00:04:20,716
+Gap one, false alarms, is closed by detection as evidence: check digits, clues, and the bank's own lists.
+
+36
+00:04:21,216 --> 00:04:26,976
+Gap two, look-alike leaks, is closed by tokens that always fail the check digit.
+
+37
+00:04:27,476 --> 00:04:31,681
+Gap three, leaky masks, is closed by the leakage ledger.
+
+38
+00:04:32,181 --> 00:04:38,214
+Gap four, unknown leakers, is closed by a different token for every destination.
+
+39
+00:04:38,714 --> 00:04:45,127
+Gap five, erasure, is closed by one key per customer, per purpose, with signed receipts.
+
+40
+00:04:45,627 --> 00:04:53,372
+Gap six, OTPs, is closed by remembering every OTP the bank sends, tied to its request.
+
+41
+00:04:53,872 --> 00:05:02,032
+And on top of these, Aran adds an AI layer, a normaliser, an immune layer, an AI gateway, and quantum-safe locks.
+
+42
+00:05:02,533 --> 00:05:10,876
+Recap. Six gaps, closed by Aran's mechanisms, with extra layers on top. Now let us see how each one works.
+

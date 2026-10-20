@@ -1,0 +1,340 @@
+1
+00:00:01,000 --> 00:00:07,357
+Hello, and welcome. This video explains a project called Aran, from the very beginning.
+
+2
+00:00:07,857 --> 00:00:14,394
+Aran is a Tamil word. It means a fortress, a strong wall that protects what is inside.
+
+3
+00:00:14,894 --> 00:00:20,007
+Aran protects one thing: the private details of people who bank with a bank.
+
+4
+00:00:20,508 --> 00:00:27,136
+It was built by four students at Kalasalingam Academy of Research and Education, called KARE.
+
+5
+00:00:27,635 --> 00:00:34,754
+Inbathamizhan S leads the project and works on cybersecurity, together with Aasif Ahmed A.
+
+6
+00:00:35,254 --> 00:00:41,345
+SN Arun Vijay and Bharadhwaj M work on the artificial intelligence part.
+
+7
+00:00:41,845 --> 00:00:47,524
+You do not need to know anything about computers or security to follow this video.
+
+8
+00:00:48,023 --> 00:00:54,184
+Whenever a new word appears, a small card in the top right corner explains it in plain words.
+
+9
+00:00:54,685 --> 00:00:56,035
+Like this one.
+
+10
+00:00:56,535 --> 00:01:01,262
+And everything that is spoken is always written at the bottom of the screen.
+
+11
+00:01:01,762 --> 00:01:07,092
+The video is long, so it is split into six parts. You can pause at any time.
+
+12
+00:01:07,591 --> 00:01:12,723
+At the end of every chapter, there is a short recap of the most important points.
+
+13
+00:01:13,223 --> 00:01:14,626
+Let us begin.
+
+14
+00:01:17,127 --> 00:01:19,194
+Here is the plan for the video.
+
+15
+00:01:19,693 --> 00:01:24,983
+Part one is the problem: how a bank's customer data leaks, and why it matters.
+
+16
+00:01:25,484 --> 00:01:30,987
+Part two teaches the basic words, one at a time, with everyday examples.
+
+17
+00:01:31,487 --> 00:01:37,584
+Part three shows why the simple way of finding data fails, and how the research was done.
+
+18
+00:01:38,084 --> 00:01:42,932
+Part four is the heart of the video: how Aran works, step by step.
+
+19
+00:01:43,432 --> 00:01:46,679
+Part five shows how Aran was built and tested.
+
+20
+00:01:47,179 --> 00:01:52,170
+And part six shares the results, the honest weak spots, and what comes next.
+
+21
+00:01:54,671 --> 00:01:56,607
+Part one. The problem.
+
+22
+00:01:59,706 --> 00:02:03,716
+Meet Ravi. Ravi is a made-up customer of a bank.
+
+23
+00:02:04,216 --> 00:02:09,886
+One morning, Ravi opens the bank's app on the phone to apply for a small loan.
+
+24
+00:02:10,386 --> 00:02:16,562
+Ravi types in a name, an Aadhaar number, a PAN number, a mobile number and a home address.
+
+25
+00:02:17,063 --> 00:02:23,408
+Then the bank sends a one-time password, called an OTP, and Ravi types that in too.
+
+26
+00:02:23,908 --> 00:02:27,948
+Ravi presses Apply. For Ravi, the story ends here.
+
+27
+00:02:28,448 --> 00:02:32,078
+But for Ravi's data, the story is only beginning.
+
+28
+00:02:32,579 --> 00:02:37,585
+The message travels from the phone to the bank's big computers, called servers.
+
+29
+00:02:38,085 --> 00:02:44,580
+The server writes a note about the request into a log file, so engineers can fix problems later.
+
+30
+00:02:45,080 --> 00:02:50,487
+A copy goes to the CRM, the screen bank staff use to look up customers.
+
+31
+00:02:50,988 --> 00:02:57,741
+Another copy goes to an outside loan company, called a vendor, which checks Ravi's credit history.
+
+32
+00:02:58,240 --> 00:03:05,194
+And a staff member may even paste Ravi's details into an AI chatbot, to help write a reply.
+
+33
+00:03:05,694 --> 00:03:12,396
+So one message from Ravi has quietly become five copies, sitting in five different places.
+
+34
+00:03:12,896 --> 00:03:16,698
+And every copy is a new door that a leak can come through.
+
+35
+00:03:19,197 --> 00:03:22,099
+Think about a photocopy of your ID card.
+
+36
+00:03:22,599 --> 00:03:29,489
+When you give a photocopy to a shop, a hotel, or a SIM card seller, you lose control of it.
+
+37
+00:03:29,990 --> 00:03:34,698
+You do not know where it is kept, who looks at it, or when it is thrown away.
+
+38
+00:03:35,198 --> 00:03:38,609
+A bank's data is the same, but on a huge scale.
+
+39
+00:03:39,109 --> 00:03:45,515
+A big bank serves millions of customers, and handles millions of requests every single day.
+
+40
+00:03:46,015 --> 00:03:52,309
+Each request can leave copies in logs, in reports, in backups and in other companies.
+
+41
+00:03:52,809 --> 00:03:58,922
+A backup is a spare copy kept in case something breaks. Backups are often kept for years.
+
+42
+00:03:59,422 --> 00:04:09,269
+Logs are the biggest surprise. Programmers write logs to find bugs, and they often write whole messages into them, private details and all.
+
+43
+00:04:09,770 --> 00:04:16,482
+Logs are then sent to other teams, to monitoring tools, and sometimes to outside companies.
+
+44
+00:04:16,982 --> 00:04:21,700
+So the most private details often sit in the least protected places.
+
+45
+00:04:22,200 --> 00:04:33,659
+Recap. One customer action makes many copies. The copies end up in logs, backups, vendors and chatbots. And logs are usually the least protected.
+
+46
+00:04:36,159 --> 00:04:42,063
+This is not just a theory. Let us look at real cases from India, one at a time.
+
+47
+00:04:42,564 --> 00:04:58,383
+October 2016. About 3.2 million Indian debit cards were exposed. Harmful software had got into the systems of Hitachi Payment Services, a company that runs ATM networks for banks.
+
+48
+00:04:58,883 --> 00:05:06,649
+Banks had to block and replace cards in a hurry, and some customers saw money taken from their accounts in other countries.
+
+49
+00:05:07,149 --> 00:05:19,942
+January 2019. A news site, TechCrunch, reported that a server used by SBI, India's largest bank, had been left open on the internet without a password.
+
+50
+00:05:20,442 --> 00:05:35,045
+It stored text messages sent to customers, with phone numbers, partial account numbers and bank balances. SBI said its core systems were not breached. But anyone who found the server could read the messages.
+
+51
+00:05:35,544 --> 00:05:49,559
+August 2020. Attackers got into Juspay, a company that processes card payments for many apps. Data on about 35 million accounts later appeared for sale on the dark web.
+
+52
+00:05:50,060 --> 00:05:55,574
+The dark web is a hidden part of the internet, where stolen data is bought and sold.
+
+53
+00:05:56,074 --> 00:06:04,161
+The card numbers were masked. But masked data, joined with emails and phone numbers, can still point to real people.
+
+54
+00:06:04,661 --> 00:06:21,369
+February 2021. SITA, a vendor that runs passenger systems for airlines, was attacked. Air India said data on 4.5 million passengers was stolen, including passport and credit card details.
+
+55
+00:06:21,869 --> 00:06:28,428
+Air India's own systems were not the ones broken into. Its vendor's were. That is a side door.
+
+56
+00:06:28,928 --> 00:06:43,463
+June 2023. A Telegram bot was found that returned a person's name, Aadhaar and PAN, when you typed in their phone number. The data was linked to people registered for COVID vaccination.
+
+57
+00:06:43,963 --> 00:06:59,300
+September 2024. Data on about 31 million Star Health insurance customers was sold through Telegram chatbots: names, phone numbers, addresses, tax numbers and medical reports.
+
+58
+00:06:59,800 --> 00:07:11,973
+Recap. In India, card data, bank messages, passport details, Aadhaar numbers and health records have all leaked. And again and again, the leak came through a side door.
+
+59
+00:07:14,473 --> 00:07:18,888
+The same side doors exist at the biggest companies in the world.
+
+60
+00:07:19,388 --> 00:07:28,758
+May 2018. Twitter found a bug. Passwords were being written into an internal log in plain text, before being protected.
+
+61
+00:07:29,258 --> 00:07:36,833
+Twitter asked all its users, more than 330 million people, to think about changing their passwords.
+
+62
+00:07:37,333 --> 00:07:53,069
+In 2019, Facebook found that hundreds of millions of user passwords had been stored in plain, readable text on its internal systems. In 2024, Meta was fined 91 million euros for it.
+
+63
+00:07:53,570 --> 00:08:00,054
+Notice that no hacker was needed. The data simply sat in a place nobody thought to protect.
+
+64
+00:08:00,554 --> 00:08:10,232
+April 2023. Engineers at Samsung pasted secret company source code into ChatGPT, to get help with it.
+
+65
+00:08:10,732 --> 00:08:20,049
+That code went to an outside AI company. A few weeks later, Samsung banned staff from using such AI tools on work devices.
+
+66
+00:08:20,549 --> 00:08:26,181
+Banks face the same risk today, when staff paste customer details into chatbots.
+
+67
+00:08:26,681 --> 00:08:35,134
+Recap. Logs, internal systems and AI chatbots are side doors everywhere, even at the world's biggest companies.
+
+68
+00:08:37,634 --> 00:08:47,776
+India now has a law about this. It is called the Digital Personal Data Protection Act, or DPDP Act, from 2023.
+
+69
+00:08:48,275 --> 00:08:54,043
+It says a company that holds personal data must protect it with reasonable safeguards.
+
+70
+00:08:54,543 --> 00:09:01,531
+If a company fails to protect the data, the fine can be as high as 250 crore rupees.
+
+71
+00:09:02,031 --> 00:09:07,000
+The law also gives people rights. One of them is the right to erasure.
+
+72
+00:09:07,500 --> 00:09:13,993
+Erasure means that when you ask, the company must delete your data, once it no longer needs it.
+
+73
+00:09:14,493 --> 00:09:24,048
+But think back to the copies. Deleting one database is easy. Deleting every copy, in every log, backup and vendor, is very hard.
+
+74
+00:09:24,549 --> 00:09:30,533
+The detailed rules of this law start applying on 13 May 2027.
+
+75
+00:09:31,033 --> 00:09:41,005
+And the Reserve Bank of India, the RBI, which watches over all banks, also asks banks to control the data they send into AI tools.
+
+76
+00:09:41,505 --> 00:09:55,103
+Recap. The DPDP Act requires safeguards, with fines of up to 250 crore rupees. People can ask for their data to be erased. And copies make that very hard.
+
+77
+00:09:57,603 --> 00:10:00,461
+So this was the challenge given to the team.
+
+78
+00:10:00,960 --> 00:10:08,854
+Find sensitive customer data in a bank's API traffic and logs, and protect it before it is stored or shared.
+
+79
+00:10:09,354 --> 00:10:17,385
+API traffic simply means the messages that bank programs send to each other. We will explain it properly soon.
+
+80
+00:10:17,885 --> 00:10:20,486
+The team also asked a bigger question.
+
+81
+00:10:20,986 --> 00:10:27,112
+Can a bank prove where each customer's details went, who could read them, and which copy leaked?
+
+82
+00:10:27,612 --> 00:10:30,135
+Aran is the answer the team built.
+
+83
+00:10:30,635 --> 00:10:34,314
+In one sentence: Aran is a firewall for data.
+
+84
+00:10:34,814 --> 00:10:44,295
+It sits on the paths where data travels, and swaps every sensitive detail for a harmless look-alike, before anything is stored or shared.
+
+85
+00:10:44,795 --> 00:10:54,688
+Recap. The goal is to find sensitive data in traffic and logs, protect it before it is stored or shared, and be able to prove what happened.
+

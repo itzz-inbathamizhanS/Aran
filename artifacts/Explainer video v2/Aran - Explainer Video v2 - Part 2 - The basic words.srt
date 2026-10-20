@@ -1,0 +1,412 @@
+1
+00:00:00,988 --> 00:00:03,277
+Part two. The basic words.
+
+2
+00:00:06,377 --> 00:00:10,931
+Before we go further, let us learn the basic words, one at a time.
+
+3
+00:00:11,431 --> 00:00:18,111
+Data simply means information. A name is data. A number is data. A photo is data.
+
+4
+00:00:18,611 --> 00:00:22,603
+Personal data is information about a real person.
+
+5
+00:00:23,103 --> 00:00:32,094
+Some personal data points straight at one single person. Experts call it PII, personally identifiable information.
+
+6
+00:00:32,594 --> 00:00:37,834
+Your Aadhaar number is PII. Only one person in the whole country has it.
+
+7
+00:00:38,334 --> 00:00:43,243
+The word sensitive means that, in the wrong hands, it can hurt the person.
+
+8
+00:00:43,742 --> 00:00:50,412
+With someone's Aadhaar and mobile number, a criminal might pretend to be them, or trick them on the phone.
+
+9
+00:00:50,912 --> 00:00:56,534
+An identifier is any number or code that points to one person, or one account.
+
+10
+00:00:57,034 --> 00:01:07,256
+Recap. Data is information. PII points to one real person. And identifiers like Aadhaar are among the most sensitive kind.
+
+11
+00:01:09,757 --> 00:01:14,566
+Now let us meet the main identifiers Aran protects, one by one.
+
+12
+00:01:15,065 --> 00:01:21,091
+First, Aadhaar. It is India's national identity number, and it has twelve digits.
+
+13
+00:01:21,591 --> 00:01:27,640
+Remember its last digit. It is special, and it will become the key to the whole project.
+
+14
+00:01:28,140 --> 00:01:33,099
+Second, PAN, the Permanent Account Number. It is used for income tax.
+
+15
+00:01:33,599 --> 00:01:39,044
+A PAN has ten characters: five letters, then four digits, then one more letter.
+
+16
+00:01:39,544 --> 00:01:46,041
+Third, the payment card number, on a debit or credit card. It usually has sixteen digits.
+
+17
+00:01:46,541 --> 00:01:53,189
+Its first six or eight digits tell you which bank issued the card. And its last digit is special too.
+
+18
+00:01:53,689 --> 00:02:05,395
+Fourth, the UPI ID. You use it to pay with apps like Google Pay or PhonePe. It looks like an email address, such as ravi@oksbi.
+
+19
+00:02:05,896 --> 00:02:14,134
+Fifth, the OTP, the one-time password the bank sends by SMS. It is usually six random digits.
+
+20
+00:02:14,634 --> 00:02:20,777
+An OTP has no pattern at all. That makes it the hardest one to find in text.
+
+21
+00:02:21,277 --> 00:02:25,201
+And finally, mobile numbers, names and home addresses.
+
+22
+00:02:25,701 --> 00:02:31,515
+One important promise. Every number shown in this video is made up by a computer.
+
+23
+00:02:32,015 --> 00:02:40,595
+They follow all the rules of real numbers, but they belong to nobody. Showing a real person's number would itself be a leak.
+
+24
+00:02:41,095 --> 00:02:54,895
+Recap. Aran protects Aadhaar, PAN, card numbers, UPI IDs, OTPs, mobile numbers, names and addresses. And Aadhaar and card numbers have a special last digit.
+
+25
+00:02:57,395 --> 00:03:02,742
+A bank is not one program. It is many programs, talking to each other all day.
+
+26
+00:03:03,243 --> 00:03:08,786
+They talk through APIs. API stands for Application Programming Interface.
+
+27
+00:03:09,286 --> 00:03:17,330
+Think of a waiter in a restaurant. You do not walk into the kitchen. You tell the waiter, and the waiter brings back your food.
+
+28
+00:03:17,830 --> 00:03:25,372
+An API is the waiter between two programs. One program sends a request, and a reply comes back.
+
+29
+00:03:25,872 --> 00:03:31,258
+These requests and replies, flowing all the time, are called API traffic.
+
+30
+00:03:31,759 --> 00:03:36,985
+Now, logs. A log is like a diary that a program writes about itself.
+
+31
+00:03:37,484 --> 00:03:45,287
+Every time something happens, the program writes a line: the time, what happened, and often the details involved.
+
+32
+00:03:45,787 --> 00:03:51,010
+Here is a log line. Can you see the customer's mobile number sitting inside it?
+
+33
+00:03:51,510 --> 00:03:58,630
+Logs are very useful when something breaks. But they are often kept for years, and read by many people.
+
+34
+00:03:59,130 --> 00:04:09,164
+Recap. Programs talk through APIs, like waiters. Programs write logs, like diaries. And both can carry customers' private details.
+
+35
+00:04:11,665 --> 00:04:15,529
+Now picture the bank's data as water moving through pipes.
+
+36
+00:04:16,029 --> 00:04:19,191
+Water comes from a source, and ends up in a sink.
+
+37
+00:04:19,691 --> 00:04:24,887
+A source is where data starts, like the mobile app, or the core banking system.
+
+38
+00:04:25,387 --> 00:04:34,337
+A sink is any place where data ends up and stays: a log store, a CRM, a vendor, a backup, or an AI company.
+
+39
+00:04:34,837 --> 00:04:38,459
+The path from a source to a sink is called a data flow.
+
+40
+00:04:38,959 --> 00:04:44,151
+In a big bank there are thousands of these pipes, carrying millions of messages.
+
+41
+00:04:44,651 --> 00:04:49,727
+But many pipes pass through a few shared points, like the main gate of a building.
+
+42
+00:04:50,227 --> 00:04:54,335
+A point that many flows must pass through is called a choke point.
+
+43
+00:04:54,835 --> 00:05:01,802
+If you guard the choke points, you can watch everything that flows, without changing every single program.
+
+44
+00:05:02,301 --> 00:05:11,249
+Recap. Data flows from sources to sinks. Choke points are where many flows meet. Guarding them protects everything downstream.
+
+45
+00:05:13,749 --> 00:05:15,960
+You may have heard the word firewall.
+
+46
+00:05:16,460 --> 00:05:24,026
+A normal firewall is like a security guard at a gate. It decides who may come in, and who must be stopped.
+
+47
+00:05:24,526 --> 00:05:29,310
+But a normal firewall looks at who is talking, not at what they are saying.
+
+48
+00:05:29,810 --> 00:05:33,587
+Aran is different. Aran is a firewall for data.
+
+49
+00:05:34,087 --> 00:05:38,372
+It sits at the choke points, and reads every message as it passes.
+
+50
+00:05:38,871 --> 00:05:42,747
+It does not block the message. The bank's work must go on.
+
+51
+00:05:43,248 --> 00:05:49,180
+Instead, it finds the sensitive details inside, and swaps them for safe look-alikes.
+
+52
+00:05:49,680 --> 00:05:56,783
+The message carries on to its sink. The sink gets what it needs to work, but no real private details.
+
+53
+00:05:57,283 --> 00:06:06,676
+Recap. A normal firewall stops connections. Aran lets messages through, but replaces the sensitive details inside them.
+
+54
+00:06:09,176 --> 00:06:13,588
+There are two main ways to hide a detail. The first is masking.
+
+55
+00:06:14,088 --> 00:06:21,166
+Masking is like a black marker. You cover part of the number, and show only, say, the last four digits.
+
+56
+00:06:21,666 --> 00:06:27,291
+Masking is simple, but it cannot be undone. The covered digits are gone forever.
+
+57
+00:06:27,791 --> 00:06:34,071
+And sometimes the bank really does need the full number later, for example to collect a loan payment.
+
+58
+00:06:34,570 --> 00:06:37,239
+The second way is called tokenisation.
+
+59
+00:06:37,740 --> 00:06:44,517
+Think of the cloakroom at a wedding hall. You hand over your bag, and you get a small token with a number on it.
+
+60
+00:06:45,017 --> 00:06:50,784
+The token is worthless to a thief. But at the counter, the token gets your bag back.
+
+61
+00:06:51,284 --> 00:07:01,098
+Tokenisation swaps a real value for a stand-in, called a token. The token has the same shape: twelve digits stay twelve digits.
+
+62
+00:07:01,598 --> 00:07:05,835
+So the bank's programs keep working, as if nothing had changed.
+
+63
+00:07:06,336 --> 00:07:13,791
+Only a system with permission can swap the token back for the real value. This is called detokenising.
+
+64
+00:07:14,291 --> 00:07:18,950
+And Aran writes down every single time that happens, and who asked.
+
+65
+00:07:19,450 --> 00:07:30,475
+Recap. Masking covers digits forever. Tokenisation swaps a value for a look-alike token, which can be swapped back, with permission, and with a record.
+
+66
+00:07:32,975 --> 00:07:37,955
+Three more words, and then we have all the basics: encryption, key, and hash.
+
+67
+00:07:38,455 --> 00:07:42,187
+Encryption scrambles data so that nobody can read it.
+
+68
+00:07:42,687 --> 00:07:50,763
+Think of a box with a lock. You put a letter inside and lock it. Anyone can see the box, but nobody can read the letter.
+
+69
+00:07:51,264 --> 00:07:58,435
+The key is a secret that locks and unlocks the box. Without the key, the scrambled data is useless.
+
+70
+00:07:58,935 --> 00:08:06,478
+In computers, a key is a very long secret number. Guessing it would take longer than the age of the universe.
+
+71
+00:08:06,977 --> 00:08:10,788
+A hash is different. It is like a fingerprint for data.
+
+72
+00:08:11,288 --> 00:08:15,267
+You feed any text into a hash, and out comes a short code.
+
+73
+00:08:15,767 --> 00:08:22,035
+The same text always gives the same fingerprint. But you cannot rebuild the text from the fingerprint.
+
+74
+00:08:22,535 --> 00:08:28,274
+It is like a meat grinder. Grinding is easy. Un-grinding is impossible.
+
+75
+00:08:28,774 --> 00:08:36,574
+Recap. Encryption locks data in a box. A key opens the box. And a hash is a one-way fingerprint.
+
+76
+00:08:39,073 --> 00:08:44,230
+Hashes and keys give us one more useful tool: the digital signature.
+
+77
+00:08:44,730 --> 00:08:54,179
+Think of the wax seal on an old royal letter. Only the king had the seal. But anyone could look at the seal, and know the letter was real.
+
+78
+00:08:54,679 --> 00:08:57,916
+A digital signature works with a pair of keys.
+
+79
+00:08:58,416 --> 00:09:02,708
+The private key is kept secret by its owner, like the king's seal.
+
+80
+00:09:03,208 --> 00:09:08,046
+The public key is shared with everyone, so anyone can check a signature.
+
+81
+00:09:08,546 --> 00:09:14,217
+To sign a document, the owner uses the private key to make a short signature for it.
+
+82
+00:09:14,717 --> 00:09:22,358
+Anyone with the public key can check that signature. If even one letter of the document changes, the check fails.
+
+83
+00:09:22,858 --> 00:09:29,317
+So a signature proves two things: who made the document, and that nobody changed it afterwards.
+
+84
+00:09:29,817 --> 00:09:36,055
+Aran uses signatures on erasure receipts, so a customer can prove what the bank promised.
+
+85
+00:09:36,555 --> 00:09:45,041
+Recap. A private key signs. A public key checks. A signature proves who made something, and that nobody changed it.
+
+86
+00:09:47,541 --> 00:09:51,992
+One last idea. Any detector can make two kinds of mistakes.
+
+87
+00:09:52,492 --> 00:09:54,962
+Think of the smoke alarm in a kitchen.
+
+88
+00:09:55,462 --> 00:10:02,609
+If it rings when you are only making toast, that is a false alarm. Experts call it a false positive.
+
+89
+00:10:03,109 --> 00:10:09,388
+If it stays quiet during a real fire, that is a miss. Experts call it a false negative.
+
+90
+00:10:09,888 --> 00:10:12,721
+Both mistakes are bad, in different ways.
+
+91
+00:10:13,220 --> 00:10:15,730
+A miss lets a real leak go through.
+
+92
+00:10:16,230 --> 00:10:25,221
+And too many false alarms are dangerous too. People get annoyed, and switch the alarm off. Then every real fire is missed.
+
+93
+00:10:25,722 --> 00:10:32,790
+A good data detector must do both: catch nearly everything real, and ring very rarely by mistake.
+
+94
+00:10:33,290 --> 00:10:41,754
+Recap. A false positive is a false alarm. A false negative is a miss. A good detector keeps both very low.
+
+95
+00:10:44,254 --> 00:10:49,516
+Aran often has to say how sure it is. For that, we use probability.
+
+96
+00:10:50,016 --> 00:10:56,486
+Probability is a number between zero and one hundred percent. It says how likely something is.
+
+97
+00:10:56,986 --> 00:11:05,601
+Think of a weather forecast. Seventy percent chance of rain means: on days like this, it rains about seven times out of ten.
+
+98
+00:11:06,101 --> 00:11:13,761
+A good forecaster is honest. When they say seventy percent, it really does rain about seventy percent of the time.
+
+99
+00:11:14,261 --> 00:11:18,437
+Being honest like this has a name. It is called being calibrated.
+
+100
+00:11:18,938 --> 00:11:22,340
+Probabilities can change when you learn something new.
+
+101
+00:11:22,839 --> 00:11:29,116
+If you see dark clouds, your guess about rain goes up. If the sky is clear, it goes down.
+
+102
+00:11:29,616 --> 00:11:35,905
+Updating a guess with new evidence is exactly what Aran does with every number it finds.
+
+103
+00:11:36,405 --> 00:11:44,542
+Recap. Probability says how likely something is. Calibrated means honest. And new evidence changes the guess.
+

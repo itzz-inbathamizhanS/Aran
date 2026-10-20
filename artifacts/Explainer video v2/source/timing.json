@@ -1,0 +1,3686 @@
+{
+ "total": 4595.634,
+ "scenes": [
+  {
+   "id": "welcome",
+   "label": "Welcome",
+   "title": "Aran, explained from zero",
+   "part": false,
+   "noHeader": true,
+   "start": 0.0,
+   "end": 76.127,
+   "cues": [
+    {
+     "t": 1.0,
+     "d": 6.057,
+     "text": "Hello, and welcome. This video explains a project called Aran, from the very beginning."
+    },
+    {
+     "t": 7.857,
+     "d": 6.237,
+     "text": "Aran is a Tamil word. It means a fortress, a strong wall that protects what is inside."
+    },
+    {
+     "t": 14.894,
+     "d": 4.813,
+     "text": "Aran protects one thing: the private details of people who bank with a bank."
+    },
+    {
+     "t": 20.508,
+     "d": 6.328,
+     "text": "It was built by four students at Kalasalingam Academy of Research and Education, called KARE."
+    },
+    {
+     "t": 27.635,
+     "d": 6.819,
+     "text": "Inbathamizhan S leads the project and works on cybersecurity, together with Aasif Ahmed A."
+    },
+    {
+     "t": 35.254,
+     "d": 5.791,
+     "text": "SN Arun Vijay and Bharadhwaj M work on the artificial intelligence part."
+    },
+    {
+     "t": 41.845,
+     "d": 5.379,
+     "text": "You do not need to know anything about computers or security to follow this video."
+    },
+    {
+     "t": 48.023,
+     "d": 5.861,
+     "text": "Whenever a new word appears, a small card in the top right corner explains it in plain words."
+    },
+    {
+     "t": 54.685,
+     "d": 1.05,
+     "text": "Like this one."
+    },
+    {
+     "t": 56.535,
+     "d": 4.427,
+     "text": "And everything that is spoken is always written at the bottom of the screen."
+    },
+    {
+     "t": 61.762,
+     "d": 5.03,
+     "text": "The video is long, so it is split into six parts. You can pause at any time."
+    },
+    {
+     "t": 67.591,
+     "d": 4.832,
+     "text": "At the end of every chapter, there is a short recap of the most important points."
+    },
+    {
+     "t": 73.223,
+     "d": 1.103,
+     "text": "Let us begin."
+    }
+   ]
+  },
+  {
+   "id": "plan",
+   "label": "Welcome",
+   "title": "What this video covers",
+   "part": false,
+   "noHeader": false,
+   "start": 76.127,
+   "end": 113.671,
+   "cues": [
+    {
+     "t": 77.127,
+     "d": 1.767,
+     "text": "Here is the plan for the video."
+    },
+    {
+     "t": 79.693,
+     "d": 4.99,
+     "text": "Part one is the problem: how a bank's customer data leaks, and why it matters."
+    },
+    {
+     "t": 85.484,
+     "d": 5.203,
+     "text": "Part two teaches the basic words, one at a time, with everyday examples."
+    },
+    {
+     "t": 91.487,
+     "d": 5.797,
+     "text": "Part three shows why the simple way of finding data fails, and how the research was done."
+    },
+    {
+     "t": 98.084,
+     "d": 4.548,
+     "text": "Part four is the heart of the video: how Aran works, step by step."
+    },
+    {
+     "t": 103.432,
+     "d": 2.947,
+     "text": "Part five shows how Aran was built and tested."
+    },
+    {
+     "t": 107.179,
+     "d": 4.691,
+     "text": "And part six shares the results, the honest weak spots, and what comes next."
+    }
+   ]
+  },
+  {
+   "id": "p1",
+   "label": "Part 1",
+   "title": "The problem",
+   "part": true,
+   "noHeader": false,
+   "start": 113.671,
+   "end": 118.706,
+   "cues": [
+    {
+     "t": 114.671,
+     "d": 1.636,
+     "text": "Part one. The problem."
+    }
+   ]
+  },
+  {
+   "id": "bankday",
+   "label": "Part 1 · Chapter 1",
+   "title": "A day in the life of your data",
+   "part": false,
+   "noHeader": false,
+   "start": 118.706,
+   "end": 198.197,
+   "cues": [
+    {
+     "t": 119.706,
+     "d": 3.71,
+     "text": "Meet Ravi. Ravi is a made-up customer of a bank."
+    },
+    {
+     "t": 124.216,
+     "d": 5.37,
+     "text": "One morning, Ravi opens the bank's app on the phone to apply for a small loan."
+    },
+    {
+     "t": 130.386,
+     "d": 5.876,
+     "text": "Ravi types in a name, an Aadhaar number, a PAN number, a mobile number and a home address."
+    },
+    {
+     "t": 137.063,
+     "d": 6.045,
+     "text": "Then the bank sends a one-time password, called an OTP, and Ravi types that in too."
+    },
+    {
+     "t": 143.908,
+     "d": 3.74,
+     "text": "Ravi presses Apply. For Ravi, the story ends here."
+    },
+    {
+     "t": 148.448,
+     "d": 3.33,
+     "text": "But for Ravi's data, the story is only beginning."
+    },
+    {
+     "t": 152.579,
+     "d": 4.706,
+     "text": "The message travels from the phone to the bank's big computers, called servers."
+    },
+    {
+     "t": 158.085,
+     "d": 6.195,
+     "text": "The server writes a note about the request into a log file, so engineers can fix problems later."
+    },
+    {
+     "t": 165.08,
+     "d": 5.107,
+     "text": "A copy goes to the CRM, the screen bank staff use to look up customers."
+    },
+    {
+     "t": 170.988,
+     "d": 6.453,
+     "text": "Another copy goes to an outside loan company, called a vendor, which checks Ravi's credit history."
+    },
+    {
+     "t": 178.24,
+     "d": 6.654,
+     "text": "And a staff member may even paste Ravi's details into an AI chatbot, to help write a reply."
+    },
+    {
+     "t": 185.694,
+     "d": 6.402,
+     "text": "So one message from Ravi has quietly become five copies, sitting in five different places."
+    },
+    {
+     "t": 192.896,
+     "d": 3.502,
+     "text": "And every copy is a new door that a leak can come through."
+    }
+   ]
+  },
+  {
+   "id": "copies",
+   "label": "Part 1 · Chapter 2",
+   "title": "Copies everywhere",
+   "part": false,
+   "noHeader": false,
+   "start": 198.197,
+   "end": 275.159,
+   "cues": [
+    {
+     "t": 199.197,
+     "d": 2.602,
+     "text": "Think about a photocopy of your ID card."
+    },
+    {
+     "t": 202.599,
+     "d": 6.59,
+     "text": "When you give a photocopy to a shop, a hotel, or a SIM card seller, you lose control of it."
+    },
+    {
+     "t": 209.99,
+     "d": 4.408,
+     "text": "You do not know where it is kept, who looks at it, or when it is thrown away."
+    },
+    {
+     "t": 215.198,
+     "d": 3.111,
+     "text": "A bank's data is the same, but on a huge scale."
+    },
+    {
+     "t": 219.109,
+     "d": 6.106,
+     "text": "A big bank serves millions of customers, and handles millions of requests every single day."
+    },
+    {
+     "t": 226.015,
+     "d": 5.994,
+     "text": "Each request can leave copies in logs, in reports, in backups and in other companies."
+    },
+    {
+     "t": 232.809,
+     "d": 5.813,
+     "text": "A backup is a spare copy kept in case something breaks. Backups are often kept for years."
+    },
+    {
+     "t": 239.422,
+     "d": 9.547,
+     "text": "Logs are the biggest surprise. Programmers write logs to find bugs, and they often write whole messages into them, private details and all."
+    },
+    {
+     "t": 249.77,
+     "d": 6.412,
+     "text": "Logs are then sent to other teams, to monitoring tools, and sometimes to outside companies."
+    },
+    {
+     "t": 256.982,
+     "d": 4.418,
+     "text": "So the most private details often sit in the least protected places."
+    },
+    {
+     "t": 262.2,
+     "d": 11.159,
+     "text": "Recap. One customer action makes many copies. The copies end up in logs, backups, vendors and chatbots. And logs are usually the least protected."
+    }
+   ]
+  },
+  {
+   "id": "leaks",
+   "label": "Part 1 · Chapter 3",
+   "title": "Real leaks in India",
+   "part": false,
+   "noHeader": false,
+   "start": 275.159,
+   "end": 433.473,
+   "cues": [
+    {
+     "t": 276.159,
+     "d": 5.604,
+     "text": "This is not just a theory. Let us look at real cases from India, one at a time."
+    },
+    {
+     "t": 282.564,
+     "d": 15.519,
+     "text": "October 2016. About 3.2 million Indian debit cards were exposed. Harmful software had got into the systems of Hitachi Payment Services, a company that runs ATM networks for banks."
+    },
+    {
+     "t": 298.883,
+     "d": 7.466,
+     "text": "Banks had to block and replace cards in a hurry, and some customers saw money taken from their accounts in other countries."
+    },
+    {
+     "t": 307.149,
+     "d": 12.493,
+     "text": "January 2019. A news site, TechCrunch, reported that a server used by SBI, India's largest bank, had been left open on the internet without a password."
+    },
+    {
+     "t": 320.442,
+     "d": 14.303,
+     "text": "It stored text messages sent to customers, with phone numbers, partial account numbers and bank balances. SBI said its core systems were not breached. But anyone who found the server could read the messages."
+    },
+    {
+     "t": 335.544,
+     "d": 13.715,
+     "text": "August 2020. Attackers got into Juspay, a company that processes card payments for many apps. Data on about 35 million accounts later appeared for sale on the dark web."
+    },
+    {
+     "t": 350.06,
+     "d": 5.214,
+     "text": "The dark web is a hidden part of the internet, where stolen data is bought and sold."
+    },
+    {
+     "t": 356.074,
+     "d": 7.787,
+     "text": "The card numbers were masked. But masked data, joined with emails and phone numbers, can still point to real people."
+    },
+    {
+     "t": 364.661,
+     "d": 16.408,
+     "text": "February 2021. SITA, a vendor that runs passenger systems for airlines, was attacked. Air India said data on 4.5 million passengers was stolen, including passport and credit card details."
+    },
+    {
+     "t": 381.869,
+     "d": 6.259,
+     "text": "Air India's own systems were not the ones broken into. Its vendor's were. That is a side door."
+    },
+    {
+     "t": 388.928,
+     "d": 14.235,
+     "text": "June 2023. A Telegram bot was found that returned a person's name, Aadhaar and PAN, when you typed in their phone number. The data was linked to people registered for COVID vaccination."
+    },
+    {
+     "t": 403.963,
+     "d": 15.037,
+     "text": "September 2024. Data on about 31 million Star Health insurance customers was sold through Telegram chatbots: names, phone numbers, addresses, tax numbers and medical reports."
+    },
+    {
+     "t": 419.8,
+     "d": 11.873,
+     "text": "Recap. In India, card data, bank messages, passport details, Aadhaar numbers and health records have all leaked. And again and again, the leak came through a side door."
+    }
+   ]
+  },
+  {
+   "id": "sidedoors",
+   "label": "Part 1 · Chapter 4",
+   "title": "The same mistakes around the world",
+   "part": false,
+   "noHeader": false,
+   "start": 433.473,
+   "end": 516.634,
+   "cues": [
+    {
+     "t": 434.473,
+     "d": 4.115,
+     "text": "The same side doors exist at the biggest companies in the world."
+    },
+    {
+     "t": 439.388,
+     "d": 9.07,
+     "text": "May 2018. Twitter found a bug. Passwords were being written into an internal log in plain text, before being protected."
+    },
+    {
+     "t": 449.258,
+     "d": 7.275,
+     "text": "Twitter asked all its users, more than 330 million people, to think about changing their passwords."
+    },
+    {
+     "t": 457.333,
+     "d": 15.436,
+     "text": "In 2019, Facebook found that hundreds of millions of user passwords had been stored in plain, readable text on its internal systems. In 2024, Meta was fined 91 million euros for it."
+    },
+    {
+     "t": 473.57,
+     "d": 6.184,
+     "text": "Notice that no hacker was needed. The data simply sat in a place nobody thought to protect."
+    },
+    {
+     "t": 480.554,
+     "d": 9.378,
+     "text": "April 2023. Engineers at Samsung pasted secret company source code into ChatGPT, to get help with it."
+    },
+    {
+     "t": 490.732,
+     "d": 9.017,
+     "text": "That code went to an outside AI company. A few weeks later, Samsung banned staff from using such AI tools on work devices."
+    },
+    {
+     "t": 500.549,
+     "d": 5.332,
+     "text": "Banks face the same risk today, when staff paste customer details into chatbots."
+    },
+    {
+     "t": 506.681,
+     "d": 8.153,
+     "text": "Recap. Logs, internal systems and AI chatbots are side doors everywhere, even at the world's biggest companies."
+    }
+   ]
+  },
+  {
+   "id": "law",
+   "label": "Part 1 · Chapter 5",
+   "title": "What the law says",
+   "part": false,
+   "noHeader": false,
+   "start": 516.634,
+   "end": 596.603,
+   "cues": [
+    {
+     "t": 517.634,
+     "d": 9.842,
+     "text": "India now has a law about this. It is called the Digital Personal Data Protection Act, or DPDP Act, from 2023."
+    },
+    {
+     "t": 528.275,
+     "d": 5.468,
+     "text": "It says a company that holds personal data must protect it with reasonable safeguards."
+    },
+    {
+     "t": 534.543,
+     "d": 6.688,
+     "text": "If a company fails to protect the data, the fine can be as high as 250 crore rupees."
+    },
+    {
+     "t": 542.031,
+     "d": 4.669,
+     "text": "The law also gives people rights. One of them is the right to erasure."
+    },
+    {
+     "t": 547.5,
+     "d": 6.193,
+     "text": "Erasure means that when you ask, the company must delete your data, once it no longer needs it."
+    },
+    {
+     "t": 554.493,
+     "d": 9.255,
+     "text": "But think back to the copies. Deleting one database is easy. Deleting every copy, in every log, backup and vendor, is very hard."
+    },
+    {
+     "t": 564.549,
+     "d": 5.684,
+     "text": "The detailed rules of this law start applying on 13 May 2027."
+    },
+    {
+     "t": 571.033,
+     "d": 9.672,
+     "text": "And the Reserve Bank of India, the RBI, which watches over all banks, also asks banks to control the data they send into AI tools."
+    },
+    {
+     "t": 581.505,
+     "d": 13.298,
+     "text": "Recap. The DPDP Act requires safeguards, with fines of up to 250 crore rupees. People can ask for their data to be erased. And copies make that very hard."
+    }
+   ]
+  },
+  {
+   "id": "task",
+   "label": "Part 1 · Chapter 6",
+   "title": "The challenge",
+   "part": false,
+   "noHeader": false,
+   "start": 596.603,
+   "end": 656.188,
+   "cues": [
+    {
+     "t": 597.603,
+     "d": 2.558,
+     "text": "So this was the challenge given to the team."
+    },
+    {
+     "t": 600.96,
+     "d": 7.594,
+     "text": "Find sensitive customer data in a bank's API traffic and logs, and protect it before it is stored or shared."
+    },
+    {
+     "t": 609.354,
+     "d": 7.731,
+     "text": "API traffic simply means the messages that bank programs send to each other. We will explain it properly soon."
+    },
+    {
+     "t": 617.885,
+     "d": 2.301,
+     "text": "The team also asked a bigger question."
+    },
+    {
+     "t": 620.986,
+     "d": 5.826,
+     "text": "Can a bank prove where each customer's details went, who could read them, and which copy leaked?"
+    },
+    {
+     "t": 627.612,
+     "d": 2.223,
+     "text": "Aran is the answer the team built."
+    },
+    {
+     "t": 630.635,
+     "d": 3.379,
+     "text": "In one sentence: Aran is a firewall for data."
+    },
+    {
+     "t": 634.814,
+     "d": 9.181,
+     "text": "It sits on the paths where data travels, and swaps every sensitive detail for a harmless look-alike, before anything is stored or shared."
+    },
+    {
+     "t": 644.795,
+     "d": 9.593,
+     "text": "Recap. The goal is to find sensitive data in traffic and logs, protect it before it is stored or shared, and be able to prove what happened."
+    }
+   ]
+  },
+  {
+   "id": "p2",
+   "label": "Part 2",
+   "title": "The basic words",
+   "part": true,
+   "noHeader": false,
+   "start": 656.188,
+   "end": 661.577,
+   "cues": [
+    {
+     "t": 657.188,
+     "d": 1.989,
+     "text": "Part two. The basic words."
+    }
+   ]
+  },
+  {
+   "id": "personal",
+   "label": "Part 2 · Chapter 7",
+   "title": "What is personal data?",
+   "part": false,
+   "noHeader": false,
+   "start": 661.577,
+   "end": 724.957,
+   "cues": [
+    {
+     "t": 662.577,
+     "d": 4.254,
+     "text": "Before we go further, let us learn the basic words, one at a time."
+    },
+    {
+     "t": 667.631,
+     "d": 6.38,
+     "text": "Data simply means information. A name is data. A number is data. A photo is data."
+    },
+    {
+     "t": 674.811,
+     "d": 3.692,
+     "text": "Personal data is information about a real person."
+    },
+    {
+     "t": 679.303,
+     "d": 8.691,
+     "text": "Some personal data points straight at one single person. Experts call it PII, personally identifiable information."
+    },
+    {
+     "t": 688.794,
+     "d": 4.94,
+     "text": "Your Aadhaar number is PII. Only one person in the whole country has it."
+    },
+    {
+     "t": 694.534,
+     "d": 4.609,
+     "text": "The word sensitive means that, in the wrong hands, it can hurt the person."
+    },
+    {
+     "t": 699.942,
+     "d": 6.37,
+     "text": "With someone's Aadhaar and mobile number, a criminal might pretend to be them, or trick them on the phone."
+    },
+    {
+     "t": 707.112,
+     "d": 5.322,
+     "text": "An identifier is any number or code that points to one person, or one account."
+    },
+    {
+     "t": 713.234,
+     "d": 9.922,
+     "text": "Recap. Data is information. PII points to one real person. And identifiers like Aadhaar are among the most sensitive kind."
+    }
+   ]
+  },
+  {
+   "id": "identifiers",
+   "label": "Part 2 · Chapter 8",
+   "title": "The details Aran protects",
+   "part": false,
+   "noHeader": false,
+   "start": 724.957,
+   "end": 832.595,
+   "cues": [
+    {
+     "t": 725.957,
+     "d": 4.509,
+     "text": "Now let us meet the main identifiers Aran protects, one by one."
+    },
+    {
+     "t": 731.265,
+     "d": 5.726,
+     "text": "First, Aadhaar. It is India's national identity number, and it has twelve digits."
+    },
+    {
+     "t": 737.791,
+     "d": 5.749,
+     "text": "Remember its last digit. It is special, and it will become the key to the whole project."
+    },
+    {
+     "t": 744.34,
+     "d": 4.659,
+     "text": "Second, PAN, the Permanent Account Number. It is used for income tax."
+    },
+    {
+     "t": 749.799,
+     "d": 5.145,
+     "text": "A PAN has ten characters: five letters, then four digits, then one more letter."
+    },
+    {
+     "t": 755.744,
+     "d": 6.197,
+     "text": "Third, the payment card number, on a debit or credit card. It usually has sixteen digits."
+    },
+    {
+     "t": 762.741,
+     "d": 6.348,
+     "text": "Its first six or eight digits tell you which bank issued the card. And its last digit is special too."
+    },
+    {
+     "t": 769.889,
+     "d": 11.406,
+     "text": "Fourth, the UPI ID. You use it to pay with apps like Google Pay or PhonePe. It looks like an email address, such as ravi@oksbi."
+    },
+    {
+     "t": 782.096,
+     "d": 7.938,
+     "text": "Fifth, the OTP, the one-time password the bank sends by SMS. It is usually six random digits."
+    },
+    {
+     "t": 790.834,
+     "d": 5.843,
+     "text": "An OTP has no pattern at all. That makes it the hardest one to find in text."
+    },
+    {
+     "t": 797.477,
+     "d": 3.624,
+     "text": "And finally, mobile numbers, names and home addresses."
+    },
+    {
+     "t": 801.901,
+     "d": 5.514,
+     "text": "One important promise. Every number shown in this video is made up by a computer."
+    },
+    {
+     "t": 808.215,
+     "d": 8.28,
+     "text": "They follow all the rules of real numbers, but they belong to nobody. Showing a real person's number would itself be a leak."
+    },
+    {
+     "t": 817.295,
+     "d": 13.5,
+     "text": "Recap. Aran protects Aadhaar, PAN, card numbers, UPI IDs, OTPs, mobile numbers, names and addresses. And Aadhaar and card numbers have a special last digit."
+    }
+   ]
+  },
+  {
+   "id": "api",
+   "label": "Part 2 · Chapter 9",
+   "title": "How bank programs talk",
+   "part": false,
+   "noHeader": false,
+   "start": 832.595,
+   "end": 906.865,
+   "cues": [
+    {
+     "t": 833.595,
+     "d": 5.047,
+     "text": "A bank is not one program. It is many programs, talking to each other all day."
+    },
+    {
+     "t": 839.443,
+     "d": 5.243,
+     "text": "They talk through APIs. API stands for Application Programming Interface."
+    },
+    {
+     "t": 845.486,
+     "d": 7.744,
+     "text": "Think of a waiter in a restaurant. You do not walk into the kitchen. You tell the waiter, and the waiter brings back your food."
+    },
+    {
+     "t": 854.03,
+     "d": 7.242,
+     "text": "An API is the waiter between two programs. One program sends a request, and a reply comes back."
+    },
+    {
+     "t": 862.072,
+     "d": 5.086,
+     "text": "These requests and replies, flowing all the time, are called API traffic."
+    },
+    {
+     "t": 867.959,
+     "d": 4.926,
+     "text": "Now, logs. A log is like a diary that a program writes about itself."
+    },
+    {
+     "t": 873.684,
+     "d": 7.503,
+     "text": "Every time something happens, the program writes a line: the time, what happened, and often the details involved."
+    },
+    {
+     "t": 881.987,
+     "d": 4.923,
+     "text": "Here is a log line. Can you see the customer's mobile number sitting inside it?"
+    },
+    {
+     "t": 887.71,
+     "d": 6.82,
+     "text": "Logs are very useful when something breaks. But they are often kept for years, and read by many people."
+    },
+    {
+     "t": 895.33,
+     "d": 9.734,
+     "text": "Recap. Programs talk through APIs, like waiters. Programs write logs, like diaries. And both can carry customers' private details."
+    }
+   ]
+  },
+  {
+   "id": "flow",
+   "label": "Part 2 · Chapter 10",
+   "title": "Sources, sinks and data flows",
+   "part": false,
+   "noHeader": false,
+   "start": 906.865,
+   "end": 968.949,
+   "cues": [
+    {
+     "t": 907.865,
+     "d": 3.564,
+     "text": "Now picture the bank's data as water moving through pipes."
+    },
+    {
+     "t": 912.229,
+     "d": 2.862,
+     "text": "Water comes from a source, and ends up in a sink."
+    },
+    {
+     "t": 915.891,
+     "d": 4.896,
+     "text": "A source is where data starts, like the mobile app, or the core banking system."
+    },
+    {
+     "t": 921.587,
+     "d": 8.65,
+     "text": "A sink is any place where data ends up and stays: a log store, a CRM, a vendor, a backup, or an AI company."
+    },
+    {
+     "t": 931.037,
+     "d": 3.322,
+     "text": "The path from a source to a sink is called a data flow."
+    },
+    {
+     "t": 935.159,
+     "d": 4.892,
+     "text": "In a big bank there are thousands of these pipes, carrying millions of messages."
+    },
+    {
+     "t": 940.851,
+     "d": 4.776,
+     "text": "But many pipes pass through a few shared points, like the main gate of a building."
+    },
+    {
+     "t": 946.427,
+     "d": 3.808,
+     "text": "A point that many flows must pass through is called a choke point."
+    },
+    {
+     "t": 951.035,
+     "d": 6.667,
+     "text": "If you guard the choke points, you can watch everything that flows, without changing every single program."
+    },
+    {
+     "t": 958.501,
+     "d": 8.648,
+     "text": "Recap. Data flows from sources to sinks. Choke points are where many flows meet. Guarding them protects everything downstream."
+    }
+   ]
+  },
+  {
+   "id": "firewall",
+   "label": "Part 2 · Chapter 11",
+   "title": "A firewall for data",
+   "part": false,
+   "noHeader": false,
+   "start": 968.949,
+   "end": 1024.376,
+   "cues": [
+    {
+     "t": 969.949,
+     "d": 1.911,
+     "text": "You may have heard the word firewall."
+    },
+    {
+     "t": 972.66,
+     "d": 7.266,
+     "text": "A normal firewall is like a security guard at a gate. It decides who may come in, and who must be stopped."
+    },
+    {
+     "t": 980.726,
+     "d": 4.484,
+     "text": "But a normal firewall looks at who is talking, not at what they are saying."
+    },
+    {
+     "t": 986.01,
+     "d": 3.477,
+     "text": "Aran is different. Aran is a firewall for data."
+    },
+    {
+     "t": 990.287,
+     "d": 3.985,
+     "text": "It sits at the choke points, and reads every message as it passes."
+    },
+    {
+     "t": 995.071,
+     "d": 3.576,
+     "text": "It does not block the message. The bank's work must go on."
+    },
+    {
+     "t": 999.448,
+     "d": 5.632,
+     "text": "Instead, it finds the sensitive details inside, and swaps them for safe look-alikes."
+    },
+    {
+     "t": 1005.88,
+     "d": 6.803,
+     "text": "The message carries on to its sink. The sink gets what it needs to work, but no real private details."
+    },
+    {
+     "t": 1013.483,
+     "d": 9.093,
+     "text": "Recap. A normal firewall stops connections. Aran lets messages through, but replaces the sensitive details inside them."
+    }
+   ]
+  },
+  {
+   "id": "masktoken",
+   "label": "Part 2 · Chapter 12",
+   "title": "Masking and tokens",
+   "part": false,
+   "noHeader": false,
+   "start": 1024.376,
+   "end": 1108.175,
+   "cues": [
+    {
+     "t": 1025.376,
+     "d": 4.112,
+     "text": "There are two main ways to hide a detail. The first is masking."
+    },
+    {
+     "t": 1030.288,
+     "d": 6.778,
+     "text": "Masking is like a black marker. You cover part of the number, and show only, say, the last four digits."
+    },
+    {
+     "t": 1037.866,
+     "d": 5.325,
+     "text": "Masking is simple, but it cannot be undone. The covered digits are gone forever."
+    },
+    {
+     "t": 1043.991,
+     "d": 5.98,
+     "text": "And sometimes the bank really does need the full number later, for example to collect a loan payment."
+    },
+    {
+     "t": 1050.77,
+     "d": 2.369,
+     "text": "The second way is called tokenisation."
+    },
+    {
+     "t": 1053.94,
+     "d": 6.477,
+     "text": "Think of the cloakroom at a wedding hall. You hand over your bag, and you get a small token with a number on it."
+    },
+    {
+     "t": 1061.217,
+     "d": 5.467,
+     "text": "The token is worthless to a thief. But at the counter, the token gets your bag back."
+    },
+    {
+     "t": 1067.484,
+     "d": 9.514,
+     "text": "Tokenisation swaps a real value for a stand-in, called a token. The token has the same shape: twelve digits stay twelve digits."
+    },
+    {
+     "t": 1077.798,
+     "d": 3.937,
+     "text": "So the bank's programs keep working, as if nothing had changed."
+    },
+    {
+     "t": 1082.536,
+     "d": 7.155,
+     "text": "Only a system with permission can swap the token back for the real value. This is called detokenising."
+    },
+    {
+     "t": 1090.491,
+     "d": 4.359,
+     "text": "And Aran writes down every single time that happens, and who asked."
+    },
+    {
+     "t": 1095.65,
+     "d": 10.725,
+     "text": "Recap. Masking covers digits forever. Tokenisation swaps a value for a look-alike token, which can be swapped back, with permission, and with a record."
+    }
+   ]
+  },
+  {
+   "id": "crypto",
+   "label": "Part 2 · Chapter 13",
+   "title": "Locks, keys and fingerprints",
+   "part": false,
+   "noHeader": false,
+   "start": 1108.175,
+   "end": 1174.273,
+   "cues": [
+    {
+     "t": 1109.175,
+     "d": 4.68,
+     "text": "Three more words, and then we have all the basics: encryption, key, and hash."
+    },
+    {
+     "t": 1114.655,
+     "d": 3.432,
+     "text": "Encryption scrambles data so that nobody can read it."
+    },
+    {
+     "t": 1118.887,
+     "d": 7.776,
+     "text": "Think of a box with a lock. You put a letter inside and lock it. Anyone can see the box, but nobody can read the letter."
+    },
+    {
+     "t": 1127.464,
+     "d": 6.871,
+     "text": "The key is a secret that locks and unlocks the box. Without the key, the scrambled data is useless."
+    },
+    {
+     "t": 1135.135,
+     "d": 7.243,
+     "text": "In computers, a key is a very long secret number. Guessing it would take longer than the age of the universe."
+    },
+    {
+     "t": 1143.177,
+     "d": 3.511,
+     "text": "A hash is different. It is like a fingerprint for data."
+    },
+    {
+     "t": 1147.488,
+     "d": 3.679,
+     "text": "You feed any text into a hash, and out comes a short code."
+    },
+    {
+     "t": 1151.967,
+     "d": 5.968,
+     "text": "The same text always gives the same fingerprint. But you cannot rebuild the text from the fingerprint."
+    },
+    {
+     "t": 1158.735,
+     "d": 5.439,
+     "text": "It is like a meat grinder. Grinding is easy. Un-grinding is impossible."
+    },
+    {
+     "t": 1164.974,
+     "d": 7.5,
+     "text": "Recap. Encryption locks data in a box. A key opens the box. And a hash is a one-way fingerprint."
+    }
+   ]
+  },
+  {
+   "id": "signatures",
+   "label": "Part 2 · Chapter 14",
+   "title": "Signatures anyone can check",
+   "part": false,
+   "noHeader": false,
+   "start": 1174.273,
+   "end": 1242.741,
+   "cues": [
+    {
+     "t": 1175.273,
+     "d": 4.857,
+     "text": "Hashes and keys give us one more useful tool: the digital signature."
+    },
+    {
+     "t": 1180.93,
+     "d": 9.149,
+     "text": "Think of the wax seal on an old royal letter. Only the king had the seal. But anyone could look at the seal, and know the letter was real."
+    },
+    {
+     "t": 1190.879,
+     "d": 2.937,
+     "text": "A digital signature works with a pair of keys."
+    },
+    {
+     "t": 1194.616,
+     "d": 3.992,
+     "text": "The private key is kept secret by its owner, like the king's seal."
+    },
+    {
+     "t": 1199.408,
+     "d": 4.538,
+     "text": "The public key is shared with everyone, so anyone can check a signature."
+    },
+    {
+     "t": 1204.746,
+     "d": 5.371,
+     "text": "To sign a document, the owner uses the private key to make a short signature for it."
+    },
+    {
+     "t": 1210.917,
+     "d": 7.341,
+     "text": "Anyone with the public key can check that signature. If even one letter of the document changes, the check fails."
+    },
+    {
+     "t": 1219.058,
+     "d": 6.159,
+     "text": "So a signature proves two things: who made the document, and that nobody changed it afterwards."
+    },
+    {
+     "t": 1226.017,
+     "d": 5.938,
+     "text": "Aran uses signatures on erasure receipts, so a customer can prove what the bank promised."
+    },
+    {
+     "t": 1232.755,
+     "d": 8.186,
+     "text": "Recap. A private key signs. A public key checks. A signature proves who made something, and that nobody changed it."
+    }
+   ]
+  },
+  {
+   "id": "alarms",
+   "label": "Part 2 · Chapter 15",
+   "title": "False alarms and misses",
+   "part": false,
+   "noHeader": false,
+   "start": 1242.741,
+   "end": 1299.454,
+   "cues": [
+    {
+     "t": 1243.741,
+     "d": 4.151,
+     "text": "One last idea. Any detector can make two kinds of mistakes."
+    },
+    {
+     "t": 1248.692,
+     "d": 2.17,
+     "text": "Think of the smoke alarm in a kitchen."
+    },
+    {
+     "t": 1251.662,
+     "d": 6.847,
+     "text": "If it rings when you are only making toast, that is a false alarm. Experts call it a false positive."
+    },
+    {
+     "t": 1259.309,
+     "d": 5.979,
+     "text": "If it stays quiet during a real fire, that is a miss. Experts call it a false negative."
+    },
+    {
+     "t": 1266.088,
+     "d": 2.533,
+     "text": "Both mistakes are bad, in different ways."
+    },
+    {
+     "t": 1269.42,
+     "d": 2.21,
+     "text": "A miss lets a real leak go through."
+    },
+    {
+     "t": 1272.43,
+     "d": 8.691,
+     "text": "And too many false alarms are dangerous too. People get annoyed, and switch the alarm off. Then every real fire is missed."
+    },
+    {
+     "t": 1281.922,
+     "d": 6.768,
+     "text": "A good data detector must do both: catch nearly everything real, and ring very rarely by mistake."
+    },
+    {
+     "t": 1289.49,
+     "d": 8.164,
+     "text": "Recap. A false positive is a false alarm. A false negative is a miss. A good detector keeps both very low."
+    }
+   ]
+  },
+  {
+   "id": "probability",
+   "label": "Part 2 · Chapter 16",
+   "title": "How sure are we? Probability",
+   "part": false,
+   "noHeader": false,
+   "start": 1299.454,
+   "end": 1362.242,
+   "cues": [
+    {
+     "t": 1300.454,
+     "d": 4.962,
+     "text": "Aran often has to say how sure it is. For that, we use probability."
+    },
+    {
+     "t": 1306.216,
+     "d": 6.17,
+     "text": "Probability is a number between zero and one hundred percent. It says how likely something is."
+    },
+    {
+     "t": 1313.186,
+     "d": 8.315,
+     "text": "Think of a weather forecast. Seventy percent chance of rain means: on days like this, it rains about seven times out of ten."
+    },
+    {
+     "t": 1322.301,
+     "d": 7.36,
+     "text": "A good forecaster is honest. When they say seventy percent, it really does rain about seventy percent of the time."
+    },
+    {
+     "t": 1330.461,
+     "d": 3.876,
+     "text": "Being honest like this has a name. It is called being calibrated."
+    },
+    {
+     "t": 1335.138,
+     "d": 3.102,
+     "text": "Probabilities can change when you learn something new."
+    },
+    {
+     "t": 1339.039,
+     "d": 5.977,
+     "text": "If you see dark clouds, your guess about rain goes up. If the sky is clear, it goes down."
+    },
+    {
+     "t": 1345.816,
+     "d": 5.989,
+     "text": "Updating a guess with new evidence is exactly what Aran does with every number it finds."
+    },
+    {
+     "t": 1352.605,
+     "d": 7.837,
+     "text": "Recap. Probability says how likely something is. Calibrated means honest. And new evidence changes the guess."
+    }
+   ]
+  },
+  {
+   "id": "p3",
+   "label": "Part 3",
+   "title": "Why the simple way fails",
+   "part": true,
+   "noHeader": false,
+   "start": 1362.242,
+   "end": 1369.951,
+   "cues": [
+    {
+     "t": 1363.242,
+     "d": 4.309,
+     "text": "Part three. Why the simple way fails, and how the research was done."
+    }
+   ]
+  },
+  {
+   "id": "regex",
+   "label": "Part 3 · Chapter 17",
+   "title": "The simple way: pattern search",
+   "part": false,
+   "noHeader": false,
+   "start": 1369.951,
+   "end": 1469.374,
+   "cues": [
+    {
+     "t": 1370.951,
+     "d": 6.125,
+     "text": "So how would most people find an Aadhaar or an OTP inside a log? With a pattern search."
+    },
+    {
+     "t": 1377.875,
+     "d": 5.941,
+     "text": "A pattern search looks for a shape. For example: any twelve digits in a row might be an Aadhaar."
+    },
+    {
+     "t": 1384.616,
+     "d": 3.21,
+     "text": "And any six digits in a row might be an OTP."
+    },
+    {
+     "t": 1388.626,
+     "d": 5.927,
+     "text": "Programmers write these patterns in a short code, called a regular expression, or regex."
+    },
+    {
+     "t": 1395.353,
+     "d": 4.615,
+     "text": "It sounds sensible. So the team tested it, honestly, on real data."
+    },
+    {
+     "t": 1400.768,
+     "d": 9.932,
+     "text": "They used Loghub, a public collection of real logs from real computer systems: 32,000 lines, from 16 different systems."
+    },
+    {
+     "t": 1411.5,
+     "d": 8.291,
+     "text": "These logs come from places like supercomputers, phones and web servers. They contain no Indian identifiers at all."
+    },
+    {
+     "t": 1420.591,
+     "d": 3.042,
+     "text": "So any hit in these logs must be a false alarm."
+    },
+    {
+     "t": 1424.432,
+     "d": 10.0,
+     "text": "Watch what happens. The simple OTP pattern fired 67,481 times. That is more than twice per line."
+    },
+    {
+     "t": 1435.232,
+     "d": 6.689,
+     "text": "It matched times, file sizes, block numbers and memory addresses. Anything with six digits."
+    },
+    {
+     "t": 1442.721,
+     "d": 3.999,
+     "text": "It even matched the letters O T P inside the word hotplug."
+    },
+    {
+     "t": 1447.52,
+     "d": 5.609,
+     "text": "Aran's checks, which you will meet soon, raised just 6 false alarms on the same lines."
+    },
+    {
+     "t": 1453.929,
+     "d": 13.645,
+     "text": "Recap. Pattern search looks only at shape. On 32,000 real log lines, it raised 67,481 false OTP alarms. Aran raised 6."
+    }
+   ]
+  },
+  {
+   "id": "research",
+   "label": "Part 3 · Chapter 18",
+   "title": "How the research was done",
+   "part": false,
+   "noHeader": false,
+   "start": 1469.374,
+   "end": 1547.142,
+   "cues": [
+    {
+     "t": 1470.374,
+     "d": 4.937,
+     "text": "So the team did proper research before building anything. It followed six steps."
+    },
+    {
+     "t": 1476.11,
+     "d": 5.428,
+     "text": "Step one: ask the right question. The real problem is not just finding numbers."
+    },
+    {
+     "t": 1482.338,
+     "d": 7.607,
+     "text": "The real problem is that a bank cannot prove where each customer's details are, who can read them, and which copy leaked."
+    },
+    {
+     "t": 1490.745,
+     "d": 7.279,
+     "text": "Step two: build the obvious solution first. This is called a baseline. It gives you something real to beat."
+    },
+    {
+     "t": 1498.824,
+     "d": 5.191,
+     "text": "Step three: read what others have already done. This is called a literature survey."
+    },
+    {
+     "t": 1504.815,
+     "d": 7.252,
+     "text": "The team studied the laws banks must follow, real leaks, and research papers. About forty sources in total."
+    },
+    {
+     "t": 1512.867,
+     "d": 4.638,
+     "text": "Step four: measure the weak spots on real data, instead of just guessing."
+    },
+    {
+     "t": 1518.305,
+     "d": 7.262,
+     "text": "Step five: for each weak spot, find a piece of mathematics that fixes it, and prove that it works, where possible."
+    },
+    {
+     "t": 1526.367,
+     "d": 8.926,
+     "text": "Step six: attack your own design, the way an enemy would. Eleven weaknesses were found, and every fix became part of Aran."
+    },
+    {
+     "t": 1536.094,
+     "d": 9.248,
+     "text": "Recap. Ask the right question, build a baseline, read the research, measure the gaps, fix each one with maths, and then attack your own design."
+    }
+   ]
+  },
+  {
+   "id": "gaps",
+   "label": "Part 3 · Chapter 19",
+   "title": "Six gaps nobody had closed",
+   "part": false,
+   "noHeader": false,
+   "start": 1547.142,
+   "end": 1607.484,
+   "cues": [
+    {
+     "t": 1548.142,
+     "d": 5.702,
+     "text": "The measurements found six gaps. A gap is a problem that existing tools leave open."
+    },
+    {
+     "t": 1554.643,
+     "d": 4.658,
+     "text": "Gap one: number detectors drown in false alarms, as we just saw."
+    },
+    {
+     "t": 1560.101,
+     "d": 6.607,
+     "text": "Gap two: a protected number and a leaked number look exactly the same. Nobody can tell them apart."
+    },
+    {
+     "t": 1567.508,
+     "d": 3.725,
+     "text": "Gap three: nobody measures how much a mask still gives away."
+    },
+    {
+     "t": 1572.033,
+     "d": 5.582,
+     "text": "Gap four: when a leaked file shows up on the internet, nobody can tell which system leaked it."
+    },
+    {
+     "t": 1578.414,
+     "d": 5.041,
+     "text": "Gap five: erasure cannot reach the copies in logs, backups and vendors."
+    },
+    {
+     "t": 1584.255,
+     "d": 6.034,
+     "text": "Gap six: OTPs have no structure at all, so they cannot be checked like other numbers."
+    },
+    {
+     "t": 1591.089,
+     "d": 2.41,
+     "text": "Each gap became one of Aran's ideas."
+    },
+    {
+     "t": 1594.299,
+     "d": 11.384,
+     "text": "Recap. Six gaps: false alarms, look-alike leaks, leaky masks, unknown leakers, erasure that cannot reach copies, and OTPs with no structure."
+    }
+   ]
+  },
+  {
+   "id": "mapping",
+   "label": "Part 3 · Chapter 20",
+   "title": "From gaps to ideas",
+   "part": false,
+   "noHeader": false,
+   "start": 1607.484,
+   "end": 1674.609,
+   "cues": [
+    {
+     "t": 1608.484,
+     "d": 5.704,
+     "text": "Here is how each gap is closed. Each of Aran's main ideas is called a mechanism."
+    },
+    {
+     "t": 1614.987,
+     "d": 7.662,
+     "text": "Gap one, false alarms, is closed by detection as evidence: check digits, clues, and the bank's own lists."
+    },
+    {
+     "t": 1623.449,
+     "d": 5.46,
+     "text": "Gap two, look-alike leaks, is closed by tokens that always fail the check digit."
+    },
+    {
+     "t": 1629.709,
+     "d": 3.905,
+     "text": "Gap three, leaky masks, is closed by the leakage ledger."
+    },
+    {
+     "t": 1634.414,
+     "d": 5.733,
+     "text": "Gap four, unknown leakers, is closed by a different token for every destination."
+    },
+    {
+     "t": 1640.947,
+     "d": 6.113,
+     "text": "Gap five, erasure, is closed by one key per customer, per purpose, with signed receipts."
+    },
+    {
+     "t": 1647.86,
+     "d": 7.445,
+     "text": "Gap six, OTPs, is closed by remembering every OTP the bank sends, tied to its request."
+    },
+    {
+     "t": 1656.105,
+     "d": 7.86,
+     "text": "And on top of these, Aran adds an AI layer, a normaliser, an immune layer, an AI gateway, and quantum-safe locks."
+    },
+    {
+     "t": 1664.766,
+     "d": 8.043,
+     "text": "Recap. Six gaps, closed by Aran's mechanisms, with extra layers on top. Now let us see how each one works."
+    }
+   ]
+  },
+  {
+   "id": "p4",
+   "label": "Part 4",
+   "title": "How Aran works",
+   "part": true,
+   "noHeader": false,
+   "start": 1674.609,
+   "end": 1679.89,
+   "cues": [
+    {
+     "t": 1675.609,
+     "d": 1.882,
+     "text": "Part four. How Aran works."
+    }
+   ]
+  },
+  {
+   "id": "architecture",
+   "label": "Part 4 · Chapter 21",
+   "title": "Where Aran sits in a bank",
+   "part": false,
+   "noHeader": false,
+   "start": 1679.89,
+   "end": 1750.176,
+   "cues": [
+    {
+     "t": 1680.89,
+     "d": 3.791,
+     "text": "Before we look inside Aran, let us see where it sits in a bank."
+    },
+    {
+     "t": 1685.481,
+     "d": 5.959,
+     "text": "On the left are the sources: the mobile app, core banking, the loan system, and log files."
+    },
+    {
+     "t": 1692.24,
+     "d": 5.95,
+     "text": "On the right are the sinks: the log platform, the CRM, vendors, and AI companies."
+    },
+    {
+     "t": 1698.99,
+     "d": 5.24,
+     "text": "Aran sits in the middle, on the choke points, so every message passes through it."
+    },
+    {
+     "t": 1705.03,
+     "d": 7.34,
+     "text": "Inside Aran, every message goes through five steps: normalise, detect, decide, protect and record."
+    },
+    {
+     "t": 1713.171,
+     "d": 5.353,
+     "text": "Below Aran sits the vault, which holds the keys: one per customer, per purpose."
+    },
+    {
+     "t": 1719.324,
+     "d": 4.63,
+     "text": "Next to it is the erasure record, which gives customers signed receipts."
+    },
+    {
+     "t": 1724.754,
+     "d": 6.062,
+     "text": "Customers never see Aran. The bank's IT team installs it, like any other firewall."
+    },
+    {
+     "t": 1731.616,
+     "d": 7.842,
+     "text": "In the next chapters, we will open each part, one at a time, starting with the most important idea: the check digit."
+    },
+    {
+     "t": 1740.258,
+     "d": 8.118,
+     "text": "Recap. Sources on the left, sinks on the right, Aran on the choke points in the middle, and the vault with the keys underneath."
+    }
+   ]
+  },
+  {
+   "id": "checkdigit",
+   "label": "Part 4 · Chapter 22",
+   "title": "The last digit is a lock",
+   "part": false,
+   "noHeader": false,
+   "start": 1750.176,
+   "end": 1811.335,
+   "cues": [
+    {
+     "t": 1751.176,
+     "d": 4.532,
+     "text": "Look closely at the last digit of an Aadhaar number. It is not random."
+    },
+    {
+     "t": 1756.508,
+     "d": 4.807,
+     "text": "It is calculated from the other eleven digits, using a fixed recipe."
+    },
+    {
+     "t": 1762.115,
+     "d": 3.621,
+     "text": "This last digit has a name. It is called a check digit."
+    },
+    {
+     "t": 1766.536,
+     "d": 6.616,
+     "text": "Think of it as a lock and a key. The first eleven digits are the key. The last digit is the lock."
+    },
+    {
+     "t": 1773.953,
+     "d": 3.971,
+     "text": "When the number is correct, the key always fits, and the lock opens."
+    },
+    {
+     "t": 1778.723,
+     "d": 5.717,
+     "text": "Now suppose a bank clerk types just one digit wrong. Here, the seven became a one."
+    },
+    {
+     "t": 1785.24,
+     "d": 4.217,
+     "text": "The key has changed, so it no longer fits. The lock stays shut."
+    },
+    {
+     "t": 1790.258,
+     "d": 4.891,
+     "text": "So the computer knows straight away that this number is wrong, and asks for it again."
+    },
+    {
+     "t": 1795.948,
+     "d": 5.456,
+     "text": "Checking a number like this, by redoing the recipe and comparing, is called a checksum."
+    },
+    {
+     "t": 1802.204,
+     "d": 7.331,
+     "text": "Recap. The check digit is a lock, and the other digits are the key. One wrong digit, and the lock stays shut."
+    }
+   ]
+  },
+  {
+   "id": "luhn",
+   "label": "Part 4 · Chapter 23",
+   "title": "The card recipe: Luhn",
+   "part": false,
+   "noHeader": false,
+   "start": 1811.335,
+   "end": 1889.974,
+   "cues": [
+    {
+     "t": 1812.335,
+     "d": 4.757,
+     "text": "Different numbers use different recipes. Card numbers use one called Luhn."
+    },
+    {
+     "t": 1817.892,
+     "d": 8.207,
+     "text": "It was created at IBM, and patented in 1960. Almost every payment card in the world uses it."
+    },
+    {
+     "t": 1826.899,
+     "d": 8.632,
+     "text": "Let us run it together on a short example. Here is a number: 7 9 9 2 7 3 9 8 7 1."
+    },
+    {
+     "t": 1836.331,
+     "d": 12.084,
+     "text": "Start from the right, and double every second digit. The 1 becomes 2. The 8 becomes 16. The 3 becomes 6. The 2 becomes 4. And the 9 becomes 18."
+    },
+    {
+     "t": 1849.215,
+     "d": 7.479,
+     "text": "If a doubled number is bigger than nine, take nine away. So 16 becomes 7, and 18 becomes 9."
+    },
+    {
+     "t": 1857.494,
+     "d": 3.576,
+     "text": "Now add up all the digits. The total is 67."
+    },
+    {
+     "t": 1861.87,
+     "d": 7.271,
+     "text": "The check digit is whatever brings the total up to the next round ten. From 67 to 70, we need 3."
+    },
+    {
+     "t": 1869.942,
+     "d": 7.013,
+     "text": "So the full card number ends in 3. Change any single digit, and the total no longer ends in zero."
+    },
+    {
+     "t": 1877.755,
+     "d": 2.282,
+     "text": "That is how a card number checks itself."
+    },
+    {
+     "t": 1880.837,
+     "d": 7.337,
+     "text": "Recap. Luhn doubles every second digit, adds everything up, and the check digit makes the total a round ten."
+    }
+   ]
+  },
+  {
+   "id": "verhoeff",
+   "label": "Part 4 · Chapter 24",
+   "title": "The Aadhaar recipe: Verhoeff",
+   "part": false,
+   "noHeader": false,
+   "start": 1889.974,
+   "end": 1986.264,
+   "cues": [
+    {
+     "t": 1890.974,
+     "d": 7.823,
+     "text": "Aadhaar uses a stronger recipe, called Verhoeff, created by a Dutch mathematician in 1969."
+    },
+    {
+     "t": 1899.597,
+     "d": 3.514,
+     "text": "Why stronger? Think about the most common typing mistakes."
+    },
+    {
+     "t": 1903.912,
+     "d": 7.871,
+     "text": "The first is one wrong digit. The second is swapping two neighbours, like typing 54 instead of 45."
+    },
+    {
+     "t": 1912.582,
+     "d": 4.214,
+     "text": "Luhn catches every single wrong digit, but it misses some swaps."
+    },
+    {
+     "t": 1917.597,
+     "d": 5.03,
+     "text": "Verhoeff catches every single wrong digit, and every swap of two neighbours."
+    },
+    {
+     "t": 1923.427,
+     "d": 4.488,
+     "text": "Its secret comes from a shape: a pentagon, a five-sided figure."
+    },
+    {
+     "t": 1928.715,
+     "d": 9.337,
+     "text": "You can turn a pentagon in five ways, and flip it over in five ways. That is ten moves in total, one for each digit from 0 to 9."
+    },
+    {
+     "t": 1938.852,
+     "d": 7.021,
+     "text": "Here is the clever part. With these moves, the order matters. Turn then flip is not the same as flip then turn."
+    },
+    {
+     "t": 1946.673,
+     "d": 5.651,
+     "text": "Watch. The same two moves, in a different order, leave the pentagon in a different position."
+    },
+    {
+     "t": 1953.123,
+     "d": 5.558,
+     "text": "Because the order matters, swapping two digits changes the answer. So the swap is caught."
+    },
+    {
+     "t": 1959.481,
+     "d": 6.375,
+     "text": "Mathematicians call this family of moves the dihedral group. You do not need to remember the name."
+    },
+    {
+     "t": 1966.656,
+     "d": 5.312,
+     "text": "What matters is this: every real Aadhaar number always passes the Verhoeff check."
+    },
+    {
+     "t": 1972.767,
+     "d": 11.697,
+     "text": "Recap. Verhoeff is built from turning and flipping a pentagon. The order matters, so it catches every wrong digit and every swap. And every real Aadhaar passes it."
+    }
+   ]
+  },
+  {
+   "id": "tokens",
+   "label": "Part 4 · Chapter 25",
+   "title": "Aran's big idea: tokens that always fail",
+   "part": false,
+   "noHeader": false,
+   "start": 1986.264,
+   "end": 2119.537,
+   "cues": [
+    {
+     "t": 1987.264,
+     "d": 5.929,
+     "text": "Now comes Aran's key idea. It is simple, and nobody had used it this way before."
+    },
+    {
+     "t": 1993.993,
+     "d": 4.383,
+     "text": "Everyone uses check digits for one thing: to catch typing mistakes."
+    },
+    {
+     "t": 1999.177,
+     "d": 1.825,
+     "text": "Aran turns the idea around."
+    },
+    {
+     "t": 2001.802,
+     "d": 6.837,
+     "text": "A real Aadhaar always passes the check. So Aran makes every token always fail it, on purpose."
+    },
+    {
+     "t": 2009.439,
+     "d": 6.444,
+     "text": "Here is how. Aran takes the first eleven digits, and scrambles them into eleven new digits."
+    },
+    {
+     "t": 2016.683,
+     "d": 2.985,
+     "text": "Then it works out the correct check digit for the new number."
+    },
+    {
+     "t": 2020.468,
+     "d": 6.145,
+     "text": "And then it adds a small secret amount, between one and nine, so the last digit is always wrong."
+    },
+    {
+     "t": 2027.413,
+     "d": 11.125,
+     "text": "Let us see it with Ravi's made-up Aadhaar, 2345 6789 0124, going to the loan vendor."
+    },
+    {
+     "t": 2039.338,
+     "d": 6.702,
+     "text": "The first eleven digits are scrambled into 0982 6158 641."
+    },
+    {
+     "t": 2046.84,
+     "d": 9.67,
+     "text": "The correct check digit for these would be 9. Aran adds a secret 3, and writes 2 instead. So the token is 0982 6158 6412."
+    },
+    {
+     "t": 2057.31,
+     "d": 4.05,
+     "text": "Run the check on the token. It fails, exactly as planned."
+    },
+    {
+     "t": 2062.16,
+     "d": 7.862,
+     "text": "Remember the lock and key. A real number is a key that always fits. An Aran token is a key that never fits."
+    },
+    {
+     "t": 2070.822,
+     "d": 4.45,
+     "text": "So now anyone, anywhere, can tell them apart, with one simple test."
+    },
+    {
+     "t": 2076.072,
+     "d": 8.951,
+     "text": "If it passes the check, it is a real Aadhaar, and it is exposed. If it fails the check, it is an Aran token, and it is safe."
+    },
+    {
+     "t": 2085.824,
+     "d": 8.297,
+     "text": "The team proved this as a mathematical rule, called Theorem 1. A theorem is a statement that is proved to be always true."
+    },
+    {
+     "t": 2094.921,
+     "d": 7.634,
+     "text": "Then they tested it. 20,000 tokens were hidden in real logs. Not one was mistaken for a real number."
+    },
+    {
+     "t": 2103.355,
+     "d": 3.923,
+     "text": "And all 20,000 real numbers mixed in with them were caught."
+    },
+    {
+     "t": 2108.078,
+     "d": 9.659,
+     "text": "Recap. Real numbers always pass the check. Aran tokens always fail it. So protected and leaked numbers can finally be told apart."
+    }
+   ]
+  },
+  {
+   "id": "ff1",
+   "label": "Part 4 · Chapter 26",
+   "title": "How the scrambling works",
+   "part": false,
+   "noHeader": false,
+   "start": 2119.537,
+   "end": 2213.726,
+   "cues": [
+    {
+     "t": 2120.537,
+     "d": 5.263,
+     "text": "How does Aran scramble eleven digits into eleven new digits? With encryption."
+    },
+    {
+     "t": 2126.6,
+     "d": 6.042,
+     "text": "It uses AES, the encryption standard used by banks and governments all over the world."
+    },
+    {
+     "t": 2133.442,
+     "d": 8.242,
+     "text": "But normal encryption turns twelve digits into a long string of random-looking symbols. That would break the bank's programs."
+    },
+    {
+     "t": 2142.484,
+     "d": 7.77,
+     "text": "So Aran uses a special method called FF1. It is approved by NIST, the American standards body."
+    },
+    {
+     "t": 2151.054,
+     "d": 6.263,
+     "text": "FF1 is format preserving. Digits go in, and the same number of digits come out."
+    },
+    {
+     "t": 2158.117,
+     "d": 8.655,
+     "text": "Inside FF1 is a clever trick called a Feistel network. Think of shuffling a deck of cards in a fixed, secret way."
+    },
+    {
+     "t": 2167.571,
+     "d": 2.45,
+     "text": "First, the number is cut into two halves."
+    },
+    {
+     "t": 2170.822,
+     "d": 5.302,
+     "text": "The right half is mixed with the secret key, and the result is added onto the left half."
+    },
+    {
+     "t": 2176.924,
+     "d": 1.882,
+     "text": "Then the two halves swap places."
+    },
+    {
+     "t": 2179.606,
+     "d": 6.843,
+     "text": "That is one round. FF1 repeats it ten times. Watch the numbers change with every round."
+    },
+    {
+     "t": 2187.249,
+     "d": 7.008,
+     "text": "After ten rounds, the result looks completely random. But with the key, every step can be run backwards."
+    },
+    {
+     "t": 2195.057,
+     "d": 4.593,
+     "text": "So the bank, and only the bank, can turn the token back into the real number."
+    },
+    {
+     "t": 2200.449,
+     "d": 11.477,
+     "text": "Recap. FF1 scrambles digits into digits, using the bank's secret key. It shuffles two halves ten times. And with the key, it can always be reversed."
+    }
+   ]
+  },
+  {
+   "id": "persink",
+   "label": "Part 4 · Chapter 27",
+   "title": "A different token for every destination",
+   "part": false,
+   "noHeader": false,
+   "start": 2213.726,
+   "end": 2270.477,
+   "cues": [
+    {
+     "t": 2214.726,
+     "d": 7.074,
+     "text": "FF1 has one more input, called a tweak. A tweak changes the result, without changing the key."
+    },
+    {
+     "t": 2222.6,
+     "d": 3.697,
+     "text": "Aran uses the name of the destination as the tweak."
+    },
+    {
+     "t": 2227.097,
+     "d": 4.745,
+     "text": "So the same customer gets a different token in every place the data goes."
+    },
+    {
+     "t": 2232.642,
+     "d": 9.876,
+     "text": "Here is Ravi's made-up Aadhaar. And here are three tokens for it: one for the CRM, one for the loan vendor, and one for the log platform."
+    },
+    {
+     "t": 2243.318,
+     "d": 4.391,
+     "text": "All three fail the check. All three are safe. But each one is different."
+    },
+    {
+     "t": 2248.509,
+     "d": 7.668,
+     "text": "Think of marked banknotes. Police sometimes mark banknotes before handing them over, so they can recognise them later."
+    },
+    {
+     "t": 2256.977,
+     "d": 4.597,
+     "text": "Aran does the same. Each destination gets its own marked copy."
+    },
+    {
+     "t": 2262.374,
+     "d": 6.303,
+     "text": "Recap. Each destination gets its own token for the same customer, like marked banknotes."
+    }
+   ]
+  },
+  {
+   "id": "trace",
+   "label": "Part 4 · Chapter 28",
+   "title": "A leaked file names its leaker",
+   "part": false,
+   "noHeader": false,
+   "start": 2270.477,
+   "end": 2341.684,
+   "cues": [
+    {
+     "t": 2271.477,
+     "d": 5.941,
+     "text": "Now imagine a bad day. A file with customer numbers appears for sale on Telegram."
+    },
+    {
+     "t": 2278.218,
+     "d": 3.192,
+     "text": "The bank's security team checks the numbers in the file."
+    },
+    {
+     "t": 2282.21,
+     "d": 9.808,
+     "text": "First, the check digit test. The numbers fail. So they are Aran tokens, not real Aadhaar numbers. No real number was exposed."
+    },
+    {
+     "t": 2292.818,
+     "d": 6.925,
+     "text": "Second, the trace. Aran looks at each token, and asks: which destination was this token made for?"
+    },
+    {
+     "t": 2300.543,
+     "d": 5.952,
+     "text": "The answer comes back: the loan vendor. These tokens were only ever given to the loan vendor."
+    },
+    {
+     "t": 2307.295,
+     "d": 2.444,
+     "text": "The leaked file has named its own source."
+    },
+    {
+     "t": 2310.539,
+     "d": 3.861,
+     "text": "The team proved how reliable this is. This is Theorem 2."
+    },
+    {
+     "t": 2315.2,
+     "d": 10.678,
+     "text": "For a bank with 50 million customers and 40 destinations, a leaked file with just five tokens points to the wrong place at most 3 times in a billion."
+    },
+    {
+     "t": 2326.678,
+     "d": 5.781,
+     "text": "In testing, every leaked file was traced to the right destination. 100 percent."
+    },
+    {
+     "t": 2333.259,
+     "d": 6.625,
+     "text": "Recap. A failed check proves that no real number leaked. And the token's mark shows who leaked it."
+    }
+   ]
+  },
+  {
+   "id": "vault",
+   "label": "Part 4 · Chapter 29",
+   "title": "Getting the real number back",
+   "part": false,
+   "noHeader": false,
+   "start": 2341.684,
+   "end": 2398.527,
+   "cues": [
+    {
+     "t": 2342.684,
+     "d": 8.093,
+     "text": "Sometimes the bank really does need the real number. For example, a loan officer may need to confirm a customer's Aadhaar."
+    },
+    {
+     "t": 2351.577,
+     "d": 4.303,
+     "text": "Swapping a token back for the real value is called detokenising."
+    },
+    {
+     "t": 2356.68,
+     "d": 6.111,
+     "text": "Only systems with permission can do it. Each one must say who it is, and why it is asking."
+    },
+    {
+     "t": 2363.591,
+     "d": 3.944,
+     "text": "Aran checks the permission, and then gives back the real value."
+    },
+    {
+     "t": 2368.335,
+     "d": 6.901,
+     "text": "And every single request is written into a log: who asked, when, for which customer, and for what reason."
+    },
+    {
+     "t": 2376.036,
+     "d": 6.119,
+     "text": "This record matters. If something goes wrong later, the bank can see exactly who looked at what."
+    },
+    {
+     "t": 2382.955,
+     "d": 6.876,
+     "text": "It also feeds the immune layer. A sudden rush of these requests is a warning sign, as we will see."
+    },
+    {
+     "t": 2390.631,
+     "d": 6.096,
+     "text": "Recap. Only allowed systems can get the real number back, and every request is recorded."
+    }
+   ]
+  },
+  {
+   "id": "detect",
+   "label": "Part 4 · Chapter 30",
+   "title": "Finding data like a detective",
+   "part": false,
+   "noHeader": false,
+   "start": 2398.527,
+   "end": 2497.705,
+   "cues": [
+    {
+     "t": 2399.527,
+     "d": 7.212,
+     "text": "Before Aran can protect a detail, it must find it. So how does Aran decide that a number is an Aadhaar?"
+    },
+    {
+     "t": 2407.539,
+     "d": 4.644,
+     "text": "Not by shape alone. Aran thinks like a detective, collecting clues."
+    },
+    {
+     "t": 2412.983,
+     "d": 3.987,
+     "text": "Clue one: does it pass the Verhoeff check? That is strong evidence."
+    },
+    {
+     "t": 2417.77,
+     "d": 3.196,
+     "text": "Clue two: does the word Aadhaar appear just before it?"
+    },
+    {
+     "t": 2421.765,
+     "d": 5.317,
+     "text": "Clue three: is it written in groups of four, the way people usually write an Aadhaar?"
+    },
+    {
+     "t": 2427.882,
+     "d": 8.771,
+     "text": "Each clue has a strength. Passing the check digit test is about ten times more likely for a real number than for random digits."
+    },
+    {
+     "t": 2437.453,
+     "d": 8.463,
+     "text": "Experts call this strength a likelihood ratio. It just means: how much more likely is this clue, if the value is real?"
+    },
+    {
+     "t": 2446.716,
+     "d": 5.119,
+     "text": "Aran combines all the clues using a rule from probability, called Bayes' rule."
+    },
+    {
+     "t": 2452.635,
+     "d": 7.168,
+     "text": "The result is one number, a probability. For example: 97 percent sure that this is an Aadhaar."
+    },
+    {
+     "t": 2460.603,
+     "d": 3.949,
+     "text": "If it is above a line, called the threshold, Aran protects it."
+    },
+    {
+     "t": 2465.352,
+     "d": 10.011,
+     "text": "And the probabilities are honest. When Aran says 90 percent sure, it is right about 90 percent of the time. This is called being calibrated."
+    },
+    {
+     "t": 2476.163,
+     "d": 8.796,
+     "text": "On 16,000 real log lines, false alarms fell from 2,506 with pattern search, to just 60."
+    },
+    {
+     "t": 2485.759,
+     "d": 10.146,
+     "text": "Recap. Aran gathers clues, weighs each one, and combines them into an honest probability. Only values above the threshold are protected."
+    }
+   ]
+  },
+  {
+   "id": "registry",
+   "label": "Part 4 · Chapter 31",
+   "title": "The bank's own lists",
+   "part": false,
+   "noHeader": false,
+   "start": 2497.705,
+   "end": 2589.515,
+   "cues": [
+    {
+     "t": 2498.705,
+     "d": 5.732,
+     "text": "The strongest clue of all comes from something the bank already has: its own customer list."
+    },
+    {
+     "t": 2505.237,
+     "d": 5.063,
+     "text": "If a number belongs to one of the bank's own customers, it is almost certainly real."
+    },
+    {
+     "t": 2511.1,
+     "d": 6.996,
+     "text": "But keeping a plain list of every customer's number inside the firewall would be dangerous. It could leak too."
+    },
+    {
+     "t": 2518.896,
+     "d": 3.33,
+     "text": "So Aran keeps fingerprints instead, using a hash."
+    },
+    {
+     "t": 2523.026,
+     "d": 8.966,
+     "text": "It uses a special kind called an HMAC. It is a hash that also needs a secret key, so only the bank can make these fingerprints."
+    },
+    {
+     "t": 2532.791,
+     "d": 8.431,
+     "text": "The fingerprints are kept in a cuckoo filter, a very compact table that answers one question, fast: have I seen this before?"
+    },
+    {
+     "t": 2542.022,
+     "d": 9.914,
+     "text": "800,000 fingerprints fit in just 4 megabytes. And unlike older designs, it can also delete fingerprints, when a customer leaves."
+    },
+    {
+     "t": 2552.736,
+     "d": 3.682,
+     "text": "OTPs need a different trick, because they are random."
+    },
+    {
+     "t": 2557.218,
+     "d": 9.827,
+     "text": "When the bank sends an OTP, Aran remembers it, tied to the exact request it belongs to. Every request has its own trace number."
+    },
+    {
+     "t": 2567.845,
+     "d": 9.958,
+     "text": "Without that tie, a random six-digit number would match some live OTP about 7 percent of the time. With it, about once in a million."
+    },
+    {
+     "t": 2578.603,
+     "d": 9.112,
+     "text": "Recap. Aran checks numbers against fingerprints of the bank's own customers, and remembers each OTP together with its request."
+    }
+   ]
+  },
+  {
+   "id": "ai",
+   "label": "Part 4 · Chapter 32",
+   "title": "Where artificial intelligence helps",
+   "part": false,
+   "noHeader": false,
+   "start": 2589.515,
+   "end": 2696.311,
+   "cues": [
+    {
+     "t": 2590.515,
+     "d": 5.335,
+     "text": "Some details have no check digit at all. Names and home addresses, for example."
+    },
+    {
+     "t": 2596.65,
+     "d": 7.643,
+     "text": "No maths can prove that Ravi Kumar is a name. This is where artificial intelligence, or AI, comes in."
+    },
+    {
+     "t": 2605.093,
+     "d": 7.191,
+     "text": "The kind of AI used here is called machine learning. Instead of being given rules, the program learns from examples."
+    },
+    {
+     "t": 2613.084,
+     "d": 6.864,
+     "text": "Think of how a child learns what a dog is. Nobody gives the child a rule. The child just sees many dogs."
+    },
+    {
+     "t": 2620.749,
+     "d": 3.392,
+     "text": "The examples used for learning are called training data."
+    },
+    {
+     "t": 2624.94,
+     "d": 8.542,
+     "text": "Aran uses a model for named entity recognition, or NER. It finds the names of people and places in text."
+    },
+    {
+     "t": 2634.282,
+     "d": 5.368,
+     "text": "The model is a CRF. It labels each word, while looking at the words around it."
+    },
+    {
+     "t": 2640.451,
+     "d": 7.768,
+     "text": "For example, a word that comes after Mr is probably a name. A word before Street is probably part of an address."
+    },
+    {
+     "t": 2649.019,
+     "d": 5.709,
+     "text": "It is small and fast. It runs on a normal laptop, with no expensive hardware."
+    },
+    {
+     "t": 2655.527,
+     "d": 7.494,
+     "text": "It reads English, Hindi, and Hinglish, where both languages mix in one sentence, the way many people really type."
+    },
+    {
+     "t": 2663.821,
+     "d": 9.964,
+     "text": "A second AI model reads the characters around a number, to tell an OTP from a port number, or a UPI ID from an email address."
+    },
+    {
+     "t": 2674.586,
+     "d": 8.727,
+     "text": "AI is used exactly where maths cannot give a sure answer, and nowhere else. The AI pair, Arun and Bharadhwaj, own this part."
+    },
+    {
+     "t": 2684.113,
+     "d": 10.398,
+     "text": "Recap. AI learns from examples. It finds names and addresses, and tells OTPs and UPI IDs apart from look-alikes."
+    }
+   ]
+  },
+  {
+   "id": "aitest",
+   "label": "Part 4 · Chapter 33",
+   "title": "Testing AI fairly",
+   "part": false,
+   "noHeader": false,
+   "start": 2696.311,
+   "end": 2779.337,
+   "cues": [
+    {
+     "t": 2697.311,
+     "d": 4.309,
+     "text": "How do you know an AI has really learned, and has not just memorised?"
+    },
+    {
+     "t": 2702.42,
+     "d": 7.739,
+     "text": "Think of a school exam. If the exam has the same questions as the homework, a student can pass from memory alone."
+    },
+    {
+     "t": 2710.959,
+     "d": 2.247,
+     "text": "A fair exam uses new questions."
+    },
+    {
+     "t": 2714.006,
+     "d": 4.081,
+     "text": "So the team kept the test data completely separate from the training data."
+    },
+    {
+     "t": 2718.888,
+     "d": 6.679,
+     "text": "The models learned from the logs of eight systems, and were tested on eight other systems they had never seen."
+    },
+    {
+     "t": 2726.367,
+     "d": 4.839,
+     "text": "Two scores tell us how well a detector does. The first is called precision."
+    },
+    {
+     "t": 2732.006,
+     "d": 7.902,
+     "text": "Precision asks: of everything it flagged, how much was really sensitive? High precision means few false alarms."
+    },
+    {
+     "t": 2740.708,
+     "d": 8.331,
+     "text": "The second is called recall. Recall asks: of everything sensitive, how much did it catch? High recall means few misses."
+    },
+    {
+     "t": 2749.838,
+     "d": 10.01,
+     "text": "For OTPs, Aran's model reached a precision of 1.0, meaning no false alarms in the test, with a recall of 0.8."
+    },
+    {
+     "t": 2760.648,
+     "d": 8.591,
+     "text": "For names, the combined score was about 0.85 on English news text, and about 0.76 on Hindi."
+    },
+    {
+     "t": 2770.04,
+     "d": 7.497,
+     "text": "Recap. Test on unseen data, like a fair exam. Precision counts false alarms. Recall counts misses."
+    }
+   ]
+  },
+  {
+   "id": "normaliser",
+   "label": "Part 4 · Chapter 34",
+   "title": "Disguises and typos",
+   "part": false,
+   "noHeader": false,
+   "start": 2779.337,
+   "end": 2886.169,
+   "cues": [
+    {
+     "t": 2780.337,
+     "d": 3.632,
+     "text": "Sometimes a number is hidden, by accident or on purpose."
+    },
+    {
+     "t": 2784.769,
+     "d": 6.41,
+     "text": "It might be written in Tamil or Hindi digits. It might have dots or spaces between the digits."
+    },
+    {
+     "t": 2791.979,
+     "d": 7.904,
+     "text": "It might be split into pieces, wrapped in web codes, or turned into base64, a way of writing data as letters."
+    },
+    {
+     "t": 2800.683,
+     "d": 6.349,
+     "text": "So Aran has a normaliser. It undoes twelve kinds of disguise, before looking for anything."
+    },
+    {
+     "t": 2807.832,
+     "d": 3.789,
+     "text": "Think of wiping the fog off a window before reading a sign."
+    },
+    {
+     "t": 2812.421,
+     "d": 6.258,
+     "text": "And it remembers where every character came from, so the right part of the original message gets replaced."
+    },
+    {
+     "t": 2819.479,
+     "d": 8.313,
+     "text": "Without the normaliser, only 8.3 percent of hidden numbers were caught. With it, and the bank's lists, 100 percent."
+    },
+    {
+     "t": 2828.592,
+     "d": 7.461,
+     "text": "Now, typos. A real Aadhaar with one typo fails the check, just like a token. That could fool Aran."
+    },
+    {
+     "t": 2836.853,
+     "d": 9.185,
+     "text": "So Aran tries every possible one-digit fix, and every swap of neighbours, and checks each one against the bank's customer fingerprints."
+    },
+    {
+     "t": 2846.838,
+     "d": 8.102,
+     "text": "If a fix matches a real customer, the number is caught. 99.2 percent of one-typo numbers were caught this way."
+    },
+    {
+     "t": 2855.739,
+     "d": 4.712,
+     "text": "And Aran makes sure it never mistakes one of its own tokens for a typo."
+    },
+    {
+     "t": 2861.252,
+     "d": 11.706,
+     "text": "Then the team attacked Aran with 26 hiding tricks, the way a real attacker would. This is called red teaming. 22 of the 26 are now fully caught."
+    },
+    {
+     "t": 2873.758,
+     "d": 10.611,
+     "text": "Recap. The normaliser wipes away disguises. Typo repair catches mistyped real numbers. And red teaming tests Aran the way an attacker would."
+    }
+   ]
+  },
+  {
+   "id": "ledger",
+   "label": "Part 4 · Chapter 35",
+   "title": "When masks leak: the leakage ledger",
+   "part": false,
+   "noHeader": false,
+   "start": 2886.169,
+   "end": 2992.332,
+   "cues": [
+    {
+     "t": 2887.169,
+     "d": 5.785,
+     "text": "Remember masking, the black marker? Masks look safe. But they can leak more than you think."
+    },
+    {
+     "t": 2893.754,
+     "d": 4.061,
+     "text": "To measure a leak, we count how many possible numbers are still left."
+    },
+    {
+     "t": 2898.615,
+     "d": 7.316,
+     "text": "Think of guessing a lock code. If only a thousand codes are possible, a computer can try them all in a second."
+    },
+    {
+     "t": 2906.731,
+     "d": 7.645,
+     "text": "Experts measure this in bits. Each bit is one yes-or-no question. A thousand choices is about ten bits."
+    },
+    {
+     "t": 2915.176,
+     "d": 8.088,
+     "text": "Showing the first eight and the last four digits of a card leaves only a thousand possible numbers. That is far too few."
+    },
+    {
+     "t": 2924.064,
+     "d": 4.139,
+     "text": "The bigger danger is joining pieces together, like a jigsaw puzzle."
+    },
+    {
+     "t": 2929.003,
+     "d": 8.269,
+     "text": "Suppose one system of a vendor sees the first six digits of a card. Another system of the same vendor sees the last four."
+    },
+    {
+     "t": 2938.071,
+     "d": 5.874,
+     "text": "Each piece looks harmless. But put them together, and only a hundred thousand numbers remain."
+    },
+    {
+     "t": 2944.745,
+     "d": 3.614,
+     "text": "So Aran keeps a ledger. A ledger is a record book."
+    },
+    {
+     "t": 2949.159,
+     "d": 5.785,
+     "text": "For every group of connected systems, it writes down what they have already seen of each customer."
+    },
+    {
+     "t": 2955.744,
+     "d": 7.81,
+     "text": "Before showing any part of a number, it asks: would this leave fewer than about a million possibilities? That is 20 bits."
+    },
+    {
+     "t": 2964.355,
+     "d": 4.35,
+     "text": "If yes, Aran refuses, and shows less, or a token instead."
+    },
+    {
+     "t": 2969.505,
+     "d": 9.146,
+     "text": "In the test, 14,175 customers could be narrowed down by joining pieces. With the ledger, zero."
+    },
+    {
+     "t": 2979.451,
+     "d": 11.081,
+     "text": "Recap. Masks leak, and joined pieces leak more. The leakage ledger remembers what each group has seen, and refuses anything that would leave too few possibilities."
+    }
+   ]
+  },
+  {
+   "id": "erasure",
+   "label": "Part 4 · Chapter 36",
+   "title": "Deleting every copy at once",
+   "part": false,
+   "noHeader": false,
+   "start": 2992.332,
+   "end": 3097.666,
+   "cues": [
+    {
+     "t": 2993.332,
+     "d": 6.527,
+     "text": "Now, the right to erasure. How do you delete a customer from every log, backup and vendor at once?"
+    },
+    {
+     "t": 3000.66,
+     "d": 3.929,
+     "text": "Aran's answer: do not chase the copies. Destroy the key."
+    },
+    {
+     "t": 3005.388,
+     "d": 6.579,
+     "text": "Aran keeps a vault. It is a protected table that links each token back to its real value."
+    },
+    {
+     "t": 3012.767,
+     "d": 7.282,
+     "text": "Each customer's entries are locked with that customer's own key. In fact, one key per customer, per purpose."
+    },
+    {
+     "t": 3020.849,
+     "d": 9.635,
+     "text": "A purpose is the reason the bank holds the data: servicing the account, marketing, loans, or KYC, which means know your customer."
+    },
+    {
+     "t": 3031.284,
+     "d": 4.299,
+     "text": "When Ravi asks for erasure, Aran destroys Ravi's keys."
+    },
+    {
+     "t": 3036.383,
+     "d": 8.655,
+     "text": "Instantly, every one of Ravi's tokens, in every log, every backup, and every vendor, points to nothing. They become meaningless."
+    },
+    {
+     "t": 3045.838,
+     "d": 9.419,
+     "text": "This is called crypto-shredding. It is like destroying the only key to a safe. The safe still exists, but nobody can ever open it."
+    },
+    {
+     "t": 3056.057,
+     "d": 6.287,
+     "text": "But some data must be kept by law. Banks must keep KYC records for a number of years."
+    },
+    {
+     "t": 3063.144,
+     "d": 8.815,
+     "text": "So the KYC key has a time lock. If Ravi asks to erase it early, Aran politely refuses, and gives the reason."
+    },
+    {
+     "t": 3072.759,
+     "d": 4.349,
+     "text": "When the legal period ends, Aran destroys that key automatically."
+    },
+    {
+     "t": 3077.908,
+     "d": 7.16,
+     "text": "The team proved that once a key is gone, its tokens reveal nothing about Ravi. This is Theorem 3."
+    },
+    {
+     "t": 3085.868,
+     "d": 9.998,
+     "text": "Recap. Each customer has a key per purpose. Destroying the keys erases every copy at once. And keys the law requires are time-locked."
+    }
+   ]
+  },
+  {
+   "id": "merkle",
+   "label": "Part 4 · Chapter 37",
+   "title": "Proof that erasure happened",
+   "part": false,
+   "noHeader": false,
+   "start": 3097.666,
+   "end": 3178.673,
+   "cues": [
+    {
+     "t": 3098.666,
+     "d": 4.634,
+     "text": "How can Ravi trust that his data was really erased? He gets a receipt."
+    },
+    {
+     "t": 3104.1,
+     "d": 7.362,
+     "text": "But a receipt is only useful if nobody can secretly change the records. So Aran uses a Merkle tree."
+    },
+    {
+     "t": 3112.263,
+     "d": 6.1,
+     "text": "Each erasure is written down as a record, and each record gets a fingerprint, using a hash."
+    },
+    {
+     "t": 3119.163,
+     "d": 4.187,
+     "text": "Then each pair of fingerprints is joined, and given a new fingerprint."
+    },
+    {
+     "t": 3124.15,
+     "d": 4.976,
+     "text": "This repeats until a single fingerprint is left at the top. It is called the root."
+    },
+    {
+     "t": 3129.927,
+     "d": 4.131,
+     "text": "Now watch what happens if someone secretly edits an old record."
+    },
+    {
+     "t": 3134.858,
+     "d": 5.418,
+     "text": "Its fingerprint changes. So the fingerprint above it changes. And so does the root."
+    },
+    {
+     "t": 3141.076,
+     "d": 4.713,
+     "text": "One small change anywhere changes the root, so cheating is easy to spot."
+    },
+    {
+     "t": 3146.589,
+     "d": 6.271,
+     "text": "Ravi's receipt holds a proof: the few fingerprints needed to rebuild the root from his own record."
+    },
+    {
+     "t": 3153.66,
+     "d": 6.707,
+     "text": "The receipt is also signed with a digital signature. Only the bank can make it, but anyone can check it."
+    },
+    {
+     "t": 3161.167,
+     "d": 4.964,
+     "text": "Even Ravi's phone can check the receipt by itself, without trusting anyone."
+    },
+    {
+     "t": 3166.931,
+     "d": 9.942,
+     "text": "Recap. A Merkle tree joins fingerprints up to one root, so any change shows. And Ravi's signed receipt proves his erasure is in the record."
+    }
+   ]
+  },
+  {
+   "id": "immune",
+   "label": "Part 4 · Chapter 38",
+   "title": "An immune system for data",
+   "part": false,
+   "noHeader": false,
+   "start": 3178.673,
+   "end": 3304.827,
+   "cues": [
+    {
+     "t": 3179.673,
+     "d": 4.872,
+     "text": "Even a perfect detector cannot stop one danger: a trusted insider."
+    },
+    {
+     "t": 3185.345,
+     "d": 8.202,
+     "text": "Imagine a staff member who uses a real login, at 2 a.m., to swap thousands of tokens back into real numbers."
+    },
+    {
+     "t": 3194.348,
+     "d": 9.003,
+     "text": "Each request looks normal on its own. Only the pattern is strange. For this, the team lead borrowed an idea from biology."
+    },
+    {
+     "t": 3204.15,
+     "d": 6.18,
+     "text": "Your body has an immune system. It learns what belongs to your own body, which is called self."
+    },
+    {
+     "t": 3211.13,
+     "d": 7.341,
+     "text": "In an organ called the thymus, new immune cells are tested. Any cell that attacks your own body is removed."
+    },
+    {
+     "t": 3219.271,
+     "d": 7.902,
+     "text": "Only cells that ignore self survive. So whatever they attack must be foreign. This is called negative selection."
+    },
+    {
+     "t": 3227.973,
+     "d": 10.548,
+     "text": "Aran does the same with data flows. It describes each flow with seven numbers, like how much data, what hour, and how often tokens are swapped back."
+    },
+    {
+     "t": 3239.322,
+     "d": 6.127,
+     "text": "Each flow becomes a dot in space. Normal flows cluster together. That cluster is self."
+    },
+    {
+     "t": 3246.249,
+     "d": 6.367,
+     "text": "Aran scatters random detectors, removes any detector that touches self, and keeps the rest."
+    },
+    {
+     "t": 3253.416,
+     "d": 6.508,
+     "text": "Now the insider's 2 a.m. flow appears. It lands inside a detector, and an alert goes off."
+    },
+    {
+     "t": 3260.724,
+     "d": 9.047,
+     "text": "In testing on simulated attacks, the immune layer caught all six kinds of attack, with only 0.6 percent false alarms."
+    },
+    {
+     "t": 3270.571,
+     "d": 4.594,
+     "text": "A standard method, called Isolation Forest, caught only 20 percent."
+    },
+    {
+     "t": 3275.964,
+     "d": 10.57,
+     "text": "And like your body, it remembers. When the same attack came back, it scored 0.71 instead of 0.37, so it stood out much more."
+    },
+    {
+     "t": 3287.334,
+     "d": 5.011,
+     "text": "This layer is owned by the cybersecurity pair, Inbathamizhan and Aasif."
+    },
+    {
+     "t": 3293.145,
+     "d": 9.882,
+     "text": "Recap. The immune layer learns what normal looks like, keeps only detectors that ignore normal, and raises an alert when something strange appears."
+    }
+   ]
+  },
+  {
+   "id": "gateway",
+   "label": "Part 4 · Chapter 39",
+   "title": "Safe AI chatbots",
+   "part": false,
+   "noHeader": false,
+   "start": 3304.827,
+   "end": 3416.973,
+   "cues": [
+    {
+     "t": 3305.827,
+     "d": 7.213,
+     "text": "Bank staff now use AI chatbots at work. These are called large language models, or LLMs."
+    },
+    {
+     "t": 3313.84,
+     "d": 3.289,
+     "text": "The message you type into a chatbot is called a prompt."
+    },
+    {
+     "t": 3317.929,
+     "d": 6.237,
+     "text": "A staff member might paste a customer's whole complaint, with Aadhaar and phone number, into a prompt."
+    },
+    {
+     "t": 3324.966,
+     "d": 3.996,
+     "text": "That sends the customer's details to an outside AI company."
+    },
+    {
+     "t": 3329.762,
+     "d": 7.793,
+     "text": "This is exactly what happened at Samsung in 2023, with company code instead of customer details."
+    },
+    {
+     "t": 3338.355,
+     "d": 8.244,
+     "text": "Aran's AI gateway sits between the staff and the AI company. A gateway is a gate that every message must pass through."
+    },
+    {
+     "t": 3347.399,
+     "d": 6.542,
+     "text": "Before the prompt leaves, each detail is replaced by a labelled placeholder, like Aadhaar number one."
+    },
+    {
+     "t": 3354.741,
+     "d": 7.32,
+     "text": "The AI company only ever sees the placeholders. It can still understand the question, and write a good answer."
+    },
+    {
+     "t": 3362.861,
+     "d": 7.638,
+     "text": "When the answer comes back, Aran puts the real details back in, but only for staff whose role allows them to see it."
+    },
+    {
+     "t": 3371.299,
+     "d": 8.83,
+     "text": "Every time a real value is put back, it is written into a hash chain. Each entry includes the fingerprint of the one before it."
+    },
+    {
+     "t": 3380.929,
+     "d": 4.163,
+     "text": "So if anyone edits an old entry, the chain breaks, and it shows."
+    },
+    {
+     "t": 3385.892,
+     "d": 10.233,
+     "text": "The team also tried prompt injection: messages that try to trick the AI into revealing data. Five kinds were tried. None leaked a value."
+    },
+    {
+     "t": 3396.925,
+     "d": 9.04,
+     "text": "Raw details reaching the AI company fell from 100 percent to 7.8 percent. And every kind of number fell to zero."
+    },
+    {
+     "t": 3406.764,
+     "d": 8.408,
+     "text": "Recap. The AI gateway swaps details for placeholders, puts them back only for the right people, and records every step."
+    }
+   ]
+  },
+  {
+   "id": "quantum",
+   "label": "Part 4 · Chapter 40",
+   "title": "Ready for quantum computers",
+   "part": false,
+   "noHeader": false,
+   "start": 3416.973,
+   "end": 3536.569,
+   "cues": [
+    {
+     "t": 3417.973,
+     "d": 3.687,
+     "text": "One more danger is still in the future: quantum computers."
+    },
+    {
+     "t": 3422.459,
+     "d": 7.128,
+     "text": "A quantum computer uses the strange rules of tiny particles to solve certain problems much faster."
+    },
+    {
+     "t": 3430.387,
+     "d": 4.148,
+     "text": "A big enough one could break some of the locks that protect the internet today."
+    },
+    {
+     "t": 3435.335,
+     "d": 6.912,
+     "text": "One method, called Shor's algorithm, could break the way computers agree on keys and sign messages."
+    },
+    {
+     "t": 3443.047,
+     "d": 9.504,
+     "text": "Another, called Grover's algorithm, only weakens other locks, and longer keys are enough. So Aran moved to AES-256."
+    },
+    {
+     "t": 3453.352,
+     "d": 7.702,
+     "text": "Here is the scary part. An attacker can record locked traffic today, and keep it until a quantum computer exists."
+    },
+    {
+     "t": 3461.853,
+     "d": 2.667,
+     "text": "This is called harvest now, decrypt later."
+    },
+    {
+     "t": 3465.32,
+     "d": 10.231,
+     "text": "The team found something new. If a customer's key was ever backed up using today's key exchange, a recording could bring the key back, even after erasure."
+    },
+    {
+     "t": 3476.351,
+     "d": 6.515,
+     "text": "In a simulation, 100 percent of erased values came back. The erasure would be undone."
+    },
+    {
+     "t": 3483.666,
+     "d": 8.628,
+     "text": "The fix is called hybrid cryptography. It uses an old lock and a new quantum-safe lock together. A thief must break both."
+    },
+    {
+     "t": 3493.094,
+     "d": 14.281,
+     "text": "Aran pairs X25519 with ML-KEM, and Ed25519 with ML-DSA. The new ones are quantum-safe standards, published in 2024."
+    },
+    {
+     "t": 3508.176,
+     "d": 3.729,
+     "text": "With the hybrid, zero percent of erased values came back."
+    },
+    {
+     "t": 3512.704,
+     "d": 9.756,
+     "text": "Aran also lists every lock it uses in a CBOM, a cryptography bill of materials, as India's banking roadmap asks."
+    },
+    {
+     "t": 3523.26,
+     "d": 11.509,
+     "text": "Recap. Quantum computers could break today's key exchange, and recorded traffic could undo erasure. Aran uses hybrid locks, so erasure stays permanent."
+    }
+   ]
+  },
+  {
+   "id": "walkthrough",
+   "label": "Part 4 · Chapter 41",
+   "title": "Ravi's request, start to finish",
+   "part": false,
+   "noHeader": false,
+   "start": 3536.569,
+   "end": 3635.922,
+   "cues": [
+    {
+     "t": 3537.569,
+     "d": 5.203,
+     "text": "Now let us put everything together, and follow Ravi's loan request all the way."
+    },
+    {
+     "t": 3543.573,
+     "d": 7.599,
+     "text": "The message holds Ravi's name, Aadhaar, PAN, mobile, address and OTP. It is going to the loan vendor."
+    },
+    {
+     "t": 3551.972,
+     "d": 4.912,
+     "text": "Step one: normalise. Aran wipes away any disguises in the message."
+    },
+    {
+     "t": 3557.684,
+     "d": 9.222,
+     "text": "Step two: detect. Check digits, fingerprints and AI models find every sensitive detail, each with an honest probability."
+    },
+    {
+     "t": 3567.706,
+     "d": 6.915,
+     "text": "Step three: decide. The leakage ledger checks what the loan vendor's systems have already seen of Ravi."
+    },
+    {
+     "t": 3575.421,
+     "d": 8.266,
+     "text": "Step four: protect. The Aadhaar becomes a token made only for the loan vendor. It fails the check digit, on purpose."
+    },
+    {
+     "t": 3584.487,
+     "d": 9.474,
+     "text": "The PAN, mobile, name and address become keyed labels. And the OTP is removed completely. Nobody downstream ever needs it."
+    },
+    {
+     "t": 3594.761,
+     "d": 5.911,
+     "text": "Step five: record. The flow is added to the immune layer's picture of normal traffic."
+    },
+    {
+     "t": 3601.472,
+     "d": 8.101,
+     "text": "The vendor gets a message in exactly the right shape, so its systems keep working. But it holds nothing that can hurt Ravi."
+    },
+    {
+     "t": 3610.372,
+     "d": 3.374,
+     "text": "Later, if the vendor leaks, the tokens name the vendor."
+    },
+    {
+     "t": 3614.546,
+     "d": 6.158,
+     "text": "If Ravi asks for erasure, Ravi's keys are destroyed, and a signed receipt follows."
+    },
+    {
+     "t": 3621.505,
+     "d": 4.16,
+     "text": "And if an insider misbehaves, the immune layer raises an alert."
+    },
+    {
+     "t": 3626.465,
+     "d": 7.658,
+     "text": "Recap. Normalise, detect, decide, protect, record. Five steps, in a fraction of a second, for every message."
+    }
+   ]
+  },
+  {
+   "id": "replay",
+   "label": "Part 4 · Chapter 42",
+   "title": "What if Aran had been there?",
+   "part": false,
+   "noHeader": false,
+   "start": 3635.922,
+   "end": 3770.238,
+   "cues": [
+    {
+     "t": 3636.922,
+     "d": 5.549,
+     "text": "Now let us go back to the real cases, and ask honestly: what would Aran have changed?"
+    },
+    {
+     "t": 3643.272,
+     "d": 12.282,
+     "text": "The SBI text messages. If the stored copies had passed through Aran, the account numbers in them would have been tokens, and the leakage ledger would have stopped partial numbers from adding up."
+    },
+    {
+     "t": 3656.354,
+     "d": 15.985,
+     "text": "The Juspay case. Masked card data was joined with emails and phone numbers. Aran's ledger counts exactly this kind of joining. And its card tokens fail the Luhn check, so a dump of them proves no real card number left."
+    },
+    {
+     "t": 3673.139,
+     "d": 12.55,
+     "text": "The Air India vendor case. With Aran, the vendor would have held tokens made only for that vendor. Stolen tokens are useless to criminals, and the trace names the vendor at once."
+    },
+    {
+     "t": 3686.488,
+     "d": 13.271,
+     "text": "The Star Health and vaccination data sold on Telegram. If that data had held Aran tokens, buyers would have got worthless look-alikes, and each token would point back to the system that leaked it."
+    },
+    {
+     "t": 3700.559,
+     "d": 10.804,
+     "text": "And if an insider pulled out real records in bulk, every request to swap tokens back would be logged with a name, and the immune layer would flag the unusual rush."
+    },
+    {
+     "t": 3712.163,
+     "d": 14.704,
+     "text": "The Twitter and Facebook passwords in logs. Aran is built for identifiers like Aadhaar and cards, not passwords. But the lesson is the one Aran is built on: clean the data before the log stores it."
+    },
+    {
+     "t": 3727.667,
+     "d": 12.985,
+     "text": "The Samsung chatbot case. For a bank, the same mistake with customer details is exactly what the AI gateway stops. Details become placeholders before anything leaves the bank."
+    },
+    {
+     "t": 3741.452,
+     "d": 18.14,
+     "text": "And the 2016 card malware? Harmful software inside a payment system that needs real card numbers is a different problem, and Aran does not claim to stop it. What it does is make sure that every copy outside that system holds only tokens."
+    },
+    {
+     "t": 3760.392,
+     "d": 8.046,
+     "text": "Recap. Most of these leaks came through side doors that Aran guards. And where Aran cannot help, it says so plainly."
+    }
+   ]
+  },
+  {
+   "id": "p5",
+   "label": "Part 5",
+   "title": "How Aran was built and tested",
+   "part": true,
+   "noHeader": false,
+   "start": 3770.238,
+   "end": 3776.404,
+   "cues": [
+    {
+     "t": 3771.238,
+     "d": 2.766,
+     "text": "Part five. How Aran was built and tested."
+    }
+   ]
+  },
+  {
+   "id": "built",
+   "label": "Part 5 · Chapter 43",
+   "title": "How it was built",
+   "part": false,
+   "noHeader": false,
+   "start": 3776.404,
+   "end": 3872.528,
+   "cues": [
+    {
+     "t": 3777.404,
+     "d": 10.713,
+     "text": "Most of the work happened in about 43 hours, from just after midnight on 16 October, to the evening of 17 October 2026."
+    },
+    {
+     "t": 3788.917,
+     "d": 2.774,
+     "text": "First, the team lead set clear working rules."
+    },
+    {
+     "t": 3792.491,
+     "d": 7.01,
+     "text": "Work locally on the laptop. Save every change under the lead's own name. And record everything in notes."
+    },
+    {
+     "t": 3800.302,
+     "d": 7.245,
+     "text": "Before any new plan, the team gets beginner learning documents, one per topic. There are now 21 of them."
+    },
+    {
+     "t": 3808.346,
+     "d": 6.074,
+     "text": "Every result is saved in the project's repository on GitHub, and linked from the main page."
+    },
+    {
+     "t": 3815.22,
+     "d": 5.735,
+     "text": "A repository is a shared folder for code that remembers every change ever made."
+    },
+    {
+     "t": 3821.756,
+     "d": 8.066,
+     "text": "In the first hour, the research document was written, along with a first working version and the first tests on real logs."
+    },
+    {
+     "t": 3830.621,
+     "d": 5.643,
+     "text": "Next came the AI layer and the immune layer. Then the normaliser, and the bank's own lists."
+    },
+    {
+     "t": 3837.064,
+     "d": 9.653,
+     "text": "On the afternoon of 16 October, a live website was built. A server runs the real firewall, and every number on screen comes from it."
+    },
+    {
+     "t": 3847.517,
+     "d": 8.603,
+     "text": "Then came a guided tour with animation, 3D scenes, the leakage ledger, the AI gateway, red teaming, and quantum safety."
+    },
+    {
+     "t": 3856.92,
+     "d": 4.107,
+     "text": "Finally, the team lead's own design became the real website."
+    },
+    {
+     "t": 3861.826,
+     "d": 8.901,
+     "text": "Recap. Built in about 43 hours, with clear rules, learning documents for every topic, and every result saved and linked."
+    }
+   ]
+  },
+  {
+   "id": "team",
+   "label": "Part 5 · Chapter 44",
+   "title": "The team",
+   "part": false,
+   "noHeader": false,
+   "start": 3872.528,
+   "end": 3929.428,
+   "cues": [
+    {
+     "t": 3873.528,
+     "d": 3.594,
+     "text": "Aran was built by a team of four, working in two pairs."
+    },
+    {
+     "t": 3877.922,
+     "d": 12.771,
+     "text": "Inbathamizhan S leads the project. With Aasif Ahmed A, the cybersecurity pair owns the tokens, the vault, erasure, the ledger, the immune layer and the quantum-safe locks."
+    },
+    {
+     "t": 3891.493,
+     "d": 12.083,
+     "text": "SN Arun Vijay and Bharadhwaj M are the AI and machine learning pair. They own the name finder, the OTP and UPI model, and the honest probabilities."
+    },
+    {
+     "t": 3904.376,
+     "d": 2.693,
+     "text": "The AI gateway is shared by both pairs."
+    },
+    {
+     "t": 3907.869,
+     "d": 5.778,
+     "text": "Every topic has a beginner learning document, so any team member can understand any part."
+    },
+    {
+     "t": 3914.447,
+     "d": 6.287,
+     "text": "All work is saved, with notes, in one shared place, so nothing depends on one person's memory."
+    },
+    {
+     "t": 3921.534,
+     "d": 6.094,
+     "text": "Recap. Two pairs, cybersecurity and AI, with shared learning documents and shared notes."
+    }
+   ]
+  },
+  {
+   "id": "console",
+   "label": "Part 5 · Chapter 45",
+   "title": "The live demo",
+   "part": false,
+   "noHeader": false,
+   "start": 3929.428,
+   "end": 4007.559,
+   "cues": [
+    {
+     "t": 3930.428,
+     "d": 2.965,
+     "text": "Let us look at the live website, called the console."
+    },
+    {
+     "t": 3934.193,
+     "d": 8.343,
+     "text": "Nothing on it is made up. Every number, token, receipt and alert comes from Aran's real code, running at that moment."
+    },
+    {
+     "t": 3943.336,
+     "d": 7.41,
+     "text": "A guided tour walks through thirteen chapters, with real requests flying into Aran and coming out as tokens."
+    },
+    {
+     "t": 3951.546,
+     "d": 7.102,
+     "text": "On the Without Aran and With Aran screen, the same requests play side by side, so you can see the difference."
+    },
+    {
+     "t": 3959.447,
+     "d": 4.429,
+     "text": "In Beat the Firewall, judges scan a QR code with their own phones."
+    },
+    {
+     "t": 3964.677,
+     "d": 7.854,
+     "text": "They try to sneak an Aadhaar, a card or a mobile number past Aran, by typing it, pasting it, or even speaking it."
+    },
+    {
+     "t": 3973.331,
+     "d": 3.937,
+     "text": "A live scoreboard shows every attempt, and whether Aran caught it."
+    },
+    {
+     "t": 3978.068,
+     "d": 6.414,
+     "text": "On the card scan page, Aran reads a sample ID card photo, and covers the numbers on it."
+    },
+    {
+     "t": 3985.282,
+     "d": 6.624,
+     "text": "A My Data page shows a customer, on a phone, where their data went, and lets them ask for erasure."
+    },
+    {
+     "t": 3992.706,
+     "d": 5.037,
+     "text": "The site also speaks Tamil and Hindi, and has a presenter mode for giving the demo."
+    },
+    {
+     "t": 3998.543,
+     "d": 7.216,
+     "text": "Recap. The live console runs Aran's real code, and judges can try to beat it from their own phones."
+    }
+   ]
+  },
+  {
+   "id": "testing",
+   "label": "Part 5 · Chapter 46",
+   "title": "Testing honestly",
+   "part": false,
+   "noHeader": false,
+   "start": 4007.559,
+   "end": 4072.774,
+   "cues": [
+    {
+     "t": 4008.559,
+     "d": 5.607,
+     "text": "Good research is honest about what is real, what is generated, and what is simulated."
+    },
+    {
+     "t": 4014.966,
+     "d": 13.299,
+     "text": "Real: the Loghub logs, 32,000 lines from 16 real systems. Real public collections of names in English, Hindi and Hinglish. And real public text messages."
+    },
+    {
+     "t": 4029.065,
+     "d": 8.97,
+     "text": "Generated: every Aadhaar, card, PAN, mobile, OTP and UPI value. They follow every rule, but belong to no one."
+    },
+    {
+     "t": 4038.834,
+     "d": 5.647,
+     "text": "Simulated: the bank's data flows for the immune layer, because no bank publishes them."
+    },
+    {
+     "t": 4045.281,
+     "d": 5.925,
+     "text": "Also simulated: the quantum attack, because no big enough quantum computer exists yet."
+    },
+    {
+     "t": 4052.005,
+     "d": 5.019,
+     "text": "Every result comes from a script that anyone can run again, to get the same numbers."
+    },
+    {
+     "t": 4057.825,
+     "d": 5.003,
+     "text": "The team ran nineteen experiments in total, numbered E1 to E19."
+    },
+    {
+     "t": 4063.628,
+     "d": 7.347,
+     "text": "Recap. Real logs, made-up numbers, simulated flows, and every result can be checked again by anyone."
+    }
+   ]
+  },
+  {
+   "id": "p6",
+   "label": "Part 6",
+   "title": "Results, limits and next steps",
+   "part": true,
+   "noHeader": false,
+   "start": 4072.774,
+   "end": 4079.235,
+   "cues": [
+    {
+     "t": 4073.774,
+     "d": 3.061,
+     "text": "Part six. Results, limits, and what comes next."
+    }
+   ]
+  },
+  {
+   "id": "results",
+   "label": "Part 6 · Chapter 47",
+   "title": "The results",
+   "part": false,
+   "noHeader": false,
+   "start": 4079.235,
+   "end": 4173.851,
+   "cues": [
+    {
+     "t": 4080.235,
+     "d": 2.546,
+     "text": "Now, the results. Here is the main one."
+    },
+    {
+     "t": 4083.581,
+     "d": 10.234,
+     "text": "On 16,000 real log lines, from eight systems the models had never seen, the team hid 1,895 sensitive values."
+    },
+    {
+     "t": 4094.615,
+     "d": 3.885,
+     "text": "Plain pattern search removed 46.1 percent of them."
+    },
+    {
+     "t": 4099.3,
+     "d": 4.1,
+     "text": "With the AI layers, Aran removed 83.5 percent."
+    },
+    {
+     "t": 4104.2,
+     "d": 4.575,
+     "text": "With the normaliser and the bank's own lists, 89.7 percent."
+    },
+    {
+     "t": 4109.575,
+     "d": 7.388,
+     "text": "With the latest fixes for mobile numbers and OTPs, 91 percent, even without the bank's lists."
+    },
+    {
+     "t": 4117.764,
+     "d": 6.27,
+     "text": "Aadhaar, card, PAN and UPI have been at 100 percent since the first AI version."
+    },
+    {
+     "t": 4124.833,
+     "d": 9.178,
+     "text": "False OTP alarms on 32,000 real lines: from 67,481 down to 6."
+    },
+    {
+     "t": 4134.812,
+     "d": 4.14,
+     "text": "Tokens wrongly flagged as real: zero out of 20,000."
+    },
+    {
+     "t": 4139.752,
+     "d": 4.242,
+     "text": "Leaked files traced to the right destination: 100 percent."
+    },
+    {
+     "t": 4144.794,
+     "d": 7.895,
+     "text": "Customers who could be narrowed down by joining systems: from 14,175 down to zero."
+    },
+    {
+     "t": 4153.489,
+     "d": 6.147,
+     "text": "Raw details reaching an AI company: from 100 percent down to 7.8 percent."
+    },
+    {
+     "t": 4160.435,
+     "d": 11.616,
+     "text": "Recap. Aran removes over 90 percent of sensitive values on unseen real logs, with very few false alarms, and every number type is fully protected."
+    }
+   ]
+  },
+  {
+   "id": "novelty",
+   "label": "Part 6 · Chapter 48",
+   "title": "What is truly new",
+   "part": false,
+   "noHeader": false,
+   "start": 4173.851,
+   "end": 4237.672,
+   "cues": [
+    {
+     "t": 4174.851,
+     "d": 4.217,
+     "text": "What is truly new in Aran? Good research answers this carefully."
+    },
+    {
+     "t": 4179.868,
+     "d": 6.705,
+     "text": "Card tokens that fail the Luhn check already exist in some products. That part alone is not new."
+    },
+    {
+     "t": 4187.373,
+     "d": 9.16,
+     "text": "What is new is turning it into a proven rule for Aadhaar and cards, in Theorem 1, so anyone can tell protected numbers from leaked ones."
+    },
+    {
+     "t": 4197.332,
+     "d": 4.691,
+     "text": "New: tokens that name the leaker, with a proven error rate, in Theorem 2."
+    },
+    {
+     "t": 4202.823,
+     "d": 3.554,
+     "text": "New: the OTP registry, tied to each request."
+    },
+    {
+     "t": 4207.177,
+     "d": 4.633,
+     "text": "New: the leakage ledger, which counts what joined systems can work out."
+    },
+    {
+     "t": 4212.61,
+     "d": 6.661,
+     "text": "New: one key per customer, per purpose, with signed receipts and legal time locks, in Theorem 3."
+    },
+    {
+     "t": 4220.071,
+     "d": 8.439,
+     "text": "And new: the finding that recorded traffic and a future quantum computer could undo erasure, together with the hybrid fix."
+    },
+    {
+     "t": 4229.31,
+     "d": 6.561,
+     "text": "Recap. Some single pieces exist elsewhere. Putting them together, with proofs and measurements, is new."
+    }
+   ]
+  },
+  {
+   "id": "limits",
+   "label": "Part 6 · Chapter 49",
+   "title": "Honest weak spots",
+   "part": false,
+   "noHeader": false,
+   "start": 4237.672,
+   "end": 4316.315,
+   "cues": [
+    {
+     "t": 4238.672,
+     "d": 4.856,
+     "text": "Good research says plainly where it is still weak. Here are Aran's weak spots."
+    },
+    {
+     "t": 4244.328,
+     "d": 9.011,
+     "text": "Names are the weakest. About 77 percent are caught. A newer kind of AI model, called a transformer, is the planned fix."
+    },
+    {
+     "t": 4254.139,
+     "d": 8.4,
+     "text": "A transformer is the technology behind modern AI chatbots. It reads a whole sentence at once, to understand its meaning."
+    },
+    {
+     "t": 4263.339,
+     "d": 9.145,
+     "text": "After the latest fix, two new mistakes appeared. For example, a cheque number was sometimes taken for a mobile number. These must be fixed."
+    },
+    {
+     "t": 4273.283,
+     "d": 9.929,
+     "text": "Speed. Aran handles 654 log lines per second today. A big bank needs thousands per second. A faster version is planned."
+    },
+    {
+     "t": 4284.012,
+     "d": 7.608,
+     "text": "The attacks on data flows were simulated. And the AI gateway has not yet been tested with a real chatbot."
+    },
+    {
+     "t": 4292.421,
+     "d": 8.073,
+     "text": "Four of the 26 hiding tricks are still open, on purpose, because undoing them on every line would cause false alarms."
+    },
+    {
+     "t": 4301.294,
+     "d": 5.458,
+     "text": "And whether destroying a key counts as legal erasure needs a lawyer's opinion."
+    },
+    {
+     "t": 4307.552,
+     "d": 6.963,
+     "text": "Recap. Names, two new mistakes, speed, and real-world testing are the main things still to improve."
+    }
+   ]
+  },
+  {
+   "id": "next",
+   "label": "Part 6 · Chapter 50",
+   "title": "What comes next",
+   "part": false,
+   "noHeader": false,
+   "start": 4316.315,
+   "end": 4386.372,
+   "cues": [
+    {
+     "t": 4317.315,
+     "d": 1.351,
+     "text": "So what comes next?"
+    },
+    {
+     "t": 4319.466,
+     "d": 12.577,
+     "text": "The cybersecurity pair, Inbathamizhan and Aasif, will make the vault survive restarts, build a tracer for leaked raw numbers, and add quantum-safe connections in front of the server."
+    },
+    {
+     "t": 4332.843,
+     "d": 10.14,
+     "text": "The AI pair, Arun and Bharadhwaj, will fix the two new mistakes, add the transformer model for names, and test the gateway with a real chatbot."
+    },
+    {
+     "t": 4343.784,
+     "d": 6.22,
+     "text": "Later come Tamil name detection, reading ID card photos properly, and a research paper."
+    },
+    {
+     "t": 4350.803,
+     "d": 8.57,
+     "text": "As a product, a bank would install Aran on its own servers: as a gateway, a log cleaner, an AI gateway and a dashboard."
+    },
+    {
+     "t": 4360.173,
+     "d": 4.558,
+     "text": "It could also be offered as a service for smaller banks and finance companies."
+    },
+    {
+     "t": 4365.532,
+     "d": 10.416,
+     "text": "The timing is right. The DPDP rules begin in May 2027, and India's banking roadmap asks banks to become quantum-safe."
+    },
+    {
+     "t": 4376.747,
+     "d": 7.824,
+     "text": "Recap. Fix the weak spots, make it faster, test it in the real world, and turn it into a product banks can install."
+    }
+   ]
+  },
+  {
+   "id": "questions",
+   "label": "Part 6 · Chapter 51",
+   "title": "Questions people ask",
+   "part": false,
+   "noHeader": false,
+   "start": 4386.372,
+   "end": 4484.438,
+   "cues": [
+    {
+     "t": 4387.372,
+     "d": 4.396,
+     "text": "Here are questions people often ask about Aran, with short answers."
+    },
+    {
+     "t": 4392.568,
+     "d": 10.548,
+     "text": "Is this just a pattern search? No. Pattern search raised 67,481 false OTP alarms. Aran raised 6."
+    },
+    {
+     "t": 4403.916,
+     "d": 11.239,
+     "text": "Where is the AI? In finding names and addresses, telling OTPs and UPI IDs apart from look-alikes, and making every probability honest."
+    },
+    {
+     "t": 4415.955,
+     "d": 9.241,
+     "text": "Did you use real customer data? Never. The logs are real and public. Every identifier is made up, with valid check digits."
+    },
+    {
+     "t": 4425.996,
+     "d": 8.397,
+     "text": "Does tokenising break the bank's apps? No. Tokens keep the exact shape, and allowed systems can get the real value back."
+    },
+    {
+     "t": 4435.193,
+     "d": 7.829,
+     "text": "What if someone hides the number? Twelve kinds of disguise are fully caught, and 22 of 26 red team tricks."
+    },
+    {
+     "t": 4443.822,
+     "d": 6.396,
+     "text": "What if there is a typo? Typo repair catches 99.2 percent of one-typo numbers."
+    },
+    {
+     "t": 4451.018,
+     "d": 10.52,
+     "text": "How can erasure be legal, if KYC records must be kept? KYC keys are time-locked, and destroyed automatically when the legal period ends."
+    },
+    {
+     "t": 4462.338,
+     "d": 4.74,
+     "text": "Is it fast enough? Not yet, for a big bank. A faster version is planned."
+    },
+    {
+     "t": 4467.878,
+     "d": 6.361,
+     "text": "Is it a product? Yes. A bank can install it on its own servers, or use it as a service."
+    },
+    {
+     "t": 4475.039,
+     "d": 7.6,
+     "text": "Recap. Aran is not just pattern search, never uses real people's data, and says plainly where it is still weak."
+    }
+   ]
+  },
+  {
+   "id": "recap",
+   "label": "Part 6 · Chapter 52",
+   "title": "Everything in ten points",
+   "part": false,
+   "noHeader": false,
+   "start": 4484.438,
+   "end": 4572.824,
+   "cues": [
+    {
+     "t": 4485.438,
+     "d": 2.718,
+     "text": "Let us bring everything together in ten points."
+    },
+    {
+     "t": 4488.957,
+     "d": 6.746,
+     "text": "One. Banks leak customer data through side doors: logs, vendors, backups and AI chatbots."
+    },
+    {
+     "t": 4496.503,
+     "d": 12.157,
+     "text": "Two. Pattern search drowns in false alarms. On real logs it raised 67,481 false OTP alarms. Aran raised 6."
+    },
+    {
+     "t": 4509.46,
+     "d": 8.001,
+     "text": "Three. Aran is a firewall for data. It sits at choke points, and swaps sensitive details for look-alike tokens."
+    },
+    {
+     "t": 4518.261,
+     "d": 11.017,
+     "text": "Four. Real Aadhaar and card numbers always pass their check digit. Aran's tokens always fail it. So protected and leaked numbers can be told apart."
+    },
+    {
+     "t": 4530.078,
+     "d": 5.529,
+     "text": "Five. Every destination gets its own tokens, so a leaked file names its leaker."
+    },
+    {
+     "t": 4536.407,
+     "d": 8.549,
+     "text": "Six. Detection works like a detective, combining clues into an honest probability, with AI for names and addresses."
+    },
+    {
+     "t": 4545.756,
+     "d": 5.069,
+     "text": "Seven. The leakage ledger stops the pieces of a number from being joined together."
+    },
+    {
+     "t": 4551.624,
+     "d": 7.308,
+     "text": "Eight. One key per customer, per purpose. Destroying the keys erases every copy, with a signed receipt."
+    },
+    {
+     "t": 4559.732,
+     "d": 5.197,
+     "text": "Nine. The immune layer spots strange behaviour, like an insider at 2 a.m."
+    },
+    {
+     "t": 4565.729,
+     "d": 5.295,
+     "text": "Ten. Hybrid, quantum-safe locks keep erasure permanent, even in the future."
+    }
+   ]
+  },
+  {
+   "id": "close",
+   "label": "Thank you",
+   "title": "Aran: protection you can prove",
+   "part": false,
+   "noHeader": true,
+   "start": 4572.824,
+   "end": 4595.634,
+   "cues": [
+    {
+     "t": 4573.824,
+     "d": 7.39,
+     "text": "Aran means fortress. Not a wall that stops the bank's work, but one that protects every customer inside it."
+    },
+    {
+     "t": 4582.014,
+     "d": 2.117,
+     "text": "Aran: protection you can prove."
+    },
+    {
+     "t": 4584.931,
+     "d": 6.73,
+     "text": "Built by Inbathamizhan S, Aasif Ahmed A, SN Arun Vijay and Bharadhwaj M, at KARE."
+    },
+    {
+     "t": 4592.46,
+     "d": 1.373,
+     "text": "Thank you for watching."
+    }
+   ]
+  }
+ ]
+}

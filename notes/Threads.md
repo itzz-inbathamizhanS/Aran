@@ -1,6 +1,6 @@
 ---
 tags: [index, threads]
-updated: 2026-10-19
+updated: 2026-10-20
 ---
 # Threads
 
@@ -27,7 +27,7 @@ Every project thread for Aran, oldest first.
 | 17 | [[17 Post-quantum cryptography]] | done (roadmap item 14, E17 to E19, Learn 14) |
 | 18 | [[18 UI design spec]] | done (full page-by-page design spec, Learn 15) |
 | 19 | [[19 Full project story]] | done (one explainer of the whole project, Markdown and PDF) |
-| 20 | [[20 Explainer video]] | done (24-minute animated video with voice-over and subtitles) |
+| 20 | [[20 Explainer video]] | done (v2: 76.6-minute full course in 6 parts; v1: 24-minute quick tour) |
 
 ## Decisions
 - All work happens locally in `D:\Aran`; nothing goes to GitHub until **save** or **push**.

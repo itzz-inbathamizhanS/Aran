@@ -1,0 +1,156 @@
+1
+00:00:01,005 --> 00:00:04,071
+Part five. How Aran was built and tested.
+
+2
+00:00:07,171 --> 00:00:18,184
+Most of the work happened in about 43 hours, from just after midnight on 16 October, to the evening of 17 October 2026.
+
+3
+00:00:18,684 --> 00:00:21,758
+First, the team lead set clear working rules.
+
+4
+00:00:22,258 --> 00:00:29,568
+Work locally on the laptop. Save every change under the lead's own name. And record everything in notes.
+
+5
+00:00:30,069 --> 00:00:37,614
+Before any new plan, the team gets beginner learning documents, one per topic. There are now 21 of them.
+
+6
+00:00:38,113 --> 00:00:44,487
+Every result is saved in the project's repository on GitHub, and linked from the main page.
+
+7
+00:00:44,987 --> 00:00:51,022
+A repository is a shared folder for code that remembers every change ever made.
+
+8
+00:00:51,523 --> 00:00:59,889
+In the first hour, the research document was written, along with a first working version and the first tests on real logs.
+
+9
+00:01:00,388 --> 00:01:06,331
+Next came the AI layer and the immune layer. Then the normaliser, and the bank's own lists.
+
+10
+00:01:06,831 --> 00:01:16,784
+On the afternoon of 16 October, a live website was built. A server runs the real firewall, and every number on screen comes from it.
+
+11
+00:01:17,284 --> 00:01:26,187
+Then came a guided tour with animation, 3D scenes, the leakage ledger, the AI gateway, red teaming, and quantum safety.
+
+12
+00:01:26,687 --> 00:01:31,094
+Finally, the team lead's own design became the real website.
+
+13
+00:01:31,593 --> 00:01:40,794
+Recap. Built in about 43 hours, with clear rules, learning documents for every topic, and every result saved and linked.
+
+14
+00:01:43,295 --> 00:01:47,189
+Aran was built by a team of four, working in two pairs.
+
+15
+00:01:47,689 --> 00:02:00,760
+Inbathamizhan S leads the project. With Aasif Ahmed A, the cybersecurity pair owns the tokens, the vault, erasure, the ledger, the immune layer and the quantum-safe locks.
+
+16
+00:02:01,260 --> 00:02:13,643
+SN Arun Vijay and Bharadhwaj M are the AI and machine learning pair. They own the name finder, the OTP and UPI model, and the honest probabilities.
+
+17
+00:02:14,143 --> 00:02:17,136
+The AI gateway is shared by both pairs.
+
+18
+00:02:17,636 --> 00:02:23,714
+Every topic has a beginner learning document, so any team member can understand any part.
+
+19
+00:02:24,214 --> 00:02:30,801
+All work is saved, with notes, in one shared place, so nothing depends on one person's memory.
+
+20
+00:02:31,301 --> 00:02:37,695
+Recap. Two pairs, cybersecurity and AI, with shared learning documents and shared notes.
+
+21
+00:02:40,195 --> 00:02:43,460
+Let us look at the live website, called the console.
+
+22
+00:02:43,960 --> 00:02:52,603
+Nothing on it is made up. Every number, token, receipt and alert comes from Aran's real code, running at that moment.
+
+23
+00:02:53,103 --> 00:03:00,813
+A guided tour walks through thirteen chapters, with real requests flying into Aran and coming out as tokens.
+
+24
+00:03:01,313 --> 00:03:08,715
+On the Without Aran and With Aran screen, the same requests play side by side, so you can see the difference.
+
+25
+00:03:09,214 --> 00:03:13,943
+In Beat the Firewall, judges scan a QR code with their own phones.
+
+26
+00:03:14,444 --> 00:03:22,598
+They try to sneak an Aadhaar, a card or a mobile number past Aran, by typing it, pasting it, or even speaking it.
+
+27
+00:03:23,098 --> 00:03:27,335
+A live scoreboard shows every attempt, and whether Aran caught it.
+
+28
+00:03:27,835 --> 00:03:34,549
+On the card scan page, Aran reads a sample ID card photo, and covers the numbers on it.
+
+29
+00:03:35,049 --> 00:03:41,973
+A My Data page shows a customer, on a phone, where their data went, and lets them ask for erasure.
+
+30
+00:03:42,473 --> 00:03:47,810
+The site also speaks Tamil and Hindi, and has a presenter mode for giving the demo.
+
+31
+00:03:48,310 --> 00:03:55,826
+Recap. The live console runs Aran's real code, and judges can try to beat it from their own phones.
+
+32
+00:03:58,326 --> 00:04:04,233
+Good research is honest about what is real, what is generated, and what is simulated.
+
+33
+00:04:04,733 --> 00:04:18,332
+Real: the Loghub logs, 32,000 lines from 16 real systems. Real public collections of names in English, Hindi and Hinglish. And real public text messages.
+
+34
+00:04:18,832 --> 00:04:28,102
+Generated: every Aadhaar, card, PAN, mobile, OTP and UPI value. They follow every rule, but belong to no one.
+
+35
+00:04:28,601 --> 00:04:34,548
+Simulated: the bank's data flows for the immune layer, because no bank publishes them.
+
+36
+00:04:35,048 --> 00:04:41,273
+Also simulated: the quantum attack, because no big enough quantum computer exists yet.
+
+37
+00:04:41,772 --> 00:04:47,091
+Every result comes from a script that anyone can run again, to get the same numbers.
+
+38
+00:04:47,592 --> 00:04:52,895
+The team ran nineteen experiments in total, numbered E1 to E19.
+
+39
+00:04:53,395 --> 00:05:01,042
+Recap. Real logs, made-up numbers, simulated flows, and every result can be checked again by anyone.
+
