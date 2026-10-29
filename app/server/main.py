@@ -4,7 +4,7 @@ import sys
 import threading
 import time
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -39,6 +39,13 @@ def eng():
     if not READY.is_set():
         raise HTTPException(503, LOAD_ERROR or "Aran is loading its models, try again in a few seconds")
     return ENG
+
+
+def _check_admin(token_header: str | None):
+    admin_token = os.environ.get("ARAN_ADMIN_TOKEN")
+    if admin_token and token_header != admin_token:
+        raise HTTPException(401, "unauthorized")
+
 
 
 # ---------------------------------------------------------------- models
@@ -164,7 +171,8 @@ def detokenise(body: DetokIn):
 
 
 @app.post("/api/erase")
-def erase(body: EraseIn):
+def erase(body: EraseIn, x_admin_token: str | None = Header(None)):
+    _check_admin(x_admin_token)
     e = eng()
     try:
         return e.erase(body.customer_ref, body.purpose)
@@ -267,7 +275,8 @@ JOBS = {"tests": [sys.executable, "-m", "pytest", "-q", "test_core.py", "test_re
 
 
 @app.post("/api/jobs/{name}")
-def start_job(name: str):
+def start_job(name: str, x_admin_token: str | None = Header(None)):
+    _check_admin(x_admin_token)
     e = eng()
     if name not in JOBS:
         raise HTTPException(404, "unknown job")

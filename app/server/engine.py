@@ -11,6 +11,7 @@ never be used outside a bank.
 """
 import glob
 import json
+import logging
 import math
 import os
 import pickle
@@ -112,6 +113,15 @@ class Engine:
         for _ in range(n_customers):
             self.add_customer()
         self.load_seconds = round(time.time() - t0, 1)
+        if self.replay.logs:
+            def _auto_learn():
+                secs = int(os.environ.get("ARAN_LEARN_SECONDS", "75"))
+                self.immune.start_learning(secs)
+                if not self.replay.running:
+                    self.replay.start(self.replay.rate)
+            threading.Thread(target=_auto_learn, daemon=True).start()
+        else:
+            logging.warning("Log data missing in %s; skipping immune auto-learning", LOGS_DIR)
 
     # ------------------------------------------------------------ customers
     def add_customer(self, name=None):
@@ -217,8 +227,30 @@ class Engine:
                 self.counts["values_raw"] += raw_left
                 for f in findings:
                     self.by_type[f["type"]] += 1
+            notes = []
+            for m in re.finditer(r"(?<!\d)(?<!\d\.)(?:\d[ -]?){9,15}\d(?!\d|\.\d)", text):
+                raw_seq = m.group(0)
+                d = re.sub(r"\D", "", raw_seq)
+                if len(d) not in (10, 12, 16):
+                    continue
+                if any(f["protected"] and not (m.end() <= f["start"] or m.start() >= f["end"]) for f in findings):
+                    continue
+                failed = False
+                if len(d) == 12:
+                    failed = not verhoeff_valid(d)
+                elif len(d) == 16:
+                    failed = not luhn_valid(d)
+                elif len(d) == 10:
+                    failed = not luhn_valid(d)
+                if failed:
+                    digits_pos = [i for i, c in enumerate(raw_seq) if c.isdigit()]
+                    keep = set(digits_pos[-4:])
+                    masked = "".join(c if i in keep or not c.isdigit() else "X" for i, c in enumerate(raw_seq))
+                    note = f"{masked} looks like an ID but fails the Aadhaar/Luhn checksum, so Aran treats it as not a real identifier."
+                    if note not in notes:
+                        notes.append(note)
             ev = dict(id=secrets.token_hex(6), at=time.time(), source=source, sink=sink, before=text, after=out,
-                      latency_ms=round(ms, 2), findings=findings, bypass=sink in self.bypass, trace_id=trace_id)
+                      latency_ms=round(ms, 2), findings=findings, notes=notes, bypass=sink in self.bypass, trace_id=trace_id)
             self.sink_store[sink].append(out)
             if record:
                 self.events.appendleft(ev)

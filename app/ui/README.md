@@ -2,7 +2,7 @@
 
 This is Aran's main web console. It started as a static HTML/CSS/JS design (Trionn-style 3D look: near-black `#040508`, mono labels, glass lines, rolling-letter links, GSAP word reveals, Lenis smooth scroll, a WebGL line-field hero with **hold-to-blast** and procedural sound) and is now wired to the real Aran API: every number, token, receipt and alert on screen comes from the server.
 
-There is no build step. The FastAPI server in `app/server` serves this folder at `/`; the earlier React console stays at `/classic`.
+There is no build step. The FastAPI server in `app/server` serves this folder at `/`.
 
 ## Open it
 
