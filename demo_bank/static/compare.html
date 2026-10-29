@@ -170,7 +170,10 @@
           <span class="brand-badge brand-aran">BANK B: ARAN SECURE</span>
           <span style="font-size: 0.85rem; color: var(--text-muted); margin-left: 0.5rem;">Port 9002 (Active Firewall & Vault)</span>
         </div>
-        <button class="btn btn-sample btn-sm" onclick="reloadFrame('frame-b')">Reload Bank B</button>
+        <div style="display: flex; gap: 0.5rem;">
+          <a href="http://127.0.0.1:8100/dashboard" target="_blank" class="btn btn-primary btn-sm" style="text-decoration: none;">⚡ Open Aran Cloud Dashboard</a>
+          <button class="btn btn-sample btn-sm" onclick="reloadFrame('frame-b')">Reload Bank B</button>
+        </div>
       </div>
       <iframe id="frame-b" src="http://127.0.0.1:9002/"></iframe>
     </div>

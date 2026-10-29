@@ -110,7 +110,20 @@ def aran_headers(admin: bool = False) -> dict:
 
 
 def call_aran(method: str, endpoint: str, json_data: dict = None, admin: bool = False, timeout: float = 10.0):
-    url = f"{ARAN_URL}{endpoint}"
+    # Compatibility switch: map core endpoints to Aran Cloud (/v1) when pointing to port 8100
+    actual_endpoint = endpoint
+    if "8100" in ARAN_URL or "/v1" in ARAN_URL:
+        cloud_map = {
+            "/api/process": "/v1/protect",
+            "/api/tour/gateway": "/v1/gateway",
+            "/api/detokenise": "/v1/detokenise",
+            "/api/erase": "/v1/erase",
+            "/api/receipts/verify": "/v1/receipts/verify",
+            "/api/trace": "/v1/trace",
+        }
+        actual_endpoint = cloud_map.get(endpoint, endpoint)
+
+    url = f"{ARAN_URL}{actual_endpoint}"
     headers = aran_headers(admin=admin)
     try:
         if method.upper() == "GET":
@@ -126,7 +139,7 @@ def call_aran(method: str, endpoint: str, json_data: dict = None, admin: bool = 
                 err_msg = err.response.json().get("detail", err.response.text)
             except Exception:
                 err_msg = err.response.text
-        raise HTTPException(status_code=502, detail=f"Aran call {endpoint} failed: {err_msg}")
+        raise HTTPException(status_code=502, detail=f"Aran call {actual_endpoint} failed: {err_msg}")
 
 
 # ---------------------------------------------------------------- models
@@ -177,15 +190,22 @@ def get_config():
 @app.get("/api/sample-customer")
 def get_sample_customer():
     """Fetches checksum-valid sample credentials from Aran tour endpoint and adds a typical Indian name."""
+    sample = None
     try:
         sample = call_aran("GET", "/api/tour/generate")
     except Exception:
-        # Fallback if Aran is unreachable
-        sample = {
-            "aadhaar": "895760490870",
-            "card": "4532015112830366",
-            "mobile": "9876543210",
-        }
+        pass
+
+    if not sample:
+        try:
+            r = requests.get("http://127.0.0.1:8000/api/tour/generate", timeout=3)
+            sample = r.json()
+        except Exception:
+            sample = {
+                "aadhaar": "895760490870",
+                "card": "4532015112830366",
+                "mobile": "9876543210",
+            }
     sample["name"] = secrets.choice(SAMPLE_NAMES)
     sample["note"] = "Use sample data only. Never submit real financial credentials."
     return sample
@@ -226,15 +246,11 @@ def register_customer(body: CustomerIn):
 
     if BANK_MODE == "aran":
         # Amendment A2: send name, mobile, Aadhaar and card in ONE POST /api/process call
-        # Include synthetic individual PAN (4th letter 'P') to prevent Aran engine KeyError: 'PAN' on KYC erasure
-        letters = "ABCDEFGHJKLMNPQRSTUVWXYZ"
-        synth_pan = f"{secrets.choice(letters)}{secrets.choice(letters)}{secrets.choice(letters)}P{secrets.choice(letters)}{secrets.randbelow(9000)+1000}{secrets.choice(letters)}"
         payload_dict = {
             "name": name,
             "mobile": mobile,
             "aadhaar": aadhaar,
             "card": card,
-            "pan": synth_pan,
         }
         process_payload = {
             "text": json.dumps(payload_dict),

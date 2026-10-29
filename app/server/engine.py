@@ -310,7 +310,8 @@ class Engine:
             receipt = self.vault.erase(ref, purpose)
             if purpose == "KYC" or all(not k["alive"] for k in self.vault.key_status(ref)):
                 for t in ("AADHAAR", "CARD", "MOBILE", "PAN"):
-                    self.registry.remove(t, self.customers[ref][t])
+                    if t in self.customers[ref]:
+                        self.registry.remove(t, self.customers[ref][t])
             return receipt
 
     # ------------------------------------------------------------ leak trace
