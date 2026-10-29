@@ -95,12 +95,13 @@ class Engine:
         self.det.stack, self.det.iso = base.stack, base.iso
         self.vault = PurposeVault()
         self.fw = _IndexingFirewall(self.det, self.key, self.vault, {s: p for s, (p, _) in SINKS.items()},
-                                    thresholds={s: t for s, (_, t) in SINKS.items()})
+                                    thresholds={s: t for s, (_, t) in SINKS.items()}, eng=self)
         self.ff1 = FF1(self.key)
         self.lock = threading.RLock()
         self.rand = random.Random(seed if seed is not None else secrets.randbits(64))
         self.started = time.time()
         self.customers = {}
+        self.dynamic_customers = set()
         self.events = deque(maxlen=300)
         self.sink_store = defaultdict(lambda: deque(maxlen=500))  # what each sink actually received
         self.latency_ms = deque(maxlen=2000)
@@ -144,9 +145,17 @@ class Engine:
 
     def customer_view(self, ref):
         c = self.customers[ref]
-        masked = dict(AADHAAR="XXXX XXXX " + c["AADHAAR"][-4:], CARD="XXXX XXXX XXXX " + c["CARD"][-4:],
-                      MOBILE="XXXXXX" + c["MOBILE"][-4:], PAN=c["PAN"][:2] + "XXXXXX" + c["PAN"][-2:])
-        return dict(ref=ref, name=c["name"], masked=masked, keys=self.vault.key_status(ref))
+        aad = c.get("AADHAAR", "")
+        card = c.get("CARD", "")
+        mob = c.get("MOBILE", "")
+        pan = c.get("PAN", "")
+        masked = dict(
+            AADHAAR="XXXX XXXX " + aad[-4:] if aad else "–",
+            CARD="XXXX XXXX XXXX " + card[-4:] if card else "–",
+            MOBILE="XXXXXX" + mob[-4:] if mob else "–",
+            PAN=pan[:2] + "XXXXXX" + pan[-2:] if len(pan) >= 4 else "–"
+        )
+        return dict(ref=ref, name=c.get("name", ref), masked=masked, keys=self.vault.key_status(ref))
 
     # ------------------------------------------------------------ requests
     def sample(self, kind, who="customer", ref=None):
@@ -188,20 +197,34 @@ class Engine:
             raise KeyError(kind)
         return dict(text=text, sink=SAMPLE_SINK[kind], source=SAMPLE_SOURCE[kind], trace_id=trace)
 
-    def process(self, text, source, sink, trace_id=None, record=True, observe=True):
+    def process(self, text, source, sink, trace_id=None, record=True, observe=True,
+                customer_ref=None, purpose=None):
         if sink not in SINKS and not re.fullmatch(r"[a-z0-9][a-z0-9.\-]{1,60}", sink):
             raise ValueError("sink names are lower-case letters, digits, dots and dashes")
         with self.lock:
+            if customer_ref is not None:
+                if customer_ref not in self.customers:
+                    self.dynamic_customers.add(customer_ref)
+                    self.vault.enroll(customer_ref, {})
+                    self.customers[customer_ref] = dict(ref=customer_ref, name=customer_ref, created=time.time())
             t0 = time.perf_counter()
-            if sink in self.bypass:
-                fs = self.det.scan(text, threshold=0.2, trace_id=trace_id)
-                out, issued = text, []
-                for f in fs:
-                    f.meta["passed_raw"] = True
-            else:
-                self.fw.issued_now = []
-                out, fs = self.fw.process(text, src=source, sink=sink, trace_id=trace_id)
-                issued = self.fw.issued_now
+            self.fw.conflicts = set()
+            self.fw.conflict_notes = []
+            self.fw._current_customer_ref = customer_ref
+            self.fw._current_purpose = purpose
+            try:
+                if sink in self.bypass:
+                    fs = self.det.scan(text, threshold=0.2, trace_id=trace_id)
+                    out, issued = text, []
+                    for f in fs:
+                        f.meta["passed_raw"] = True
+                else:
+                    self.fw.issued_now = []
+                    out, fs = self.fw.process(text, src=source, sink=sink, trace_id=trace_id)
+                    issued = self.fw.issued_now
+            finally:
+                self.fw._current_customer_ref = None
+                self.fw._current_purpose = None
             ms = (time.perf_counter() - t0) * 1000
             thr = SINKS.get(sink, ("", 0.5))[1]
             findings = []
@@ -215,6 +238,18 @@ class Engine:
                     if fd.get("token") is None and fd["type"] == typ and fd["protected"]:
                         fd["token"] = tok
                         break
+            for fd in findings:
+                tok = fd.get("token")
+                is_vault = tok in self.vault.vault if tok else False
+                fd["erasable"] = is_vault
+                if is_vault:
+                    ve = self.vault.vault[tok]
+                    fd["customer_ref"] = ve["customer"]
+                    fd["purpose"] = ve["purpose"]
+                else:
+                    fd["customer_ref"] = None
+                    fd["purpose"] = None
+                fd["owner_conflict"] = fd["start"] in self.fw.conflicts
             raw_left = sum(1 for f in findings if not f["protected"])
             owners = {self.vault.owner_of(f["type"], text[f["start"]:f["end"]]) for f in findings}
             owners.discard(None)
@@ -227,7 +262,7 @@ class Engine:
                 self.counts["values_raw"] += raw_left
                 for f in findings:
                     self.by_type[f["type"]] += 1
-            notes = []
+            notes = list(self.fw.conflict_notes)
             for m in re.finditer(r"(?<!\d)(?<!\d\.)(?:\d[ -]?){9,15}\d(?!\d|\.\d)", text):
                 raw_seq = m.group(0)
                 d = re.sub(r"\D", "", raw_seq)
@@ -343,12 +378,29 @@ class Engine:
 class _IndexingFirewall(PurposeFirewall):
     """Records every token it issues, so a leaked dump can be traced back."""
 
-    def __init__(self, *a, **kw):
+    def __init__(self, *a, eng=None, **kw):
         super().__init__(*a, **kw)
+        self.eng = eng
         self.index, self.issued_now = {}, []
+        self._current_purpose = None
+        self._current_customer_ref = None
+        self.conflicts = set()
+        self.conflict_notes = []
 
-    def _replace(self, f, value, sink):
-        tok = super()._replace(f, value, sink)
+    def _replace(self, f, value, sink, purpose=None):
+        purpose = purpose or self._current_purpose
+        if self._current_customer_ref and f.type in ("AADHAAR", "CARD", "MOBILE", "PAN", "UPI"):
+            existing_owner = self.vault.owner_of(f.type, value)
+            if existing_owner is None:
+                self.vault.owner[self.vault._owner_key(f.type, value)] = self._current_customer_ref
+                if self.eng and self._current_customer_ref in self.eng.customers:
+                    self.eng.customers[self._current_customer_ref][f.type] = value
+            elif existing_owner != self._current_customer_ref:
+                self.conflicts.add(f.start)
+                note = "owner_conflict: this identifier is already enrolled under another customer; token issued under the original owner."
+                if note not in self.conflict_notes:
+                    self.conflict_notes.append(note)
+        tok = super()._replace(f, value, sink, purpose=purpose)
         if tok not in ("<OTP:destroyed>",) and "withheld" not in tok:
             self.index[tok] = sink
         self.issued_now.append((tok, f.type, value))

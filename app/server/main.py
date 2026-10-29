@@ -1,5 +1,6 @@
 """Aran console API. Run: uvicorn main:app --port 8000 (from app/server)."""
 import os
+import re
 import sys
 import threading
 import time
@@ -54,6 +55,8 @@ class ProcessIn(BaseModel):
     source: str = "console"
     sink: str = "log-platform"
     trace_id: str | None = None
+    customer_ref: str | None = None
+    purpose: str | None = None
 
 
 class SampleIn(BaseModel):
@@ -117,8 +120,17 @@ def stats():
 
 @app.post("/api/process")
 def process(body: ProcessIn):
+    e = eng()
+    if body.customer_ref is not None:
+        if not re.fullmatch(r"^[A-Za-z0-9_-]{1,64}$", body.customer_ref):
+            raise HTTPException(422, "customer_ref must contain only letters, numbers, underscores and dashes (1-64 characters)")
+    if body.purpose is not None and body.purpose not in E.PURPOSES:
+        raise HTTPException(422, f"purpose must be one of {', '.join(E.PURPOSES)}")
+    if body.customer_ref and body.customer_ref not in e.customers and len(e.dynamic_customers) >= 10000:
+        raise HTTPException(429, "Dynamic customer enrolment limit reached (10,000 customers)")
     try:
-        return eng().process(body.text, body.source, body.sink, body.trace_id)
+        return e.process(body.text, body.source, body.sink, body.trace_id,
+                         customer_ref=body.customer_ref, purpose=body.purpose)
     except ValueError as err:
         raise HTTPException(400, str(err))
 

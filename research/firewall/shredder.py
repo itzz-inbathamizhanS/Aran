@@ -284,8 +284,8 @@ class PurposeFirewall(AranFirewall):
         super().__init__(detector, key, **kw)
         self.vault, self.sink_purpose = vault, sink_purpose
 
-    def _replace(self, f, value, sink):
-        purpose = self.sink_purpose.get(sink)
+    def _replace(self, f, value, sink, purpose=None):
+        purpose = purpose or self.sink_purpose.get(sink)
         if purpose and f.type in ("AADHAAR", "CARD", "MOBILE", "PAN", "UPI"):
             cust = self.vault.owner_of(f.type, value)
             if cust is not None:
