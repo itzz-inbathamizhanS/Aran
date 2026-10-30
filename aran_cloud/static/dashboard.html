@@ -2,183 +2,258 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - Aran Cloud (preview)</title>
+  <link rel="stylesheet" href="/static/css/tokens.css">
   <link rel="stylesheet" href="/static/css/cloud.css">
-  <style>
-    .bar-row {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      margin-bottom: 0.75rem;
-    }
-    .bar-label {
-      width: 140px;
-      font-size: 0.9rem;
-      color: var(--text-muted);
-      text-overflow: ellipsis;
-      overflow: hidden;
-      white-space: nowrap;
-    }
-    .bar-track {
-      flex: 1;
-      height: 12px;
-      background: #080D1A;
-      border-radius: 9999px;
-      overflow: hidden;
-      border: 1px solid var(--border-card);
-    }
-    .bar-fill {
-      height: 100%;
-      background: var(--accent-teal);
-      border-radius: 9999px;
-      transition: width 0.5s ease;
-    }
-    .bar-count {
-      width: 50px;
-      text-align: right;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.9rem;
-      font-weight: 700;
-    }
-  </style>
 </head>
 <body>
+  <!-- Progressive Blur overlay (Aran Cloud top edge atmospheric depth) -->
+  <div class="gradient-blur" aria-hidden="true">
+    <div></div><div></div><div></div><div></div>
+  </div>
+
+  <!-- Navigation Bar -->
   <nav>
     <a href="/" class="brand-logo">
-      <span>⚡</span> ARAN CLOUD
+      <span class="brand-mark">⚡</span> ARAN CLOUD
     </a>
     <div class="nav-links">
       <span class="pill-preview">PREVIEW</span>
       <a href="/connect" class="nav-link">Quick Connect</a>
       <a href="/dashboard" class="nav-link active">Dashboard</a>
+      <button class="btn-projector" id="toggle-projector" title="High-contrast projector mode">
+        <span>📺</span> <span id="projector-label">Projector Mode: OFF</span>
+      </button>
     </div>
   </nav>
 
-  <div class="container">
-    <!-- Header -->
-    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem; border-bottom: 1px solid var(--border-card); padding-bottom: 1.25rem;">
-      <div>
-        <h1 style="font-size: 2.2rem; font-weight: 800; display: flex; align-items: center; gap: 0.75rem;">
-          <span id="header-ws-name">Demo Bank Workspace</span>
-          <span class="pill-token" style="font-size: 0.8rem; vertical-align: middle;">PROTECTED</span>
-        </h1>
-        <div style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0.25rem;">
-          Tenant ID: <span class="mono" id="header-ws-id">t_...</span> | Plan: <span style="color: var(--accent-teal); font-weight: 700;">Free Developer (10,000 req/mo)</span>
+  <!-- Layout Container with Container Lines Guide System -->
+  <main class="container-lines">
+    <div class="container">
+      
+      <!-- Header with Status Rail & Corner Markers -->
+      <header class="corner-squares" style="border-bottom: 1px solid var(--border-hairline); padding-bottom: var(--space-6); margin-bottom: var(--space-8);">
+        <span class="corner top-left"></span>
+        <span class="corner top-right"></span>
+        <span class="corner bottom-left"></span>
+        <span class="corner bottom-right"></span>
+
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: var(--space-4);">
+          <div>
+            <div style="display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-2);">
+              <h1 id="header-ws-name" style="font-size: var(--text-3xl); font-weight: 800; letter-spacing: -0.02em; color: var(--text-contrast);">
+                Demo Bank Workspace
+              </h1>
+              <span class="pill-token">PROTECTED</span>
+              <span class="beam-live" style="margin-left: var(--space-2);">
+                <span class="beam-dot"></span> LIVE AUDIT
+              </span>
+            </div>
+            <div style="color: var(--text-muted); font-size: var(--text-base); display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;">
+              <span>Tenant: <span class="mono" id="header-ws-id" style="color: var(--text-contrast); font-weight: 600;">t_...</span></span>
+              <span style="color: var(--border-strong);">|</span>
+              <span>Plan: <span style="color: var(--accent-teal); font-weight: 700;">Free Developer (10,000 req/mo)</span></span>
+            </div>
+          </div>
+          <div>
+            <button class="btn btn-secondary btn-sm" id="btn-refresh-now">
+              <span>↻</span> Refresh Metrics
+            </button>
+          </div>
         </div>
-      </div>
-      <div>
-        <button class="btn btn-secondary btn-sm" id="btn-refresh-now">Refresh Metrics</button>
-      </div>
-    </div>
+      </header>
 
-    <!-- 4 Metric Tiles -->
-    <div class="tile-grid">
-      <div class="tile">
-        <div class="tile-title">Identifiers Protected</div>
-        <div class="tile-value" id="val-protected" style="color: var(--token-green);">0</div>
-        <div class="tile-sub" id="sub-by-type">Breakdown: loading...</div>
-      </div>
-      <div class="tile">
-        <div class="tile-title">Passed unprotected</div>
-        <div class="tile-value" id="val-unprotected" style="color: #60A5FA;">0</div>
-        <div class="tile-sub">Names and addresses are best effort.</div>
-      </div>
-      <div class="tile">
-        <div class="tile-title">Latency (p95 / p50)</div>
-        <div class="tile-value" id="val-latency" style="color: #FBBF24;">0.0ms</div>
-        <div class="tile-sub">Deterministic inline processing</div>
-      </div>
-      <div class="tile">
-        <div class="tile-title">Verified Erasure Receipts</div>
-        <div class="tile-value" id="val-receipts" style="color: #C084FC;">0</div>
-        <div class="tile-sub">Ed25519 + ML-DSA-65 PQ signed</div>
-      </div>
-    </div>
+      <!-- 4 Metric Tiles with CSS Border Gradient & Tabular Figures -->
+      <section class="tile-grid" aria-label="Key Security Metrics">
+        
+        <!-- Tile 1: Protected Identifiers (Green - Strictly tokens) -->
+        <article class="tile">
+          <div class="tile-header">
+            <span class="tile-title">Identifiers Protected</span>
+            <span class="num-detail">01</span>
+          </div>
+          <div class="tile-value" id="val-protected" style="color: var(--token-green);">0</div>
+          <div class="tile-sub" id="sub-by-type">Breakdown: loading...</div>
+        </article>
 
-    <!-- Usage Bar & Token Sinks Grid -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
-      <!-- Usage Meter -->
-      <div class="card" style="margin-bottom: 0;">
+        <!-- Tile 2: Passed Unprotected (Neutral / Text-contrast, strictly no decorative red/green) -->
+        <article class="tile">
+          <div class="tile-header">
+            <span class="tile-title">Passed unprotected</span>
+            <span class="num-detail">02</span>
+          </div>
+          <div class="tile-value" id="val-unprotected" style="color: var(--text-contrast);">0</div>
+          <div class="tile-sub">
+            <div><span id="val-ignored" class="mono" style="font-weight: 700; color: var(--text-contrast);">0</span> not valid IDs (ignored)</div>
+            <div style="font-size: var(--text-xs); color: var(--text-dim); margin-top: 3px;">Names and addresses are best effort.</div>
+          </div>
+        </article>
+
+        <!-- Tile 3: Processing Latency (Teal UI accent) -->
+        <article class="tile">
+          <div class="tile-header">
+            <span class="tile-title">Latency (p95 / p50)</span>
+            <span class="num-detail">03</span>
+          </div>
+          <div class="tile-value" id="val-latency" style="color: var(--accent-teal);">0.0ms</div>
+          <div class="tile-sub">Deterministic inline processing</div>
+        </article>
+
+        <!-- Tile 4: Erasure Receipts (Teal UI accent) -->
+        <article class="tile">
+          <div class="tile-header">
+            <span class="tile-title">Verified Erasure Receipts</span>
+            <span class="num-detail">04</span>
+          </div>
+          <div class="tile-value" id="val-receipts" style="color: var(--text-contrast);">0</div>
+          <div class="tile-sub">Ed25519 + ML-DSA-65 PQ signed</div>
+        </article>
+
+      </section>
+
+      <!-- Usage Quota & Token Destination Sinks -->
+      <section style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); margin-bottom: var(--space-8);">
+        
+        <!-- Card 1: Quota Meter -->
+        <div class="card" style="margin-bottom: 0;">
+          <h2>
+            <span>Monthly Quota Meter</span>
+            <span class="mono" id="usage-text" style="font-size: var(--text-sm); color: var(--accent-teal); font-weight: 700;">0 / 10,000 (0%)</span>
+          </h2>
+          <div class="bar-track" style="height: 18px; margin: var(--space-6) 0 var(--space-4) 0;">
+            <div class="bar-fill" id="usage-progress" style="width: 0%;"></div>
+          </div>
+          <div style="font-size: var(--text-sm); color: var(--text-muted); line-height: 1.5;">
+            Requests renew on the 1st of every month. Upgrades to dedicated Enterprise vaults available upon request.
+          </div>
+        </div>
+
+        <!-- Card 2: Sinks Chart -->
+        <div class="card" style="margin-bottom: 0;">
+          <h2>
+            <span>Where Tokens Went (by Target Sink)</span>
+            <span class="num-detail">AUDIT SINK</span>
+          </h2>
+          <div id="sinks-chart" style="margin-top: var(--space-4);">
+            <div style="color: var(--text-dim); text-align: center; padding: var(--space-6);">No sink traffic recorded yet</div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Live Activity Feed Table -->
+      <section class="card">
         <h2>
-          <span>Monthly Quota Meter</span>
-          <span class="mono" id="usage-text" style="font-size: 0.95rem; color: var(--accent-teal);">0 / 10,000 (0%)</span>
+          <div style="display: flex; align-items: center; gap: var(--space-3);">
+            <span>Live Activity Feed</span>
+            <span class="beam-live">
+              <span class="beam-dot"></span> Polling 2s
+            </span>
+          </div>
+          <span style="font-size: var(--text-sm); color: var(--text-muted); font-weight: 400;">
+            Real-time tenant-isolated audit log
+          </span>
         </h2>
-        <div class="bar-track" style="height: 18px; margin: 1.5rem 0 1rem 0;">
-          <div class="bar-fill" id="usage-progress" style="width: 0%;"></div>
+        <div class="table-container" style="max-height: 320px;">
+          <table id="table-activity">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Endpoint</th>
+                <th>Destination Sink</th>
+                <th>Protected Findings</th>
+                <th>Customer Ref</th>
+                <th>Latency</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="7" style="text-align: center; color: var(--text-dim); padding: var(--space-6);">Awaiting traffic...</td></tr>
+            </tbody>
+          </table>
         </div>
-        <div style="font-size: 0.85rem; color: var(--text-dim);">
-          Requests renew at the first of every month. Upgrades to dedicated Enterprise vaults available upon request.
+      </section>
+
+      <!-- Verified Erasure Receipts Table -->
+      <section class="card">
+        <h2>
+          <span>Cryptographic Erasure Receipts (DPDP Section 12)</span>
+          <span class="pill-preview">RFC 6962 LOGGED</span>
+        </h2>
+        <div class="table-container">
+          <table id="table-receipts">
+            <thead>
+              <tr>
+                <th>Customer Ref</th>
+                <th>Purpose Key Destroyed</th>
+                <th>Post-Quantum Algorithm</th>
+                <th>Receipt Leaf Root</th>
+                <th>Verification Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="5" style="text-align: center; color: var(--text-dim); padding: var(--space-6);">No purpose keys shredded yet</td></tr>
+            </tbody>
+          </table>
         </div>
-      </div>
+      </section>
 
-      <!-- Sinks Bar Chart -->
-      <div class="card" style="margin-bottom: 0;">
-        <h2>Where Tokens Went (by Target Sink)</h2>
-        <div id="sinks-chart" style="margin-top: 1rem;">
-          <div style="color: var(--text-dim); text-align: center; padding: 1.5rem;">No sink traffic recorded yet</div>
-        </div>
-      </div>
     </div>
+  </main>
 
-    <!-- Live Activity Feed -->
-    <div class="card">
-      <h2>
-        <span>Live Activity Feed (Polling every 2s)</span>
-        <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 400;">Real-time tenant-isolated audit log</span>
-      </h2>
-      <div class="table-container" style="max-height: 300px;">
-        <table id="table-activity">
-          <thead>
-            <tr>
-              <th>Timestamp</th>
-              <th>Endpoint</th>
-              <th>Destination Sink</th>
-              <th>Protected Findings</th>
-              <th>Customer Ref</th>
-              <th>Latency</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td colspan="7" style="text-align: center; color: var(--text-dim);">Awaiting traffic...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Verified Erasure Receipts Table -->
-    <div class="card">
-      <h2>
-        <span>Cryptographic Erasure Receipts (DPDP Section 12)</span>
-        <span class="pill-preview">RFC 6962 LOGGED</span>
-      </h2>
-      <div class="table-container">
-        <table id="table-receipts">
-          <thead>
-            <tr>
-              <th>Customer Ref</th>
-              <th>Purpose Key Destroyed</th>
-              <th>Post-Quantum Algorithm</th>
-              <th>Receipt Leaf Root</th>
-              <th>Verification Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td colspan="5" style="text-align: center; color: var(--text-dim);">No purpose keys shredded yet</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
+  <!-- Footer (Preserved exactly as required) -->
   <footer>
     Aran Cloud (preview): separate keys, namespaces, metering and dashboards. Per-tenant engines and persistent vault storage are the next milestone.
   </footer>
 
   <script>
+    // ========================================================================
+    // Projector Mode Toggle with sessionStorage persistence
+    // ========================================================================
+    (function initProjectorMode() {
+      const btn = document.getElementById('toggle-projector');
+      const label = document.getElementById('projector-label');
+
+      let isProjector = false;
+      try {
+        isProjector = sessionStorage.getItem('aran_projector_mode') === 'true';
+      } catch (e) {
+        console.warn('sessionStorage unavailable for projector mode:', e);
+      }
+
+      function applyMode(active) {
+        if (active) {
+          document.documentElement.classList.add('projector-mode');
+          document.body.classList.add('projector-mode');
+          btn.classList.add('active');
+          label.innerText = 'Projector Mode: ON';
+        } else {
+          document.documentElement.classList.remove('projector-mode');
+          document.body.classList.remove('projector-mode');
+          btn.classList.remove('active');
+          label.innerText = 'Projector Mode: OFF';
+        }
+      }
+
+      applyMode(isProjector);
+
+      btn.addEventListener('click', () => {
+        isProjector = !isProjector;
+        try {
+          sessionStorage.setItem('aran_projector_mode', isProjector ? 'true' : 'false');
+        } catch (e) {
+          console.warn('Failed to save projector mode in sessionStorage:', e);
+        }
+        applyMode(isProjector);
+      });
+    })();
+
+    // ========================================================================
+    // Dashboard Data Fetch & Render
+    // ========================================================================
     let activeKey = localStorage.getItem('aran_api_key') || '';
 
-    // If key missing, prompt user
     if (!activeKey) {
       activeKey = prompt('Please enter your Aran Cloud API key to load your dashboard:');
       if (activeKey) {
@@ -215,13 +290,21 @@
       document.getElementById('header-ws-name').innerText = t.name;
       document.getElementById('header-ws-id').innerText = t.id;
 
+      // Metric 1: Protected Identifiers (Green - tokens)
       document.getElementById('val-protected').innerText = m.identifiers_protected;
       const typeStr = Object.entries(m.by_type || {}).map(([k,v]) => `${k}: ${v}`).join(' | ');
       document.getElementById('sub-by-type').innerText = typeStr ? `Breakdown: ${typeStr}` : 'Active tokenisation';
 
+      // Metric 2: Passed Unprotected (Split into real unprot + ignored checksum failures)
       const unprotVal = (m.passed_unprotected !== undefined) ? m.passed_unprotected : (m.raw_values_passed || 0);
-      const elUnprot = document.getElementById('val-unprotected') || document.getElementById('val-leaked');
+      const elUnprot = document.getElementById('val-unprotected');
       if (elUnprot) elUnprot.innerText = unprotVal;
+
+      const ignoredVal = (m.not_valid_ids_ignored !== undefined) ? m.not_valid_ids_ignored : (m.ignored_checksum_count || 0);
+      const elIgnored = document.getElementById('val-ignored');
+      if (elIgnored) elIgnored.innerText = ignoredVal;
+
+      // Metric 3 & 4
       document.getElementById('val-latency').innerText = `${m.p95_ms}ms / ${m.p50_ms}ms`;
       document.getElementById('val-receipts').innerText = m.receipts_count;
 
@@ -233,7 +316,7 @@
       const sc = document.getElementById('sinks-chart');
       const sinks = Object.entries(m.destinations || {});
       if (sinks.length === 0) {
-        sc.innerHTML = '<div style="color: var(--text-dim); text-align: center; padding: 1.5rem;">No sink traffic recorded yet</div>';
+        sc.innerHTML = '<div style="color: var(--text-dim); text-align: center; padding: var(--space-6);">No sink traffic recorded yet</div>';
       } else {
         const maxVal = Math.max(...sinks.map(([_, v]) => v), 1);
         sc.innerHTML = sinks.map(([k, v]) => `
@@ -242,7 +325,7 @@
             <div class="bar-track">
               <div class="bar-fill" style="width: ${(v / maxVal) * 100}%;"></div>
             </div>
-            <div class="bar-count">${v}</div>
+            <div class="bar-count mono">${v}</div>
           </div>
         `).join('');
       }
@@ -250,36 +333,36 @@
       // Recent Activity
       const aBody = document.querySelector('#table-activity tbody');
       if (!data.recent_activity || data.recent_activity.length === 0) {
-        aBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-dim);">No requests yet</td></tr>';
+        aBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-dim); padding: var(--space-6);">No requests yet</td></tr>';
       } else {
         aBody.innerHTML = data.recent_activity.map(a => {
           const dateStr = new Date(a.at * 1000).toLocaleTimeString();
           return `
             <tr>
-              <td>${dateStr}</td>
-              <td><span class="mono">${a.endpoint}</span></td>
-              <td>${a.sink || '-'}</td>
+              <td class="mono" style="color: var(--text-muted);">${dateStr}</td>
+              <td><span class="mono" style="color: var(--accent-teal);">${a.endpoint}</span></td>
+              <td><span style="color: var(--text-primary); font-weight: 500;">${a.sink || '-'}</span></td>
               <td><span class="pill-token">${a.protected_count} protected</span></td>
-              <td>${a.customer_ref || '-'}</td>
-              <td class="mono">${a.latency_ms}ms</td>
-              <td><span style="color: #34D399;">✔ ${a.status}</span></td>
+              <td><span class="mono" style="color: var(--text-muted);">${a.customer_ref || '-'}</span></td>
+              <td class="mono" style="color: var(--text-primary); font-weight: 600;">${a.latency_ms}ms</td>
+              <td><span style="color: var(--accent-teal); font-weight: 700;">✔ ${a.status}</span></td>
             </tr>
           `;
         }).join('');
       }
 
-      // Receipts
+      // Verified Erasure Receipts
       const rBody = document.querySelector('#table-receipts tbody');
       if (!data.receipts || data.receipts.length === 0) {
-        rBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-dim);">No purpose keys shredded yet</td></tr>';
+        rBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-dim); padding: var(--space-6);">No purpose keys shredded yet</td></tr>';
       } else {
         rBody.innerHTML = data.receipts.map(r => `
           <tr>
-            <td><strong>${r.customer_ref}</strong></td>
-            <td><span class="mono" style="color: #F87171;">${r.purpose} (Destroyed)</span></td>
-            <td>${r.alg}</td>
-            <td class="mono" style="font-size: 0.8rem;">${(r.root || '').substring(0, 24)}...</td>
-            <td><span style="color: #34D399; font-weight: 700;">✔ Cryptographically Verified</span></td>
+            <td><strong class="mono" style="color: var(--text-contrast);">${r.customer_ref}</strong></td>
+            <td><span class="pill-raw">${r.purpose} (Destroyed)</span></td>
+            <td><span class="pill-preview" style="letter-spacing: 0;">${r.alg}</span></td>
+            <td class="mono" style="font-size: var(--text-xs); color: var(--text-muted);">${(r.root || '').substring(0, 24)}...</td>
+            <td><span style="color: var(--accent-teal); font-weight: 700;">✔ Verified</span></td>
           </tr>
         `).join('');
       }
@@ -294,4 +377,3 @@
   </script>
 </body>
 </html>
-

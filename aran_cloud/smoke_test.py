@@ -164,29 +164,100 @@ def main():
     assert_true(r_alpha_trace["top"] is not None, "Tenant Alpha trace has top sink identification")
     assert_eq(r_alpha_trace["top"]["sink"], "kyc-archive", "Tenant Alpha trace correctly identifies 'kyc-archive' sink")
 
-    # 8. AI Gateway Placeholder Token Ownership
-    print_step(8, "AI Gateway token ownership recording in cloud.db")
-    r_gw = requests.post(f"{CLOUD_URL}/v1/gateway", headers={"X-API-Key": api_key}, json={
-        "role": "customer-care",
-        "text": f"Customer card is {card}"
-    }, timeout=10).json()
-    assert_true(r_gw.get("findings_in_prompt", 0) >= 1, "Gateway detected prompt PII")
+    # 8. Vaultless Token Co-Ownership Across Tenants (Requirement 4a)
+    print_step(8, "Vaultless FF1 token co-ownership across tenants (Alpha & Beta)")
+    sample_vaultless = requests.get(f"{CORE_URL}/api/tour/generate", timeout=5).json()["aadhaar"]
 
-    # 9. Dashboard Metric: Passed unprotected
-    print_step(9, "Verify 'Passed unprotected' dashboard metric calculation")
-    # Send text with an invalid checksum Aadhaar that passes through unchanged
-    requests.post(f"{CLOUD_URL}/v1/protect", headers={"X-API-Key": api_key}, json={
-        "text": "Bogus invalid Aadhaar 1234 5678 9012 passed into system",
-        "customer_ref": "CUST-UNPROT-TEST",
+    # Alpha protects Aadhaar with NO customer_ref (vaultless)
+    r_va = requests.post(f"{CLOUD_URL}/v1/protect", headers={"X-API-Key": api_key}, json={
+        "text": f"Vaultless customer with Aadhaar {sample_vaultless}",
+        "sink": "kyc-archive",
         "purpose": "KYC"
-    }, timeout=10)
-    dash_unprot = requests.get(f"{CLOUD_URL}/v1/dashboard", headers={"X-API-Key": api_key}, timeout=5).json()
-    assert_true("passed_unprotected" in dash_unprot["metrics"], "'passed_unprotected' present in dashboard metrics")
-    assert_true(dash_unprot["metrics"]["passed_unprotected"] >= 1,
-                f"Passed unprotected count >= 1 (got {dash_unprot['metrics']['passed_unprotected']})")
+    }, timeout=10).json()
+    tok_va = next(f for f in r_va["findings"] if f["type"] == "AADHAAR")["token"]
+    assert_true(tok_va is not None, "Alpha received deterministic vaultless token")
 
-    # 10. Erase and Receipt Storage
-    print_step(10, "Execute erasure & verify stored post-quantum receipts")
+    # Beta protects the EXACT SAME Aadhaar with NO customer_ref (vaultless)
+    r_vb = requests.post(f"{CLOUD_URL}/v1/protect", headers={"X-API-Key": key_t2}, json={
+        "text": f"Vaultless customer with Aadhaar {sample_vaultless}",
+        "sink": "kyc-archive",
+        "purpose": "KYC"
+    }, timeout=10).json()
+    tok_vb = next(f for f in r_vb["findings"] if f["type"] == "AADHAAR")["token"]
+    assert_eq(tok_vb, tok_va, "Both tenants received identical deterministic vaultless token string")
+
+    # Both can trace their own vaultless token
+    dump_vaultless = f"CONFIDENTIAL LEAK:\nrecord: token={tok_va} sink=kyc-archive"
+    r_trace_va = requests.post(f"{CLOUD_URL}/v1/trace", headers={"X-API-Key": api_key}, json={"dump": dump_vaultless}, timeout=5).json()
+    assert_true(r_trace_va["matched"] >= 1, "Alpha matches its own vaultless token in trace")
+    assert_eq(r_trace_va["top"]["sink"], "kyc-archive", "Alpha trace identifies correct sink")
+
+    r_trace_vb = requests.post(f"{CLOUD_URL}/v1/trace", headers={"X-API-Key": key_t2}, json={"dump": dump_vaultless}, timeout=5).json()
+    assert_true(r_trace_vb["matched"] >= 1, "Beta matches its own vaultless token in trace")
+    assert_eq(r_trace_vb["top"]["sink"], "kyc-archive", "Beta trace identifies correct sink")
+
+    # Neither sees other's activity
+    dash_a_check = requests.get(f"{CLOUD_URL}/v1/dashboard", headers={"X-API-Key": api_key}, timeout=5).json()
+    dash_b_check = requests.get(f"{CLOUD_URL}/v1/dashboard", headers={"X-API-Key": key_t2}, timeout=5).json()
+    assert_true(not any(e["tenant_id"] == dash_b_check["tenant"]["id"] for e in dash_a_check["recent_activity"]),
+                "Alpha dashboard activity contains 0 Beta events")
+    assert_true(not any(e["tenant_id"] == t_id for e in dash_b_check["recent_activity"]),
+                "Beta dashboard activity contains 0 Alpha events")
+
+    # 9. AI Gateway Multi-Tenant Prompts & Placeholder Exclusion (Requirement 4b)
+    print_step(9, "AI Gateway multi-tenant prompts & placeholder exclusion")
+    r_gw_a = requests.post(f"{CLOUD_URL}/v1/gateway", headers={"X-API-Key": api_key}, json={
+        "role": "customer-care",
+        "text": f"Alpha customer card inquiry: {card}"
+    }, timeout=10)
+    assert_eq(r_gw_a.status_code, 200, "Alpha gateway call succeeded")
+    assert_true(r_gw_a.json().get("findings_in_prompt", 0) >= 1, "Alpha prompt PII detected")
+
+    r_gw_b = requests.post(f"{CLOUD_URL}/v1/gateway", headers={"X-API-Key": key_t2}, json={
+        "role": "customer-care",
+        "text": f"Beta customer card inquiry: {card}"
+    }, timeout=10)
+    assert_eq(r_gw_b.status_code, 200, "Beta gateway call succeeded (no error, no ownership theft)")
+    assert_true(r_gw_b.json().get("findings_in_prompt", 0) >= 1, "Beta prompt PII detected")
+
+    # Assert placeholders like <CARD_1> or <AADHAAR_1> are NOT in tenant_tokens
+    r_detok_ph_a = requests.post(f"{CLOUD_URL}/v1/detokenise", headers={"X-API-Key": api_key}, json={"token": "<CARD_1>"}, timeout=5).json()
+    assert_eq(r_detok_ph_a["status"], "unknown", "Placeholder <CARD_1> NOT recorded in Alpha tenant_tokens")
+    r_detok_ph_b = requests.post(f"{CLOUD_URL}/v1/detokenise", headers={"X-API-Key": key_t2}, json={"token": "<CARD_1>"}, timeout=5).json()
+    assert_eq(r_detok_ph_b["status"], "unknown", "Placeholder <CARD_1> NOT recorded in Beta tenant_tokens")
+
+    # Confirm each dashboard shows only its own gateway activity
+    dash_a_gw = requests.get(f"{CLOUD_URL}/v1/dashboard", headers={"X-API-Key": api_key}, timeout=5).json()
+    dash_b_gw = requests.get(f"{CLOUD_URL}/v1/dashboard", headers={"X-API-Key": key_t2}, timeout=5).json()
+    a_gw_count = sum(1 for e in dash_a_gw["recent_activity"] if e["endpoint"] == "/v1/gateway")
+    b_gw_count = sum(1 for e in dash_b_gw["recent_activity"] if e["endpoint"] == "/v1/gateway")
+    assert_eq(a_gw_count, 1, "Alpha dashboard has exactly 1 gateway event")
+    assert_eq(b_gw_count, 1, "Beta dashboard has exactly 1 gateway event")
+
+    # 10. Checksum Failure vs Passed Unprotected (Requirement 4c)
+    print_step(10, "Checksum failure verification (increments 'not valid IDs', not 'Passed unprotected')")
+    dash_metric_before = requests.get(f"{CLOUD_URL}/v1/dashboard", headers={"X-API-Key": api_key}, timeout=5).json()
+    init_unprot = dash_metric_before["metrics"]["passed_unprotected"]
+    init_ignored = dash_metric_before["metrics"]["not_valid_ids_ignored"]
+
+    # Send random 12-digit number that fails the checksum
+    r_bogus = requests.post(f"{CLOUD_URL}/v1/protect", headers={"X-API-Key": api_key}, json={
+        "text": "Checking applicant identity with 1234 5678 9012 in queue",
+        "customer_ref": "CUST-CHECKSUM-001",
+        "purpose": "KYC"
+    }, timeout=10).json()
+    assert_true(any("fails the Aadhaar/Luhn checksum" in n for n in r_bogus.get("notes", [])),
+                "Core notes flagged Aadhaar/Luhn checksum failure")
+
+    dash_metric_after = requests.get(f"{CLOUD_URL}/v1/dashboard", headers={"X-API-Key": api_key}, timeout=5).json()
+    new_unprot = dash_metric_after["metrics"]["passed_unprotected"]
+    new_ignored = dash_metric_after["metrics"]["not_valid_ids_ignored"]
+
+    assert_eq(new_unprot, init_unprot, "Checksum failure did NOT increment 'Passed unprotected'")
+    assert_eq(new_ignored, init_ignored + 1, "Checksum failure DID increment 'not valid IDs (ignored)' by 1")
+
+    # 11. Erase and Receipt Storage
+    print_step(11, "Execute erasure & verify stored post-quantum receipts")
     r_erase = requests.post(f"{CLOUD_URL}/v1/erase", headers={"X-API-Key": api_key}, json={
         "customer_ref": cust_ref,
         "purpose": "KYC"
@@ -217,8 +288,8 @@ def main():
     assert_eq(r_beta_detok_after["status"], "unknown", "Tenant Beta still receives 'unknown' for erased token")
     assert_eq(r_beta_detok_after["value"], None, "Tenant Beta receives None for erased token")
 
-    # 11. Restart Persistence Test
-    print_step(11, "Test restart persistence across process reboot")
+    # 12. Restart Persistence Test
+    print_step(12, "Test restart persistence across process reboot")
     print("  ▶ Restarting Aran Cloud process...")
     # Find PID on port 8100
     pid_res = subprocess.run(["lsof", "-Pi", ":8100", "-sTCP:LISTEN", "-t"], capture_output=True, text=True)
@@ -246,7 +317,7 @@ def main():
     assert_true(persist_data["metrics"]["receipts_count"] >= 1, "Erasure receipts preserved in cloud.db")
 
     print("\n" + "=" * 65)
-    print(" ALL 11 ARAN CLOUD SMOKE TEST STEPS PASSED SUCCESSFULLY! ")
+    print(" ALL 12 ARAN CLOUD SMOKE TEST STEPS PASSED SUCCESSFULLY! ")
     print("=" * 65)
 
 

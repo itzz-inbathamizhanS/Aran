@@ -1,0 +1,190 @@
+/* ==========================================================================
+   ARAN DESIGN SYSTEM: TOKENS
+   Shared across Aran Cloud & Demo Bank (Single source of truth)
+   ========================================================================== */
+
+/* Offline-safe Font Loading with System Fallback */
+@font-face {
+  font-family: 'Inter';
+  src: url('/static/fonts/Inter-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('/static/fonts/Inter-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('/static/fonts/Inter-SemiBold.woff2') format('woff2');
+  font-weight: 600 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/static/fonts/JetBrainsMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/static/fonts/JetBrainsMono-Medium.woff2') format('woff2');
+  font-weight: 500 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* --- Surfaces & Neutral Backgrounds --- */
+  --bg-deep: #070B14;
+  --bg-surface: #0E1526;
+  --bg-surface-elevated: #141E36;
+  --bg-card: #0F172A;
+  --bg-card-hover: #16223D;
+  --bg-input: #080D1A;
+  --bg-nav: rgba(11, 17, 32, 0.82);
+
+  /* --- Fixed Colour Semantics (Strictly enforced) --- */
+  /* RED: ONLY for exposed raw data */
+  --raw-red: #FCA5A5;
+  --raw-red-bg: rgba(239, 68, 68, 0.16);
+  --raw-red-border: rgba(239, 68, 68, 0.45);
+  --raw-red-text: #FCA5A5;
+
+  /* GREEN: ONLY for protected tokens */
+  --token-green: #4ADE80;
+  --token-green-bg: rgba(34, 197, 94, 0.15);
+  --token-green-border: rgba(34, 197, 94, 0.45);
+  --token-green-text: #4ADE80;
+
+  /* TEAL: The ONLY UI Accent (buttons, active tabs, glow, focus, live indicator) */
+  --accent-teal: #2DD4BF;
+  --accent-teal-hover: #14B8A6;
+  --accent-teal-glow: rgba(45, 212, 191, 0.28);
+  --accent-teal-subtle: rgba(45, 212, 191, 0.12);
+  --accent-teal-border: rgba(45, 212, 191, 0.38);
+
+  /* --- Text & Contrast (Projector ready: contrast >= 7:1) --- */
+  --text-primary: #F8FAFC;    /* 17.5:1 on #070B14 */
+  --text-muted: #CBD5E1;      /* 10.7:1 on #070B14 */
+  --text-dim: #94A3B8;        /* 6.3:1 (secondary labels only) */
+  --text-contrast: #FFFFFF;   /* 21:1 */
+
+  /* --- Typography Scale (Projector: body >= 18px, key data >= 22px) --- */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --text-xs: 0.8125rem;   /* 13px */
+  --text-sm: 0.9375rem;   /* 15px */
+  --text-base: 1.125rem;  /* 18px - Body base */
+  --text-lg: 1.25rem;     /* 20px */
+  --text-xl: 1.375rem;    /* 22px - Key data minimum */
+  --text-2xl: 1.625rem;   /* 26px */
+  --text-3xl: 2rem;       /* 32px */
+  --text-4xl: 2.5rem;     /* 40px */
+
+  /* --- Borders & Hairlines --- */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-card: #1E293B;
+  --border-strong: #334155;
+  --border-hairline: rgba(255, 255, 255, 0.07);
+
+  /* --- Beautiful Shadows (from beautiful-shadows skill) --- */
+  --shadow-sm: 0px 2px 3px -1px rgba(0, 0, 0, 0.3), 0px 1px 0px 0px rgba(255, 255, 255, 0.02), 0px 0px 0px 1px rgba(255, 255, 255, 0.08);
+  --shadow-md: 0px 0px 0px 1px rgba(255, 255, 255, 0.08), 0px 1px 1px -0.5px rgba(0, 0, 0, 0.3), 0px 3px 3px -1.5px rgba(0, 0, 0, 0.3), 0px 6px 6px -3px rgba(0, 0, 0, 0.3), 0px 12px 12px -6px rgba(0, 0, 0, 0.3), 0px 24px 24px -12px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 2.8px 2.2px rgba(0, 0, 0, 0.12), 0 6.7px 5.3px rgba(0, 0, 0, 0.15), 0 12.5px 10px rgba(0, 0, 0, 0.18), 0 22.3px 17.9px rgba(0, 0, 0, 0.22), 0 41.8px 33.4px rgba(0, 0, 0, 0.26), 0 100px 80px rgba(0, 0, 0, 0.38);
+
+  /* --- Spacing System --- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* --- Border Radii --- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  /* --- Motion System (CSS only, 150-250ms, respectful of reduced motion) --- */
+  --motion-duration-fast: 150ms;
+  --motion-duration-default: 200ms;
+  --motion-duration-slow: 250ms;
+  --motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* --- Container Lines & Guide Grid --- */
+  --container-max: 1320px;
+  --container-pad: clamp(20px, 3vw, 40px);
+  --line-color: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(45, 212, 191, 0.35);
+  --corner-size: 6px;
+}
+
+/* ==========================================================================
+   Projector Mode (High-contrast, thicker borders, no blur/translucency)
+   ========================================================================== */
+html.projector-mode,
+body.projector-mode {
+  --bg-deep: #000000;
+  --bg-surface: #060911;
+  --bg-card: #0A0F1D;
+  --bg-card-hover: #121A30;
+  --bg-input: #000000;
+  --bg-nav: #000000;
+
+  --border-card: #475569;
+  --border-strong: #64748B;
+  --border-hairline: #334155;
+
+  --text-primary: #FFFFFF;
+  --text-muted: #F1F5F9;
+  --text-dim: #E2E8F0;
+
+  --raw-red: #FFA8A8;
+  --raw-red-bg: #450A0A;
+  --raw-red-border: #EF4444;
+
+  --token-green: #6EE7B7;
+  --token-green-bg: #064E3B;
+  --token-green-border: #10B981;
+
+  --accent-teal: #5EEAD4;
+  --accent-teal-subtle: #134E4A;
+  --accent-teal-border: #2DD4BF;
+}
+
+.projector-mode * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.projector-mode .gradient-blur {
+  display: none !important;
+}
+
+.projector-mode .card,
+.projector-mode .tile,
+.projector-mode .table-container {
+  border-width: 2px !important;
+  border-color: var(--border-card) !important;
+  box-shadow: none !important;
+}
+
+.projector-mode .btn {
+  border-width: 2px !important;
+}

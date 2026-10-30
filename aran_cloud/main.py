@@ -87,28 +87,61 @@ def init_db():
                 purpose TEXT,
                 protected_count INTEGER DEFAULT 0,
                 unprotected_count INTEGER DEFAULT 0,
+                ignored_count INTEGER DEFAULT 0,
                 by_type TEXT,
                 latency_ms REAL NOT NULL,
                 customer_ref TEXT,
                 status TEXT DEFAULT 'ok'
             );
         """)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS tenant_tokens (
-                token TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL REFERENCES tenants(id),
-                customer_ref TEXT,
-                purpose TEXT,
-                sink TEXT,
-                created_at REAL NOT NULL
-            );
-        """)
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_tenant_tokens_tenant ON tenant_tokens(tenant_id);")
-
         try:
             conn.execute("ALTER TABLE usage_events ADD COLUMN unprotected_count INTEGER DEFAULT 0;")
         except sqlite3.OperationalError:
             pass
+        try:
+            conn.execute("ALTER TABLE usage_events ADD COLUMN ignored_count INTEGER DEFAULT 0;")
+        except sqlite3.OperationalError:
+            pass
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS tenant_tokens (
+                token TEXT NOT NULL,
+                tenant_id TEXT NOT NULL REFERENCES tenants(id),
+                customer_ref TEXT,
+                purpose TEXT,
+                sink TEXT,
+                created_at REAL NOT NULL,
+                PRIMARY KEY (tenant_id, token)
+            );
+        """)
+
+        # Migration: check if tenant_tokens has single-column PK (token) and migrate to (tenant_id, token)
+        info = conn.execute("PRAGMA table_info(tenant_tokens);").fetchall()
+        pk_cols = [row[1] for row in info if row[5] > 0]
+        if len(pk_cols) == 1 and pk_cols[0] == "token":
+            conn.execute("""
+                CREATE TABLE tenant_tokens_v2 (
+                    token TEXT NOT NULL,
+                    tenant_id TEXT NOT NULL REFERENCES tenants(id),
+                    customer_ref TEXT,
+                    purpose TEXT,
+                    sink TEXT,
+                    created_at REAL NOT NULL,
+                    PRIMARY KEY (tenant_id, token)
+                );
+            """)
+            conn.execute("""
+                INSERT OR IGNORE INTO tenant_tokens_v2 (token, tenant_id, customer_ref, purpose, sink, created_at)
+                SELECT token, tenant_id, customer_ref, purpose, sink, created_at FROM tenant_tokens
+                WHERE token NOT LIKE '<%>%';
+            """)
+            conn.execute("DROP TABLE tenant_tokens;")
+            conn.execute("ALTER TABLE tenant_tokens_v2 RENAME TO tenant_tokens;")
+
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_tenant_tokens_tenant ON tenant_tokens(tenant_id);")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_tenant_tokens_token ON tenant_tokens(token);")
+        # Clean up any leftover placeholder tokens
+        conn.execute("DELETE FROM tenant_tokens WHERE token LIKE '<%>%';")
         conn.execute("""
             CREATE TABLE IF NOT EXISTS receipts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -304,15 +337,15 @@ def protect(body: ProtectIn, tenant: dict = Depends(get_current_tenant)):
         else:
             clean_notes.append(note)
 
-    # Calculate unprotected count:
-    # 1. Findings where protected is False (low confidence, passed raw)
+    # Calculate counts:
+    # 1. Real identifiers that were detected but not protected:
+    # findings where protected is False, plus any valid raw identifiers core notes passed through
     unprot_findings = sum(1 for f in core_res.get("findings", []) if not f.get("protected"))
-    # 2. Raw identifiers reported by core in notes (e.g., checksum failures, passed through)
-    raw_in_notes = sum(
-        1 for note in core_res.get("notes", [])
-        if ("fails the Aadhaar/Luhn checksum" in note or "passed through unchanged" in note)
-    )
-    unprot_count = unprot_findings + raw_in_notes
+    raw_passed = sum(1 for note in core_res.get("notes", []) if "passed through unchanged" in note)
+    unprot_count = unprot_findings + raw_passed
+
+    # 2. Shape matches that fail their checksum (ignored, not valid IDs)
+    ignored_count = sum(1 for note in core_res.get("notes", []) if "fails the Aadhaar/Luhn checksum" in note)
 
     now_ts = time.time()
     conn = get_db()
@@ -335,8 +368,8 @@ def protect(body: ProtectIn, tenant: dict = Depends(get_current_tenant)):
         # Record usage event
         conn.execute(
             """
-            INSERT INTO usage_events (tenant_id, at, endpoint, sink, purpose, protected_count, unprotected_count, by_type, latency_ms, customer_ref, status)
-            VALUES (?, ?, '/v1/protect', ?, ?, ?, ?, ?, ?, ?, 'ok')
+            INSERT INTO usage_events (tenant_id, at, endpoint, sink, purpose, protected_count, unprotected_count, ignored_count, by_type, latency_ms, customer_ref, status)
+            VALUES (?, ?, '/v1/protect', ?, ?, ?, ?, ?, ?, ?, ?, 'ok')
             """,
             (
                 tenant_id,
@@ -345,6 +378,7 @@ def protect(body: ProtectIn, tenant: dict = Depends(get_current_tenant)):
                 body.purpose or "KYC",
                 prot_count,
                 unprot_count,
+                ignored_count,
                 json.dumps(by_type),
                 latency_ms,
                 body.customer_ref,
@@ -366,28 +400,13 @@ def gateway(body: GatewayIn, tenant: dict = Depends(get_current_tenant)):
     findings_in_prompt = core_res.get("findings_in_prompt", 0)
     by_type = {"PROMPT_PII": findings_in_prompt} if findings_in_prompt else {}
 
-    # Record any placeholders issued to provider under this tenant
-    gw_placeholders = set()
-    for msg in core_res.get("provider_saw", []):
-        content = msg.get("content", "")
-        for ph in re.findall(r"<[A-Za-z0-9_]+>", content):
-            gw_placeholders.add(ph)
-
     now_ts = time.time()
     conn = get_db()
     with conn:
-        for ph in gw_placeholders:
-            conn.execute(
-                """
-                INSERT OR REPLACE INTO tenant_tokens (token, tenant_id, customer_ref, purpose, sink, created_at)
-                VALUES (?, ?, NULL, 'Service', 'llm-gateway', ?)
-                """,
-                (ph, tenant_id, now_ts),
-            )
         conn.execute(
             """
-            INSERT INTO usage_events (tenant_id, at, endpoint, sink, purpose, protected_count, unprotected_count, by_type, latency_ms, customer_ref, status)
-            VALUES (?, ?, '/v1/gateway', 'llm-gateway', 'Service', ?, 0, ?, ?, NULL, 'ok')
+            INSERT INTO usage_events (tenant_id, at, endpoint, sink, purpose, protected_count, unprotected_count, ignored_count, by_type, latency_ms, customer_ref, status)
+            VALUES (?, ?, '/v1/gateway', 'llm-gateway', 'Service', ?, 0, 0, ?, ?, NULL, 'ok')
             """,
             (tenant_id, now_ts, findings_in_prompt, json.dumps(by_type), latency_ms),
         )
@@ -404,8 +423,8 @@ def detokenise(body: DetokeniseIn, tenant: dict = Depends(get_current_tenant)):
     # Check token ownership in cloud.db
     conn = get_db()
     row = conn.execute(
-        "SELECT tenant_id FROM tenant_tokens WHERE token = ?",
-        (body.token,),
+        "SELECT tenant_id FROM tenant_tokens WHERE token = ? AND tenant_id = ?",
+        (body.token, tenant_id),
     ).fetchone()
     conn.close()
 
@@ -416,14 +435,14 @@ def detokenise(body: DetokeniseIn, tenant: dict = Depends(get_current_tenant)):
         "reason": "Not a vault token. Vaultless FF1 tokens are reversed only inside the bank's key boundary.",
     }
 
-    if not row or row["tenant_id"] != tenant_id:
+    if not row:
         # Unknown to this tenant or belongs to another tenant: return standard unknown response
         conn = get_db()
         with conn:
             conn.execute(
                 """
-                INSERT INTO usage_events (tenant_id, at, endpoint, sink, purpose, protected_count, unprotected_count, by_type, latency_ms, customer_ref, status)
-                VALUES (?, ?, '/v1/detokenise', 'vault', 'Detokenise', 0, 0, '{}', 0.5, NULL, 'unknown')
+                INSERT INTO usage_events (tenant_id, at, endpoint, sink, purpose, protected_count, unprotected_count, ignored_count, by_type, latency_ms, customer_ref, status)
+                VALUES (?, ?, '/v1/detokenise', 'vault', 'Detokenise', 0, 0, 0, '{}', 0.5, NULL, 'unknown')
                 """,
                 (tenant_id, time.time()),
             )
@@ -437,8 +456,8 @@ def detokenise(body: DetokeniseIn, tenant: dict = Depends(get_current_tenant)):
     with conn:
         conn.execute(
             """
-            INSERT INTO usage_events (tenant_id, at, endpoint, sink, purpose, protected_count, unprotected_count, by_type, latency_ms, customer_ref, status)
-            VALUES (?, ?, '/v1/detokenise', 'vault', 'Detokenise', 0, 0, '{}', ?, NULL, ?)
+            INSERT INTO usage_events (tenant_id, at, endpoint, sink, purpose, protected_count, unprotected_count, ignored_count, by_type, latency_ms, customer_ref, status)
+            VALUES (?, ?, '/v1/detokenise', 'vault', 'Detokenise', 0, 0, 0, '{}', ?, NULL, ?)
             """,
             (tenant_id, time.time(), latency_ms, core_res.get("status", "ok")),
         )
@@ -477,8 +496,8 @@ def erase(body: EraseIn, tenant: dict = Depends(get_current_tenant)):
         )
         conn.execute(
             """
-            INSERT INTO usage_events (tenant_id, at, endpoint, sink, purpose, protected_count, unprotected_count, by_type, latency_ms, customer_ref, status)
-            VALUES (?, ?, '/v1/erase', 'vault', ?, 0, 0, '{}', ?, ?, 'shredded')
+            INSERT INTO usage_events (tenant_id, at, endpoint, sink, purpose, protected_count, unprotected_count, ignored_count, by_type, latency_ms, customer_ref, status)
+            VALUES (?, ?, '/v1/erase', 'vault', ?, 0, 0, 0, '{}', ?, ?, 'shredded')
             """,
             (tenant_id, now_ts, body.purpose, latency_ms, body.customer_ref),
         )
@@ -547,8 +566,8 @@ def trace(body: TraceIn, tenant: dict = Depends(get_current_tenant)):
     with conn:
         conn.execute(
             """
-            INSERT INTO usage_events (tenant_id, at, endpoint, sink, purpose, protected_count, unprotected_count, by_type, latency_ms, customer_ref, status)
-            VALUES (?, ?, '/v1/trace', 'trace', 'Audit', ?, 0, '{}', ?, NULL, 'ok')
+            INSERT INTO usage_events (tenant_id, at, endpoint, sink, purpose, protected_count, unprotected_count, ignored_count, by_type, latency_ms, customer_ref, status)
+            VALUES (?, ?, '/v1/trace', 'trace', 'Audit', ?, 0, 0, '{}', ?, NULL, 'ok')
             """,
             (tenant_id, time.time(), matched, latency_ms),
         )
@@ -574,6 +593,7 @@ def get_dashboard(tenant: dict = Depends(get_current_tenant)):
 
     total_protected = sum(e["protected_count"] for e in events)
     total_unprotected = sum((e.get("unprotected_count") or 0) for e in events)
+    total_ignored = sum((e.get("ignored_count") or 0) for e in events)
     by_type = {}
     latencies = []
     destinations = {}
@@ -623,6 +643,8 @@ def get_dashboard(tenant: dict = Depends(get_current_tenant)):
             "identifiers_protected": total_protected,
             "passed_unprotected": total_unprotected,
             "raw_values_passed": total_unprotected,
+            "not_valid_ids_ignored": total_ignored,
+            "ignored_checksum_count": total_ignored,
             "by_type": by_type,
             "p50_ms": p50_ms,
             "p95_ms": p95_ms,
