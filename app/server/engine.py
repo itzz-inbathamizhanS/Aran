@@ -38,6 +38,8 @@ from firewall.aran_firewall import card_offset  # noqa: E402
 from firewall.normalise import Normaliser  # noqa: E402
 from firewall.registry import CustomerRegistry, OtpRegistry, canonical  # noqa: E402
 from firewall.shredder import PURPOSES, Erased, PurposeFirewall, PurposeVault, verify_receipt  # noqa: E402
+from firewall.store import AranStore, BACKUP_POLICY_STATEMENT  # noqa: E402
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM  # noqa: E402
 from immune.ais import tune_self_radius  # noqa: E402
 from immune.flows import FlowFeaturizer  # noqa: E402
 
@@ -83,17 +85,30 @@ def _p95(xs):
 
 
 class Engine:
-    def __init__(self, n_customers=25, seed=None):
+    def __init__(self, n_customers=25, seed=None, store_path=None, master_key=None):
         t0 = time.time()
         with open(MODELS, "rb") as fh:
             base = pickle.load(fh)
-        self.key = secrets.token_bytes(32)  # AES-256 for FF1: Grover leaves 128-bit strength
+
+        # Persistence Lite support
+        store_path = store_path or os.environ.get("ARAN_STORE")
+        if store_path:
+            master_key = master_key or os.environ.get("ARAN_MASTER_KEY")
+            self.store = AranStore(data_path=store_path, master_key=master_key)
+            self.key = self.store.load_system_key("ff1_key")
+            if self.key is None:
+                self.key = secrets.token_bytes(32)
+                self.store.save_system_key("ff1_key", self.key)
+        else:
+            self.store = None
+            self.key = secrets.token_bytes(32)  # AES-256 for FF1: Grover leaves 128-bit strength
+
         self.registry = CustomerRegistry(secrets.token_bytes(32), capacity=100_000)
         self.otp_registry = OtpRegistry(secrets.token_bytes(32), ttl=300.0)
         self.det = Detector(base.ner, base.otp_clf, base.upi_clf, normaliser=Normaliser(),
                             registry=self.registry, otp_registry=self.otp_registry)
         self.det.stack, self.det.iso = base.stack, base.iso
-        self.vault = PurposeVault()
+        self.vault = PurposeVault(store=self.store)
         self.fw = _IndexingFirewall(self.det, self.key, self.vault, {s: p for s, (p, _) in SINKS.items()},
                                     thresholds={s: t for s, (_, t) in SINKS.items()}, eng=self)
         self.ff1 = FF1(self.key)
@@ -111,8 +126,33 @@ class Engine:
         self.immune = Immune(self)
         self.replay = Replay(self)
         self.jobs = {}
-        for _ in range(n_customers):
-            self.add_customer()
+
+        # Rehydrate customer profiles and registry if store exists
+        if self.store is not None:
+            profiles = self.store.load_all_customer_profiles()
+            for prof in profiles:
+                ref = prof["ref"]
+                self.dynamic_customers.add(ref)
+                if (ref, "KYC") in self.vault.keys:
+                    kyc_key = bytes(self.vault.keys[(ref, "KYC")])
+                    try:
+                        raw_ids_json = AESGCM(kyc_key).decrypt(
+                            prof["nonce"], prof["encrypted_ids"], ref.encode("utf-8")
+                        ).decode("utf-8")
+                        ids = json.loads(raw_ids_json)
+                        self.customers[ref] = dict(ref=ref, name=prof["name"], upi=prof["upi"], created=prof["created"], **ids)
+                        for t, v in ids.items():
+                            self.registry.add(t, v)
+                    except Exception:
+                        masked = json.loads(prof["masked_json"])
+                        self.customers[ref] = dict(ref=ref, name=prof["name"], upi=prof["upi"], created=prof["created"], **masked)
+                else:
+                    masked = json.loads(prof["masked_json"])
+                    self.customers[ref] = dict(ref=ref, name=prof["name"], upi=prof["upi"], created=prof["created"], _erased=True, **masked)
+
+        if not self.customers:
+            for _ in range(n_customers):
+                self.add_customer()
         self.load_seconds = round(time.time() - t0, 1)
         if self.replay.logs:
             def _auto_learn():
@@ -141,6 +181,25 @@ class Engine:
             # KYC records are kept for 5 years after the relationship ends (PMLA rules)
             self.vault.enroll(ref, dict(ids, UPI=upi), retain={"KYC": time.time() + 5 * 365 * 86400})
             self.customers[ref] = dict(ref=ref, name=name, upi=upi, created=time.time(), **ids)
+            if self.store is not None:
+                kyc_key = bytes(self.vault.keys[(ref, "KYC")])
+                nonce = secrets.token_bytes(12)
+                enc_ids = AESGCM(kyc_key).encrypt(nonce, json.dumps(ids).encode("utf-8"), ref.encode("utf-8"))
+                masked = {
+                    "AADHAAR": "XXXX XXXX " + aad[-4:],
+                    "CARD": "XXXX XXXX XXXX " + card[-4:],
+                    "MOBILE": "XXXXXX" + mob[-4:],
+                    "PAN": pan[:2] + "XXXXXX" + pan[-2:] if len(pan) >= 4 else "–",
+                }
+                self.store.save_customer_profile(
+                    customer_ref=ref,
+                    name=name,
+                    upi=upi,
+                    encrypted_ids=enc_ids,
+                    nonce=nonce,
+                    masked_json=json.dumps(masked),
+                    created_at=time.time(),
+                )
             return self.customers[ref]
 
     def customer_view(self, ref):
@@ -150,11 +209,12 @@ class Engine:
         mob = c.get("MOBILE", "")
         pan = c.get("PAN", "")
         masked = dict(
-            AADHAAR="XXXX XXXX " + aad[-4:] if aad else "–",
-            CARD="XXXX XXXX XXXX " + card[-4:] if card else "–",
-            MOBILE="XXXXXX" + mob[-4:] if mob else "–",
-            PAN=pan[:2] + "XXXXXX" + pan[-2:] if len(pan) >= 4 else "–"
+            AADHAAR=aad if aad.startswith("XXXX") else ("XXXX XXXX " + aad[-4:] if aad else "–"),
+            CARD=card if card.startswith("XXXX") else ("XXXX XXXX XXXX " + card[-4:] if card else "–"),
+            MOBILE=mob if mob.startswith("XXXX") else ("XXXXXX" + mob[-4:] if mob else "–"),
+            PAN=pan if "XXXX" in pan else (pan[:2] + "XXXXXX" + pan[-2:] if len(pan) >= 4 else "–")
         )
+        return dict(ref=ref, name=c.get("name", ref), masked=masked, keys=self.vault.key_status(ref))
         return dict(ref=ref, name=c.get("name", ref), masked=masked, keys=self.vault.key_status(ref))
 
     # ------------------------------------------------------------ requests
@@ -309,9 +369,13 @@ class Engine:
         with self.lock:
             receipt = self.vault.erase(ref, purpose)
             if purpose == "KYC" or all(not k["alive"] for k in self.vault.key_status(ref)):
-                for t in ("AADHAAR", "CARD", "MOBILE", "PAN"):
-                    if t in self.customers[ref]:
-                        self.registry.remove(t, self.customers[ref][t])
+                if ref in self.customers:
+                    for t in ("AADHAAR", "CARD", "MOBILE", "PAN"):
+                        if t in self.customers[ref]:
+                            self.registry.remove(t, self.customers[ref][t])
+                if self.store is not None:
+                    self.store.delete_customer_profile(ref)
+                    self.store.checkpoint_and_truncate()
             return receipt
 
     # ------------------------------------------------------------ leak trace
@@ -375,6 +439,13 @@ class Engine:
                         merkle_size=len(self.vault.log.leaves), uptime_s=round(time.time() - self.started),
                         immune=self.immune.state, replay=self.replay.status(), model_load_seconds=self.load_seconds)
 
+    def close(self):
+        """Clean shutdown of background threads and persistent database connections."""
+        if hasattr(self, "replay") and getattr(self.replay, "running", False):
+            self.replay.stop()
+        if self.store is not None:
+            self.store.close()
+
 
 class _IndexingFirewall(PurposeFirewall):
     """Records every token it issues, so a leaked dump can be traced back."""
@@ -383,6 +454,8 @@ class _IndexingFirewall(PurposeFirewall):
         super().__init__(*a, **kw)
         self.eng = eng
         self.index, self.issued_now = {}, []
+        if self.eng and self.eng.store is not None:
+            self.index.update(self.eng.store.load_all_token_sinks())
         self._current_purpose = None
         self._current_customer_ref = None
         self.conflicts = set()
@@ -393,7 +466,10 @@ class _IndexingFirewall(PurposeFirewall):
         if self._current_customer_ref and f.type in ("AADHAAR", "CARD", "MOBILE", "PAN", "UPI"):
             existing_owner = self.vault.owner_of(f.type, value)
             if existing_owner is None:
-                self.vault.owner[self.vault._owner_key(f.type, value)] = self._current_customer_ref
+                k = self.vault._owner_key(f.type, value)
+                self.vault.owner[k] = self._current_customer_ref
+                if self.vault.store is not None:
+                    self.vault.store.save_owner(k, self._current_customer_ref)
                 if self.eng and self._current_customer_ref in self.eng.customers:
                     self.eng.customers[self._current_customer_ref][f.type] = value
             elif existing_owner != self._current_customer_ref:
@@ -404,6 +480,11 @@ class _IndexingFirewall(PurposeFirewall):
         tok = super()._replace(f, value, sink, purpose=purpose)
         if tok not in ("<OTP:destroyed>",) and "withheld" not in tok:
             self.index[tok] = sink
+            if self.eng and self.eng.store is not None:
+                try:
+                    self.eng.store.save_token_sink(tok, sink)
+                except Exception:
+                    pass
         self.issued_now.append((tok, f.type, value))
         return tok
 
@@ -553,6 +634,9 @@ class Replay:
 
     def stop(self):
         self.running = False
+        t = getattr(self, "thread", None)
+        if t and t.is_alive() and threading.current_thread() != t:
+            t.join(timeout=2.0)
 
     def _line(self, systems):
         r = self.eng.rand

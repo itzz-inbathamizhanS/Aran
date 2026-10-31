@@ -1,18 +1,36 @@
 """Aran console API. Run: uvicorn main:app --port 8000 (from app/server)."""
+import hmac
 import os
 import re
 import sys
 import threading
 import time
 
-from fastapi import FastAPI, HTTPException, Header
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Header, Request
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 import engine as E
 
 app = FastAPI(title="Aran console API", version="1.0")
+
+
+@app.middleware("http")
+async def check_internal_secret(request: Request, call_next):
+    internal_secret = os.environ.get("ARAN_INTERNAL_SECRET")
+    if internal_secret:
+        path = request.url.path
+        if path != "/api/health":
+            provided = request.headers.get("X-Aran-Internal") or ""
+            if not hmac.compare_digest(provided, internal_secret):
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "Unauthorized: missing or invalid X-Aran-Internal header."},
+                )
+    return await call_next(request)
+
+
 ENG = None
 READY = threading.Event()
 LOAD_ERROR = None
@@ -200,6 +218,36 @@ def verify(receipt: dict):
         return E.verify_receipt(receipt)
     except Exception as err:
         return dict(valid=False, signature_valid=False, included_in_log=False, error=str(err))
+
+
+@app.get("/api/public-keys")
+@app.get("/api/keys/public")
+def public_keys():
+    e = eng()
+    with e.lock:
+        if e.vault.signer is not None:
+            pub = e.vault.signer.public()
+            return dict(
+                alg=pub["alg"],
+                context=e.vault.signer.context.decode("ascii", errors="ignore"),
+                public_keys=dict(
+                    ed25519=pub["ed25519"],
+                    ml_dsa_65=pub["ml_dsa_65"],
+                ),
+                created_at=e.started,
+                key_id="aran-signer-primary",
+                backup_policy=E.BACKUP_POLICY_STATEMENT,
+            )
+        else:
+            return dict(
+                alg="Ed25519",
+                public_keys=dict(
+                    ed25519=e.vault.public_key_pem(),
+                ),
+                created_at=e.started,
+                key_id="aran-signer-primary",
+                backup_policy=E.BACKUP_POLICY_STATEMENT,
+            )
 
 
 @app.get("/api/merkle")

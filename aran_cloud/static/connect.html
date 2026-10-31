@@ -27,7 +27,7 @@
     <div class="card" style="padding: 1rem 1.5rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
       <div>
         <span style="color: var(--text-muted); font-size: 0.9rem;">Active Workspace API Key:</span>
-        <span class="mono" id="active-key-text" style="color: var(--accent-teal); margin-left: 0.5rem;">loading...</span>
+        <span class="mono" id="active-key-text" style="color: var(--accent-bright); margin-left: 0.5rem;">loading...</span>
       </div>
       <button class="btn btn-secondary btn-sm" id="btn-change-key">Change Key</button>
     </div>
@@ -90,11 +90,11 @@
         <h3 style="font-size: 1.15rem; margin-bottom: 0.75rem;">Interactive Live Test</h3>
         <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem;">
           <input type="text" id="live-test-input" value="Customer Sunita Rao with Aadhaar 895760490870 applying for loan with card 4532015112830366" style="flex: 1;">
-          <button class="btn btn-primary" id="btn-run-live">Test It Live &rarr;</button>
+          <button class="btn btn-primary" id="btn-run-live">Send live test request &rarr;</button>
         </div>
 
         <div id="live-output" style="display: none; background: #070B16; border: 1px solid var(--border-card); border-radius: 8px; padding: 1.25rem;">
-          <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Firewall Output (Vault Tokens Generated):</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;" id="live-output-label">Live Output (Vault Tokens Generated):</div>
           <div id="live-after-text" style="font-size: 1.05rem; margin-bottom: 0.75rem; color: #FFFFFF;"></div>
           <div id="live-findings-pills" style="display: flex; gap: 0.5rem; flex-wrap: wrap;"></div>
         </div>
@@ -107,7 +107,26 @@
   </footer>
 
   <script>
-    let activeKey = localStorage.getItem('aran_api_key') || 'aran_live_demo1234567890abcdef12345678';
+    let activeKey = '';
+    try {
+      if (window.location.hash && window.location.hash.includes('key=')) {
+        const hashStr = window.location.hash.replace(/^#/, '');
+        const params = new URLSearchParams(hashStr);
+        const k = params.get('key');
+        if (k) {
+          activeKey = k.trim();
+          sessionStorage.setItem('aran_dashboard_key', activeKey);
+          const cleanUrl = window.location.pathname + (window.location.search || '');
+          window.history.replaceState(null, '', cleanUrl);
+        }
+      }
+      if (!activeKey) {
+        activeKey = sessionStorage.getItem('aran_dashboard_key') || 'aran_live_demo1234567890abcdef12345678';
+      }
+    } catch (e) {
+      console.warn('sessionStorage error', e);
+      activeKey = 'aran_live_demo1234567890abcdef12345678';
+    }
     
     function updateKeyDisplays() {
       document.getElementById('active-key-text').innerText = activeKey;
@@ -129,18 +148,21 @@
       const k = prompt('Enter your Aran Cloud API key:', activeKey);
       if (k) {
         activeKey = k.trim();
-        localStorage.setItem('aran_api_key', activeKey);
+        try {
+          sessionStorage.setItem('aran_dashboard_key', activeKey);
+        } catch (e) {}
         updateKeyDisplays();
       }
     });
 
     document.getElementById('btn-run-live').addEventListener('click', async () => {
       const text = document.getElementById('live-test-input').value.trim();
-      const res = await fetch('/v1/protect', {
+      let keyToUse = activeKey;
+      let res = await fetch('/v1/protect', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': activeKey
+          'X-API-Key': keyToUse
         },
         body: JSON.stringify({
           text,
@@ -149,6 +171,53 @@
           sink: 'kyc-archive'
         })
       });
+
+      // If active key is dashboard-only, request protect/admin key
+      if (res.status === 403) {
+        let adminK = '';
+        try { adminK = sessionStorage.getItem('aran_admin_key'); } catch(e){}
+        if (!adminK) {
+          adminK = prompt("Your active key has 'dashboard' scope only. Please enter a key with 'protect' or 'admin' scope to run live tests:");
+          if (adminK) {
+            try { sessionStorage.setItem('aran_admin_key', adminK.trim()); } catch(e){}
+          }
+        }
+        if (adminK) {
+          keyToUse = adminK.trim();
+          res = await fetch('/v1/protect', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-API-Key': keyToUse
+            },
+            body: JSON.stringify({
+              text,
+              customer_ref: 'CUST-DEMO-LIVE',
+              purpose: 'KYC',
+              sink: 'kyc-archive'
+            })
+          });
+        }
+      }
+
+      const data = await res.json();
+      if (!res.ok) {
+        alert('Error ' + res.status + ': ' + (data.detail || 'Request failed'));
+        return;
+      }
+
+      document.getElementById('live-output').style.display = 'block';
+      document.getElementById('live-output-label').innerText = 'Live Response (Live Test Request Executed):';
+      let after = data.after || '';
+      // Highlight tokens in green
+      after = after.replace(/<[A-Za-z0-9_:\-]+>|\b\d{12,16}\b/g, m => `<span class="pill-token">${m}</span>`);
+      document.getElementById('live-after-text').innerHTML = after;
+
+      const pills = (data.findings || []).map(f => `
+        <span class="pill-token">${f.type}: ${f.token || 'protected'} (latency: ${data.latency_ms || 1.2}ms)</span>
+      `).join('');
+      document.getElementById('live-findings-pills').innerHTML = pills;
+    });
       const data = await res.json();
       if (!res.ok) {
         alert('Error ' + res.status + ': ' + (data.detail || 'Request failed'));

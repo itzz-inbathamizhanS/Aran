@@ -29,7 +29,7 @@
       <div class="card">
         <h2>
           <span>Create Developer Workspace</span>
-          <span style="font-size: 0.85rem; color: var(--accent-teal);">Free Plan (10,000 reqs/mo)</span>
+          <span style="font-size: 0.85rem; color: var(--accent-bright);">Free Plan (10,000 reqs/mo)</span>
         </h2>
         <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">
           Get your instant API key to namespace and protect your customer databases, server logs, and LLM prompts.
@@ -48,17 +48,17 @@
         </form>
 
         <div id="key-modal" style="display: none; margin-top: 1.5rem;">
-          <div style="background: rgba(45, 212, 191, 0.1); border-left: 4px solid var(--accent-teal); padding: 0.85rem 1rem; border-radius: 0 6px 6px 0; margin-bottom: 1rem;">
+          <div style="background: var(--accent-subtle); border-left: 4px solid var(--accent-border); padding: 0.85rem 1rem; border-radius: 0 6px 6px 0; margin-bottom: 1rem;">
             <strong>Workspace Created:</strong> <span id="ws-name"></span> (<span id="ws-id" class="mono"></span>)<br>
-            <span style="color: var(--accent-teal); font-size: 0.9rem;">Save your API key now. We only store a SHA-256 hash.</span>
+            <span style="color: var(--accent-bright); font-size: 0.9rem;">Save your API key now. We only store a SHA-256 hash.</span>
           </div>
           <div class="key-box">
             <span class="key-text" id="api-key-display"></span>
             <button class="btn btn-secondary btn-sm" id="btn-copy-key">Copy Key</button>
           </div>
           <div style="display: flex; gap: 1rem; margin-top: 1.25rem;">
-            <a href="/connect" class="btn btn-primary" style="flex: 1;">Connect Your App &rarr;</a>
-            <a href="/dashboard" class="btn btn-secondary" style="flex: 1;">Open Dashboard</a>
+            <a id="btn-goto-connect" href="/connect" class="btn btn-primary" style="flex: 1;">Connect Your App &rarr;</a>
+            <a id="btn-goto-dashboard" href="/dashboard" class="btn btn-secondary" style="flex: 1;">Open Dashboard</a>
           </div>
         </div>
       </div>
@@ -90,9 +90,21 @@
         document.getElementById('key-modal').style.display = 'block';
         form.style.display = 'none';
 
-        // Save in browser session storage for seamless demo navigation
-        localStorage.setItem('aran_api_key', data.api_key);
-        localStorage.setItem('aran_tenant_name', data.name);
+        const dashKey = data.dashboard_key || data.api_key;
+        const adminKey = data.admin_key || data.api_key;
+
+        // Save in browser session storage with try/catch
+        try {
+          sessionStorage.setItem('aran_dashboard_key', dashKey);
+          sessionStorage.setItem('aran_admin_key', adminKey);
+          sessionStorage.setItem('aran_tenant_name', data.name);
+        } catch (err) {
+          console.warn('sessionStorage unavailable', err);
+        }
+
+        // Set button links with URL fragment #key=... (never in query string)
+        document.getElementById('btn-goto-connect').href = `/connect#key=${encodeURIComponent(dashKey)}`;
+        document.getElementById('btn-goto-dashboard').href = `/dashboard#key=${encodeURIComponent(dashKey)}`;
       } else {
         alert('Failed: ' + (data.detail || 'Could not create workspace'));
       }

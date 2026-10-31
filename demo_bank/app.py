@@ -10,6 +10,7 @@ import os
 import re
 import secrets
 import sqlite3
+import sys
 import time
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Header, Query
@@ -18,6 +19,13 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import requests
+
+# Add aran_sdk to path for standard-library Python SDK
+SDK_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "aran_sdk")
+if SDK_DIR not in sys.path:
+    sys.path.insert(0, SDK_DIR)
+
+from aran import Aran, AranError, AranAuthError, AranScopeError, AranRateLimit
 
 # ---------------------------------------------------------------- configuration
 BANK_MODE = os.environ.get("BANK_MODE", "legacy").strip().lower()
@@ -36,6 +44,55 @@ DB_PATH = os.path.join(HERE, f"data_{BANK_MODE}.db")
 
 # In-memory token mapping for demo authorized officer view (Spec 3a)
 TOKEN_MAP = {}
+
+# Scoped SDK clients for Bank B (Item 4)
+_sdk_clients = {}
+
+
+def get_sdk_clients():
+    """Returns (app_client, compliance_client, admin_client) for Bank B."""
+    if not _sdk_clients and BANK_MODE == "aran":
+        admin_key = ARAN_API_KEY
+        if not admin_key:
+            return None, None, None
+
+        admin_client = Aran(api_key=admin_key, base_url=ARAN_URL)
+        app_key = os.environ.get("ARAN_APP_KEY")
+        compliance_key = os.environ.get("ARAN_COMPLIANCE_KEY")
+
+        if not app_key:
+            try:
+                import urllib.request
+                req = urllib.request.Request(
+                    f"{ARAN_URL}/v1/keys",
+                    data=json.dumps({"label": "Bank B Core Ingestion & AI", "scopes": ["protect", "gateway", "trace"]}).encode(),
+                    headers={"Content-Type": "application/json", "X-API-Key": admin_key},
+                    method="POST",
+                )
+                with urllib.request.urlopen(req) as resp:
+                    app_key = json.loads(resp.read().decode())["api_key"]
+            except Exception:
+                app_key = admin_key
+
+        if not compliance_key:
+            try:
+                import urllib.request
+                req = urllib.request.Request(
+                    f"{ARAN_URL}/v1/keys",
+                    data=json.dumps({"label": "Bank B Compliance Audit", "scopes": ["detokenise"]}).encode(),
+                    headers={"Content-Type": "application/json", "X-API-Key": admin_key},
+                    method="POST",
+                )
+                with urllib.request.urlopen(req) as resp:
+                    compliance_key = json.loads(resp.read().decode())["api_key"]
+            except Exception:
+                compliance_key = admin_key
+
+        _sdk_clients["app"] = Aran(api_key=app_key, base_url=ARAN_URL)
+        _sdk_clients["compliance"] = Aran(api_key=compliance_key, base_url=ARAN_URL)
+        _sdk_clients["admin"] = admin_client
+
+    return _sdk_clients.get("app"), _sdk_clients.get("compliance"), _sdk_clients.get("admin")
 
 app = FastAPI(
     title=f"Demo Bank ({'Aran Protected' if BANK_MODE == 'aran' else 'Legacy'})",
@@ -102,6 +159,9 @@ init_db()
 # ---------------------------------------------------------------- Aran HTTP client
 def aran_headers(admin: bool = False) -> dict:
     h = {"Content-Type": "application/json"}
+    internal_secret = os.environ.get("ARAN_INTERNAL_SECRET")
+    if internal_secret:
+        h["X-Aran-Internal"] = internal_secret
     if ARAN_API_KEY:
         h["X-API-Key"] = ARAN_API_KEY
     if admin and ARAN_ADMIN_TOKEN:
@@ -193,19 +253,27 @@ def get_sample_customer():
     sample = None
     try:
         sample = call_aran("GET", "/api/tour/generate")
+        if not isinstance(sample, dict) or "mobile" not in sample:
+            sample = None
     except Exception:
         pass
 
     if not sample:
         try:
-            r = requests.get("http://127.0.0.1:8000/api/tour/generate", timeout=3)
-            sample = r.json()
+            r = requests.get("http://127.0.0.1:8000/api/tour/generate", headers=aran_headers(), timeout=3)
+            r.raise_for_status()
+            res_json = r.json()
+            if isinstance(res_json, dict) and "mobile" in res_json:
+                sample = res_json
         except Exception:
-            sample = {
-                "aadhaar": "895760490870",
-                "card": "4532015112830366",
-                "mobile": "9876543210",
-            }
+            pass
+
+    if not sample or not isinstance(sample, dict) or "mobile" not in sample:
+        sample = {
+            "aadhaar": "895760490870",
+            "card": "4532015112830366",
+            "mobile": "9876543210",
+        }
     sample["name"] = secrets.choice(SAMPLE_NAMES)
     sample["note"] = "Use sample data only. Never submit real financial credentials."
     return sample
@@ -220,6 +288,7 @@ def list_customers():
 
 
 @app.post("/api/customers")
+@app.post("/api/register")
 def register_customer(body: CustomerIn):
     """Customer sign-up route (Write path).
 
@@ -245,48 +314,36 @@ def register_customer(body: CustomerIn):
     aran_findings = []
 
     if BANK_MODE == "aran":
-        # Amendment A2: send name, mobile, Aadhaar and card in ONE POST /api/process call
-        payload_dict = {
-            "name": name,
-            "mobile": mobile,
-            "aadhaar": aadhaar,
-            "card": card,
-        }
-        process_payload = {
-            "text": json.dumps(payload_dict),
-            "source": "core-banking",
-            "sink": "kyc-archive",
-            "customer_ref": cust_ref,
-            "purpose": "KYC",
-        }
-        res = call_aran("POST", "/api/process", process_payload)
+        app_client, _, _ = get_sdk_clients()
+        # Format chosen from demo_bank/names_experiment.py benchmark (100% tokenisation rate)
+        registration_payload = f"Account holder {name} opened an account with mobile {mobile}, Aadhaar {aadhaar}, card {card}"
+        res = app_client.protect(
+            text=registration_payload,
+            customer_ref=cust_ref,
+            purpose="KYC",
+            sink="kyc-archive",
+        )
         aran_findings = res.get("findings", [])
 
-        # Parse processed fields from after text
-        try:
-            after_fields = json.loads(res.get("after", "{}"))
-            stored_name = after_fields.get("name", name)
-            stored_mobile = after_fields.get("mobile", mobile)
-            stored_aadhaar = after_fields.get("aadhaar", aadhaar)
-            stored_card = after_fields.get("card", card)
-        except Exception:
-            # Fallback token extraction from findings
-            for f in aran_findings:
-                ftype = f.get("type")
-                tok = f.get("token")
-                if ftype == "PER" and tok:
-                    stored_name = tok
-                elif ftype == "MOBILE" and tok:
-                    stored_mobile = tok
-                elif ftype == "AADHAAR" and tok:
-                    stored_aadhaar = tok
-                elif ftype == "CARD" and tok:
-                    stored_card = tok
+        # Extract tokens for each identifier type from findings
+        for f in aran_findings:
+            ftype = f.get("type")
+            tok = f.get("token")
+            if ftype == "PER" and tok:
+                stored_name = tok
+            elif ftype == "MOBILE" and tok:
+                stored_mobile = tok
+            elif ftype == "AADHAAR" and tok:
+                stored_aadhaar = tok
+            elif ftype == "CARD" and tok:
+                stored_card = tok
 
         # Record in memory token map for authorized officer view
         TOKEN_MAP[stored_aadhaar] = {"raw": aadhaar, "type": "AADHAAR", "customer_ref": cust_ref}
         TOKEN_MAP[stored_card] = {"raw": card, "type": "CARD", "customer_ref": cust_ref}
         TOKEN_MAP[stored_mobile] = {"raw": mobile, "type": "MOBILE", "customer_ref": cust_ref}
+        if stored_name != name:
+            TOKEN_MAP[stored_name] = {"raw": name, "type": "PER", "customer_ref": cust_ref}
 
     # Save to customers table
     try:
@@ -305,16 +362,12 @@ def register_customer(body: CustomerIn):
     # Log path: write audit log
     raw_log = f"Account created for {name} | Mobile: {mobile} | Aadhaar: {aadhaar} | Card: {card}"
     if BANK_MODE == "aran":
-        # Sanitize log via Aran before storing
-        log_res = call_aran(
-            "POST",
-            "/api/process",
-            {
-                "text": raw_log,
-                "source": "core-banking",
-                "sink": "log-platform",
-                "purpose": "Service",
-            },
+        # Sanitize log via Aran SDK before storing
+        app_client, _, _ = get_sdk_clients()
+        log_res = app_client.protect(
+            text=raw_log,
+            sink="log-platform",
+            purpose="Service",
         )
         stored_log = log_res.get("after", raw_log)
     else:
@@ -372,19 +425,16 @@ def staff_chat(body: ChatIn):
     now_str = time.strftime("%Y-%m-%d %H:%M:%S")
 
     if BANK_MODE == "aran":
-        # AI path: role customer-care
-        res = call_aran("POST", "/api/tour/gateway", {"role": "customer-care", "text": prompt})
+        app_client, _, _ = get_sdk_clients()
+        # AI path: role customer-care using SDK gateway
+        res = app_client.gateway(prompt=prompt, role="customer-care")
         provider_saw_list = res.get("provider_saw", [])
         provider_saw_text = "\n".join(m.get("content", "") for m in provider_saw_list) if isinstance(provider_saw_list, list) else str(provider_saw_list)
         reply = res.get("reply", "No reply received")
         audit_ok = res.get("audit_ok", True)
 
         # Sanitize prompt before saving to chat_history so Bank B DB holds no raw PII
-        proc_prompt = call_aran(
-            "POST",
-            "/api/process",
-            {"text": prompt, "source": "employee-desktop", "sink": "llm-gateway", "purpose": "Service"},
-        )
+        proc_prompt = app_client.protect(text=prompt, sink="llm-gateway", purpose="Service")
         stored_prompt = proc_prompt.get("after", prompt)
     else:
         # Legacy mode: provider sees full raw prompt
@@ -406,11 +456,7 @@ def staff_chat(body: ChatIn):
         # Log entry
         chat_log = f"Chat inquiry for {cust_ref or 'general'}: {prompt}"
         if BANK_MODE == "aran":
-            proc = call_aran(
-                "POST",
-                "/api/process",
-                {"text": chat_log, "source": "core-banking", "sink": "log-platform", "purpose": "Service"},
-            )
+            proc = app_client.protect(text=chat_log, sink="log-platform", purpose="Service")
             chat_log = proc.get("after", chat_log)
         conn.execute(
             "INSERT INTO logs (customer_ref, level, message, created_at) VALUES (?, 'INFO', ?, ?)",
@@ -473,9 +519,10 @@ def officer_view(customer_ref: str, role: str = Query("teller")):
                 "status": "token",
             }
         else:
-            # Call Aran detokenise
+            # Call Aran detokenise using separate detokenise-scoped key via SDK (Item 4)
             try:
-                detok = call_aran("POST", "/api/detokenise", {"token": token, "caller": f"officer:{role}"})
+                _, compliance_client, _ = get_sdk_clients()
+                detok = compliance_client.detokenise(token=token)
                 status = detok.get("status", "unknown")
                 raw_val = detok.get("value")
                 if status == "erased":
@@ -565,7 +612,12 @@ def trace_dump(body: TraceIn):
         dump_res = get_breach_dump()
         dump_text = dump_res["dump"]
 
-    trace_res = call_aran("POST", "/api/trace", {"dump": dump_text})
+    if BANK_MODE == "aran":
+        app_client, _, _ = get_sdk_clients()
+        trace_res = app_client.trace(dump=dump_text)
+    else:
+        trace_res = call_aran("POST", "/api/trace", {"dump": dump_text})
+
     return {
         "bank_mode": BANK_MODE,
         "trace": trace_res,
@@ -576,7 +628,7 @@ def trace_dump(body: TraceIn):
 def erase_customer(customer_ref: str):
     """Erasure flow (Spec 7):
     - Legacy mode: deletes customer row only; leaves residual copies in logs and chat_history.
-    - Aran mode: calls POST /api/erase with purpose 'KYC', verifies receipt with POST /api/receipts/verify,
+    - Aran mode: calls POST /v1/erase with purpose 'KYC' via admin-scoped SDK, verifies receipt,
       and shows tokens permanently unreadable.
     """
     conn = get_db()
@@ -604,22 +656,18 @@ def erase_customer(customer_ref: str):
             "customer_ref": customer_ref,
         }
 
-    # Aran mode: crypto-shredding via key destruction
-    # 1. Call POST /api/erase on Aran
-    erase_payload = {
-        "customer_ref": customer_ref,
-        "purpose": "KYC",
-    }
-    receipt = call_aran("POST", "/api/erase", erase_payload, admin=True)
+    # Aran mode: crypto-shredding via key destruction using admin SDK client
+    _, compliance_client, admin_client = get_sdk_clients()
+    receipt = admin_client.erase(customer_ref=customer_ref, purpose="KYC")
 
-    # 2. Verify the signed receipt via POST /api/receipts/verify
-    verify_res = call_aran("POST", "/api/receipts/verify", receipt)
+    # 2. Verify the signed receipt via admin SDK verify_receipt
+    verify_res = admin_client.verify_receipt(receipt)
 
-    # 3. Verify detokenise now reports erased
+    # 3. Verify detokenise now reports erased via compliance client
     detok_checks = {}
     for field in ("aadhaar", "card"):
         tok = cust[field]
-        detok = call_aran("POST", "/api/detokenise", {"token": tok, "caller": "erasure-verification"})
+        detok = compliance_client.detokenise(token=tok)
         detok_checks[field] = {
             "token": tok,
             "status": detok.get("status"),

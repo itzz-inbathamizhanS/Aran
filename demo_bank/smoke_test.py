@@ -21,6 +21,22 @@ BANK_A_URL = os.environ.get("BANK_A_URL", "http://127.0.0.1:9001")
 BANK_B_URL = os.environ.get("BANK_B_URL", "http://127.0.0.1:9002")
 ARAN_URL = os.environ.get("ARAN_URL", "http://127.0.0.1:8000")
 
+INTERNAL_SECRET = os.environ.get("ARAN_INTERNAL_SECRET")
+if not INTERNAL_SECRET:
+    _env_local = os.path.join(os.path.dirname(__file__), "..", ".env.local")
+    if os.path.exists(_env_local):
+        with open(_env_local) as _f:
+            for _line in _f:
+                if _line.startswith("ARAN_INTERNAL_SECRET="):
+                    INTERNAL_SECRET = _line.strip().split("=", 1)[1]
+
+
+def get_core_headers():
+    h = {}
+    if INTERNAL_SECRET:
+        h["X-Aran-Internal"] = INTERNAL_SECRET
+    return h
+
 
 def print_step(n, msg):
     print(f"\n[Step {n:02d}] {msg}")
@@ -198,7 +214,7 @@ def main():
 
     # 9. Verify tokens permanently unreadable
     print_step(9, "Verify Bank B tokens are permanently unreadable via detokenise")
-    r_detok_after = requests.post(f"{ARAN_URL}/api/detokenise", json={"token": tok_aadhaar, "caller": "smoke"}, timeout=5)
+    r_detok_after = requests.post(f"{ARAN_URL}/api/detokenise", headers=get_core_headers(), json={"token": tok_aadhaar, "caller": "smoke"}, timeout=5)
     assert_eq(r_detok_after.json()["status"], "erased", "Aadhaar token status is erased")
     assert_eq(r_detok_after.json()["value"], None, "Detokenised value is None")
 

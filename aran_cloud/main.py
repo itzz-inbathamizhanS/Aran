@@ -7,12 +7,14 @@ Provides:
 - Granular per-tenant audit logs, erasure receipts, and dashboard metrics.
 """
 
+from collections import defaultdict, deque
 import hashlib
 import json
 import os
 import re
 import secrets
 import sqlite3
+import threading
 import time
 from typing import Any, Dict, List, Optional
 
@@ -33,6 +35,67 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(HERE, "static")
 DB_PATH = os.path.join(HERE, "cloud.db")
 
+VALID_SCOPES = {"admin", "protect", "gateway", "trace", "detokenise", "erase", "verify", "dashboard"}
+DEFAULT_ADMIN_SCOPES = "admin,protect,gateway,trace,detokenise,erase,verify,dashboard"
+
+# Rate limiting settings (Item 5 & Hardening 1a)
+RATE_LIMIT_PER_KEY = int(os.environ.get("ARAN_RATE_LIMIT_PER_KEY", "300"))
+ARAN_SIGNUP_LIMIT = int(os.environ.get("ARAN_SIGNUP_LIMIT", os.environ.get("ARAN_SIGNUP_LIMIT_PER_IP", "5")))
+ARAN_DEMO_MODE = os.environ.get("ARAN_DEMO_MODE", "0") in ("1", "true", "True")
+
+_key_request_timestamps = defaultdict(deque)  # key_hash -> deque of timestamps
+_signup_ip_timestamps = defaultdict(deque)    # ip -> deque of timestamps
+_rate_limit_lock = threading.Lock()
+
+
+def is_demo_exempt(ip: str) -> bool:
+    if not ARAN_DEMO_MODE:
+        return False
+    return ip in ("127.0.0.1", "::1", "localhost")
+
+
+def check_key_rate_limit(key_hash: str):
+    now = time.time()
+    window = 60.0  # 1 minute
+    with _rate_limit_lock:
+        ts_queue = _key_request_timestamps[key_hash]
+        while ts_queue and ts_queue[0] <= now - window:
+            ts_queue.popleft()
+        if len(ts_queue) >= RATE_LIMIT_PER_KEY:
+            retry_after = int(window - (now - ts_queue[0])) + 1
+            raise HTTPException(
+                status_code=429,
+                detail=f"Rate limit exceeded: max {RATE_LIMIT_PER_KEY} requests per minute.",
+                headers={"Retry-After": str(max(1, retry_after))},
+            )
+        ts_queue.append(now)
+
+
+def check_signup_rate_limit(request: Request):
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        ip = forwarded.split(",")[0].strip()
+    else:
+        ip = request.client.host if request.client else "127.0.0.1"
+
+    if is_demo_exempt(ip):
+        return
+
+    now = time.time()
+    window = 3600.0  # 1 hour
+    with _rate_limit_lock:
+        ts_queue = _signup_ip_timestamps[ip]
+        while ts_queue and ts_queue[0] <= now - window:
+            ts_queue.popleft()
+        if len(ts_queue) >= ARAN_SIGNUP_LIMIT:
+            retry_after = int(window - (now - ts_queue[0])) + 1
+            raise HTTPException(
+                status_code=429,
+                detail=f"Signup rate limit exceeded: max {ARAN_SIGNUP_LIMIT} signups per hour per IP.",
+                headers={"Retry-After": str(max(1, retry_after))},
+            )
+        ts_queue.append(now)
+
 app = FastAPI(
     title="Aran Cloud (preview)",
     description="Thin SaaS proxy providing tenants, API keys, namespacing, and metering for Aran.",
@@ -46,6 +109,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def add_no_cache_headers(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/static") or request.url.path in ("/", "/connect", "/dashboard"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
 
 
 # ---------------------------------------------------------------- storage
@@ -70,13 +143,54 @@ def init_db():
         """)
         conn.execute("""
             CREATE TABLE IF NOT EXISTS api_keys (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 tenant_id TEXT NOT NULL REFERENCES tenants(id),
-                key_hash TEXT PRIMARY KEY,
+                key_hash TEXT UNIQUE NOT NULL,
                 prefix TEXT NOT NULL,
+                label TEXT DEFAULT 'Default Admin Key',
+                scopes TEXT DEFAULT 'admin,protect,gateway,trace,detokenise,erase,verify,dashboard',
                 created_at TEXT NOT NULL,
+                last_used TEXT,
                 revoked INTEGER DEFAULT 0
             );
         """)
+        # Migration for existing api_keys tables missing scopes/last_used columns
+        info_keys = conn.execute("PRAGMA table_info(api_keys);").fetchall()
+        col_names = {row[1] for row in info_keys}
+        if "scopes" not in col_names:
+            conn.execute("""
+                CREATE TABLE api_keys_v2 (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    tenant_id TEXT NOT NULL REFERENCES tenants(id),
+                    key_hash TEXT UNIQUE NOT NULL,
+                    prefix TEXT NOT NULL,
+                    label TEXT DEFAULT 'Default Admin Key',
+                    scopes TEXT DEFAULT 'admin,protect,gateway,trace,detokenise,erase,verify,dashboard',
+                    created_at TEXT NOT NULL,
+                    last_used TEXT,
+                    revoked INTEGER DEFAULT 0
+                );
+            """)
+            conn.execute("""
+                INSERT INTO api_keys_v2 (tenant_id, key_hash, prefix, label, scopes, created_at, revoked)
+                SELECT tenant_id, key_hash, prefix, 'Default Admin Key',
+                       'admin,protect,gateway,trace,detokenise,erase,verify,dashboard',
+                       created_at, revoked FROM api_keys;
+            """)
+            conn.execute("DROP TABLE api_keys;")
+            conn.execute("ALTER TABLE api_keys_v2 RENAME TO api_keys;")
+        else:
+            if "label" not in col_names:
+                try:
+                    conn.execute("ALTER TABLE api_keys ADD COLUMN label TEXT DEFAULT 'Default Admin Key';")
+                except Exception:
+                    pass
+            if "last_used" not in col_names:
+                try:
+                    conn.execute("ALTER TABLE api_keys ADD COLUMN last_used TEXT;")
+                except Exception:
+                    pass
+
         conn.execute("""
             CREATE TABLE IF NOT EXISTS usage_events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -142,6 +256,7 @@ def init_db():
         conn.execute("CREATE INDEX IF NOT EXISTS idx_tenant_tokens_token ON tenant_tokens(token);")
         # Clean up any leftover placeholder tokens
         conn.execute("DELETE FROM tenant_tokens WHERE token LIKE '<%>%';")
+
         conn.execute("""
             CREATE TABLE IF NOT EXISTS receipts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -153,38 +268,141 @@ def init_db():
                 verified INTEGER DEFAULT 1
             );
         """)
+
+        # Detokenise Audit table with cryptographic hash chain (Item 2 & Hardening 1d)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS detokenise_audit (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id TEXT NOT NULL REFERENCES tenants(id),
+                key_id INTEGER,
+                key_label TEXT,
+                token TEXT NOT NULL,
+                purpose TEXT,
+                result TEXT NOT NULL,
+                at REAL NOT NULL,
+                created_at TEXT NOT NULL,
+                prev_hash TEXT,
+                entry_hash TEXT
+            );
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_audit_tenant ON detokenise_audit(tenant_id);")
+
+        audit_cols = {row[1] for row in conn.execute("PRAGMA table_info(detokenise_audit);").fetchall()}
+        if "prev_hash" not in audit_cols:
+            try:
+                conn.execute("ALTER TABLE detokenise_audit ADD COLUMN prev_hash TEXT;")
+            except Exception:
+                pass
+        if "entry_hash" not in audit_cols:
+            try:
+                conn.execute("ALTER TABLE detokenise_audit ADD COLUMN entry_hash TEXT;")
+            except Exception:
+                pass
     conn.close()
 
 
 init_db()
 
 
-# ---------------------------------------------------------------- auth dependency
-def get_current_tenant(x_api_key: Optional[str] = Header(None)) -> dict:
+def log_detokenise_audit(
+    conn: sqlite3.Connection,
+    tenant_id: str,
+    key_id: Optional[int],
+    key_label: Optional[str],
+    token: str,
+    purpose: Optional[str],
+    result: str,
+):
+    """Inserts a cryptographic hash-chained audit log row for detokenise operations."""
+    last_row = conn.execute(
+        "SELECT entry_hash FROM detokenise_audit WHERE tenant_id = ? ORDER BY id DESC LIMIT 1",
+        (tenant_id,),
+    ).fetchone()
+    prev_hash = last_row[0] if (last_row and last_row[0]) else "0" * 64
+
+    now_ts = time.time()
+    now_str = time.strftime("%Y-%m-%d %H:%M:%S")
+    entry_payload = f"{prev_hash}|{tenant_id}|{key_id or ''}|{key_label or ''}|{token}|{purpose or ''}|{result}|{now_ts:.4f}|{now_str}"
+    entry_hash = hashlib.sha256(entry_payload.encode("utf-8")).hexdigest()
+
+    conn.execute(
+        """
+        INSERT INTO detokenise_audit (
+            tenant_id, key_id, key_label, token, purpose, result, at, created_at, prev_hash, entry_hash
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (tenant_id, key_id, key_label, token, purpose, result, now_ts, now_str, prev_hash, entry_hash),
+    )
+
+
+# ---------------------------------------------------------------- auth dependency & scopes
+def get_current_tenant_and_key(x_api_key: Optional[str] = Header(None)) -> dict:
     if not x_api_key:
         raise HTTPException(
             status_code=401,
             detail="Invalid, missing or revoked API key. Pass a valid key in header 'X-API-Key'.",
         )
-    key_hash = hashlib.sha256(x_api_key.strip().encode()).hexdigest()
+    raw_key = x_api_key.strip()
+    key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+
+    # Rate limit check per API key (Item 5)
+    check_key_rate_limit(key_hash)
+
     conn = get_db()
     row = conn.execute(
         """
-        SELECT t.id, t.name, t.email, t.created_at, t.plan
+        SELECT t.id, t.name, t.email, t.created_at, t.plan,
+               k.id as key_id, k.prefix as key_prefix, k.label as key_label, k.scopes as key_scopes, k.created_at as key_created
         FROM api_keys k
         JOIN tenants t ON k.tenant_id = t.id
         WHERE k.key_hash = ? AND k.revoked = 0
         """,
         (key_hash,),
     ).fetchone()
-    conn.close()
 
     if not row:
+        conn.close()
         raise HTTPException(
             status_code=401,
             detail="Invalid, missing or revoked API key. Pass a valid key in header 'X-API-Key'.",
         )
-    return dict(row)
+
+    # Update last_used
+    now_str = time.strftime("%Y-%m-%d %H:%M:%S")
+    with conn:
+        conn.execute("UPDATE api_keys SET last_used = ? WHERE key_hash = ?", (now_str, key_hash))
+    conn.close()
+
+    raw_scopes = row["key_scopes"] or ""
+    scopes_list = [s.strip().lower() for s in raw_scopes.split(",") if s.strip()]
+
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "email": row["email"],
+        "created_at": row["created_at"],
+        "plan": row["plan"],
+        "key_id": row["key_id"],
+        "key_prefix": row["key_prefix"],
+        "key_label": row["key_label"],
+        "scopes": scopes_list,
+        "key_hash": key_hash,
+    }
+
+
+get_current_tenant = get_current_tenant_and_key
+
+
+def require_scope(required_scope: str):
+    def dependency(tenant_and_key: dict = Depends(get_current_tenant_and_key)):
+        scopes = tenant_and_key.get("scopes", [])
+        if "admin" not in scopes and required_scope not in scopes:
+            raise HTTPException(
+                status_code=403,
+                detail=f"this key lacks the '{required_scope}' scope",
+            )
+        return tenant_and_key
+    return dependency
 
 
 # ---------------------------------------------------------------- models
@@ -202,7 +420,8 @@ class ProtectIn(BaseModel):
 
 class GatewayIn(BaseModel):
     role: str = "customer-care"
-    text: str
+    text: Optional[str] = None
+    prompt: Optional[str] = None
 
 
 class DetokeniseIn(BaseModel):
@@ -219,10 +438,18 @@ class TraceIn(BaseModel):
     dump: str
 
 
+class KeyCreateIn(BaseModel):
+    label: str
+    scopes: List[str]
+
+
 # ---------------------------------------------------------------- helpers
 def call_core(method: str, endpoint: str, json_data: dict = None, admin: bool = False, timeout: float = 10.0):
     url = f"{ARAN_CORE_URL}{endpoint}"
     headers = {"Content-Type": "application/json"}
+    internal_secret = os.environ.get("ARAN_INTERNAL_SECRET")
+    if internal_secret:
+        headers["X-Aran-Internal"] = internal_secret
     if admin and ARAN_ADMIN_TOKEN:
         headers["X-Admin-Token"] = ARAN_ADMIN_TOKEN
     try:
@@ -246,12 +473,19 @@ def call_core(method: str, endpoint: str, json_data: dict = None, admin: bool = 
 
 # ---------------------------------------------------------------- v1 API
 @app.post("/v1/workspaces")
-def create_workspace(body: WorkspaceIn):
-    """Creates a new workspace tenant and returns a single-use API key."""
+def create_workspace(body: WorkspaceIn, request: Request):
+    """Creates a new workspace tenant and returns a single-use ADMIN API key with all scopes."""
+    # Check signup rate limit (Item 5)
+    check_signup_rate_limit(request)
+
     tenant_id = f"t_{secrets.token_hex(4)}"
     raw_key = f"aran_live_{secrets.token_hex(16)}"
     key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
     prefix = raw_key[:14]
+
+    raw_dash_key = f"aran_live_{secrets.token_hex(16)}"
+    dash_key_hash = hashlib.sha256(raw_dash_key.encode()).hexdigest()
+    dash_prefix = raw_dash_key[:14]
     now_str = time.strftime("%Y-%m-%d %H:%M:%S")
 
     conn = get_db()
@@ -265,10 +499,17 @@ def create_workspace(body: WorkspaceIn):
         )
         conn.execute(
             """
-            INSERT INTO api_keys (tenant_id, key_hash, prefix, created_at, revoked)
-            VALUES (?, ?, ?, ?, 0)
+            INSERT INTO api_keys (tenant_id, key_hash, prefix, label, scopes, created_at, revoked)
+            VALUES (?, ?, ?, 'Default Admin Key', ?, ?, 0)
             """,
-            (tenant_id, key_hash, prefix, now_str),
+            (tenant_id, key_hash, prefix, DEFAULT_ADMIN_SCOPES, now_str),
+        )
+        conn.execute(
+            """
+            INSERT INTO api_keys (tenant_id, key_hash, prefix, label, scopes, created_at, revoked)
+            VALUES (?, ?, ?, 'Dashboard Read-Only Key', 'dashboard', ?, 0)
+            """,
+            (tenant_id, dash_key_hash, dash_prefix, now_str),
         )
     conn.close()
 
@@ -277,14 +518,122 @@ def create_workspace(body: WorkspaceIn):
         "name": body.name.strip(),
         "email": body.email.strip(),
         "api_key": raw_key,
+        "admin_key": raw_key,
+        "dashboard_key": raw_dash_key,
+        "prefix": prefix,
+        "label": "Default Admin Key",
+        "scopes": [s.strip() for s in DEFAULT_ADMIN_SCOPES.split(",")],
         "plan": "free",
         "created_at": now_str,
         "note": "Save your API key now. It is shown once and stored only as a SHA-256 hash.",
     }
 
 
+# ---------------------------------------------------------------- Scoped API Key Management (Item 1)
+@app.post("/v1/keys")
+def mint_key(body: KeyCreateIn, tenant: dict = Depends(require_scope("admin"))):
+    """Mints a key with a label and a chosen list of scopes (admin scope only)."""
+    chosen_scopes = [s.strip().lower() for s in body.scopes if s.strip()]
+    if not chosen_scopes:
+        raise HTTPException(status_code=400, detail="At least one scope must be provided.")
+    for s in chosen_scopes:
+        if s not in VALID_SCOPES:
+            raise HTTPException(status_code=400, detail=f"Invalid scope '{s}'. Valid scopes are: {sorted(VALID_SCOPES)}")
+
+    raw_key = f"aran_live_{secrets.token_hex(16)}"
+    key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+    prefix = raw_key[:14]
+    now_str = time.strftime("%Y-%m-%d %H:%M:%S")
+    scopes_str = ",".join(chosen_scopes)
+
+    conn = get_db()
+    with conn:
+        cur = conn.execute(
+            """
+            INSERT INTO api_keys (tenant_id, key_hash, prefix, label, scopes, created_at, revoked)
+            VALUES (?, ?, ?, ?, ?, ?, 0)
+            """,
+            (tenant["id"], key_hash, prefix, body.label.strip(), scopes_str, now_str),
+        )
+        new_id = cur.lastrowid
+    conn.close()
+
+    return {
+        "id": new_id,
+        "prefix": prefix,
+        "api_key": raw_key,
+        "label": body.label.strip(),
+        "scopes": chosen_scopes,
+        "created": now_str,
+        "created_at": now_str,
+        "last_used": None,
+        "revoked": 0,
+        "note": "Save your API key now. It is shown once and stored only as a SHA-256 hash.",
+    }
+
+
+@app.get("/v1/keys")
+def list_keys(tenant: dict = Depends(require_scope("dashboard"))):
+    """Lists keys for the authenticated tenant (prefix, label, scopes, created, last used, revoked; never the secret)."""
+    conn = get_db()
+    rows = conn.execute(
+        """
+        SELECT id, prefix, label, scopes, created_at, last_used, revoked
+        FROM api_keys
+        WHERE tenant_id = ?
+        ORDER BY id ASC
+        """,
+        (tenant["id"],),
+    ).fetchall()
+    conn.close()
+
+    out = []
+    for r in rows:
+        scopes_list = [s.strip().lower() for s in (r["scopes"] or "").split(",") if s.strip()]
+        out.append({
+            "id": r["id"],
+            "prefix": r["prefix"],
+            "label": r["label"],
+            "scopes": scopes_list,
+            "created": r["created_at"],
+            "created_at": r["created_at"],
+            "last_used": r["last_used"],
+            "revoked": bool(r["revoked"]),
+        })
+    return {"keys": out, "count": len(out)}
+
+
+@app.delete("/v1/keys/{key_id}")
+def revoke_key(key_id: str, tenant: dict = Depends(require_scope("admin"))):
+    """Revokes an API key by id or prefix (admin scope only)."""
+    conn = get_db()
+    with conn:
+        row = conn.execute(
+            """
+            SELECT id, prefix, revoked FROM api_keys
+            WHERE tenant_id = ? AND (id = ? OR prefix = ?)
+            """,
+            (tenant["id"], key_id, key_id),
+        ).fetchone()
+
+        if not row:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Key not found.")
+
+        conn.execute(
+            """
+            UPDATE api_keys SET revoked = 1
+            WHERE tenant_id = ? AND (id = ? OR prefix = ?)
+            """,
+            (tenant["id"], key_id, key_id),
+        )
+    conn.close()
+
+    return {"status": "ok", "message": f"Key {key_id} has been revoked.", "revoked": True}
+
+
 @app.post("/v1/protect")
-def protect(body: ProtectIn, tenant: dict = Depends(get_current_tenant)):
+def protect(body: ProtectIn, tenant: dict = Depends(require_scope("protect"))):
     """Namespaces customer_ref, forwards to core /api/process, meters usage, and applies tenant isolation safeguards."""
     tenant_id = tenant["id"]
     # Core main.py enforces ^[A-Za-z0-9_-]{1,64}$, so we use '__' delimiter for namespacing
@@ -392,10 +741,11 @@ def protect(body: ProtectIn, tenant: dict = Depends(get_current_tenant)):
 
 
 @app.post("/v1/gateway")
-def gateway(body: GatewayIn, tenant: dict = Depends(get_current_tenant)):
+def gateway(body: GatewayIn, tenant: dict = Depends(require_scope("gateway"))):
     """AI Gateway forwarder for staff chatbots."""
     tenant_id = tenant["id"]
-    core_res, latency_ms = call_core("POST", "/api/tour/gateway", {"role": body.role, "text": body.text})
+    prompt_text = body.prompt if body.prompt is not None else (body.text or "")
+    core_res, latency_ms = call_core("POST", "/api/tour/gateway", {"role": body.role, "text": prompt_text})
 
     findings_in_prompt = core_res.get("findings_in_prompt", 0)
     by_type = {"PROMPT_PII": findings_in_prompt} if findings_in_prompt else {}
@@ -419,14 +769,30 @@ def gateway(body: GatewayIn, tenant: dict = Depends(get_current_tenant)):
 def detokenise(body: DetokeniseIn, tenant: dict = Depends(get_current_tenant)):
     """Detokenisation forwarder: only resolves tokens that belong to the calling tenant."""
     tenant_id = tenant["id"]
+    scopes = tenant.get("scopes", [])
+
+    # Scope check: must have 'detokenise' or 'admin'
+    if "admin" not in scopes and "detokenise" not in scopes:
+        conn = get_db()
+        with conn:
+            log_detokenise_audit(
+                conn,
+                tenant_id=tenant_id,
+                key_id=tenant.get("key_id"),
+                key_label=tenant.get("key_label"),
+                token=body.token,
+                purpose="unknown",
+                result="denied",
+            )
+        conn.close()
+        raise HTTPException(status_code=403, detail="this key lacks the 'detokenise' scope")
 
     # Check token ownership in cloud.db
     conn = get_db()
     row = conn.execute(
-        "SELECT tenant_id FROM tenant_tokens WHERE token = ? AND tenant_id = ?",
+        "SELECT tenant_id, purpose FROM tenant_tokens WHERE token = ? AND tenant_id = ?",
         (body.token, tenant_id),
     ).fetchone()
-    conn.close()
 
     unknown_res = {
         "token": body.token,
@@ -437,7 +803,6 @@ def detokenise(body: DetokeniseIn, tenant: dict = Depends(get_current_tenant)):
 
     if not row:
         # Unknown to this tenant or belongs to another tenant: return standard unknown response
-        conn = get_db()
         with conn:
             conn.execute(
                 """
@@ -446,20 +811,40 @@ def detokenise(body: DetokeniseIn, tenant: dict = Depends(get_current_tenant)):
                 """,
                 (tenant_id, time.time()),
             )
+            log_detokenise_audit(
+                conn,
+                tenant_id=tenant_id,
+                key_id=tenant.get("key_id"),
+                key_label=tenant.get("key_label"),
+                token=body.token,
+                purpose="unknown",
+                result="unknown",
+            )
         conn.close()
         return unknown_res
 
+    purpose = row["purpose"] or "KYC"
+
     # Owned by caller: forward to Aran core
     core_res, latency_ms = call_core("POST", "/api/detokenise", {"token": body.token, "caller": body.caller or "console"})
+    res_status = core_res.get("status", "ok")
 
-    conn = get_db()
     with conn:
         conn.execute(
             """
             INSERT INTO usage_events (tenant_id, at, endpoint, sink, purpose, protected_count, unprotected_count, ignored_count, by_type, latency_ms, customer_ref, status)
             VALUES (?, ?, '/v1/detokenise', 'vault', 'Detokenise', 0, 0, 0, '{}', ?, NULL, ?)
             """,
-            (tenant_id, time.time(), latency_ms, core_res.get("status", "ok")),
+            (tenant_id, time.time(), latency_ms, res_status),
+        )
+        log_detokenise_audit(
+            conn,
+            tenant_id=tenant_id,
+            key_id=tenant.get("key_id"),
+            key_label=tenant.get("key_label"),
+            token=body.token,
+            purpose=purpose,
+            result=res_status,
         )
     conn.close()
 
@@ -467,7 +852,7 @@ def detokenise(body: DetokeniseIn, tenant: dict = Depends(get_current_tenant)):
 
 
 @app.post("/v1/erase")
-def erase(body: EraseIn, tenant: dict = Depends(get_current_tenant)):
+def erase(body: EraseIn, tenant: dict = Depends(require_scope("erase"))):
     """Namespaces customer_ref, forwards to core /api/erase, and stores cryptographic receipt."""
     tenant_id = tenant["id"]
     namespaced_ref = f"{tenant_id}__{body.customer_ref}"
@@ -507,14 +892,14 @@ def erase(body: EraseIn, tenant: dict = Depends(get_current_tenant)):
 
 
 @app.post("/v1/receipts/verify")
-def verify_receipt(receipt: dict, tenant: dict = Depends(get_current_tenant)):
+def verify_receipt(receipt: dict, tenant: dict = Depends(require_scope("verify"))):
     """Forwards receipt verification to Aran core."""
     res, _ = call_core("POST", "/api/receipts/verify", receipt)
     return res
 
 
 @app.post("/v1/trace")
-def trace(body: TraceIn, tenant: dict = Depends(get_current_tenant)):
+def trace(body: TraceIn, tenant: dict = Depends(require_scope("trace"))):
     """Forwards dump trace to Aran core, reporting only tokens owned by the calling tenant."""
     tenant_id = tenant["id"]
     core_res, latency_ms = call_core("POST", "/api/trace", {"dump": body.dump})
@@ -577,7 +962,7 @@ def trace(body: TraceIn, tenant: dict = Depends(get_current_tenant)):
 
 
 @app.get("/v1/dashboard")
-def get_dashboard(tenant: dict = Depends(get_current_tenant)):
+def get_dashboard(tenant: dict = Depends(require_scope("dashboard"))):
     """Returns calling tenant's isolated metrics, usage events, and receipts."""
     tenant_id = tenant["id"]
     conn = get_db()
@@ -589,6 +974,12 @@ def get_dashboard(tenant: dict = Depends(get_current_tenant)):
     receipts_rows = [dict(r) for r in conn.execute(
         "SELECT * FROM receipts WHERE tenant_id = ? ORDER BY id DESC", (tenant_id,)
     ).fetchall()]
+
+    # Count plaintext reads from detokenise_audit (Item 2)
+    plaintext_reads = conn.execute(
+        "SELECT count(*) FROM detokenise_audit WHERE tenant_id = ? AND result = 'ok'",
+        (tenant_id,),
+    ).fetchone()[0]
     conn.close()
 
     total_protected = sum(e["protected_count"] for e in events)
@@ -645,6 +1036,8 @@ def get_dashboard(tenant: dict = Depends(get_current_tenant)):
             "raw_values_passed": total_unprotected,
             "not_valid_ids_ignored": total_ignored,
             "ignored_checksum_count": total_ignored,
+            "plaintext_reads": plaintext_reads,
+            "plaintext reads": plaintext_reads,
             "by_type": by_type,
             "p50_ms": p50_ms,
             "p95_ms": p95_ms,
@@ -657,6 +1050,132 @@ def get_dashboard(tenant: dict = Depends(get_current_tenant)):
         "recent_activity": events[:50],
         "receipts": parsed_receipts,
     }
+
+
+# ---------------------------------------------------------------- Detokenise Audit (Item 2 & Hardening 1d)
+@app.get("/v1/audit")
+def get_audit(tenant: dict = Depends(require_scope("dashboard"))):
+    """Returns caller's detokenise audit log rows (dashboard scope)."""
+    tenant_id = tenant["id"]
+    conn = get_db()
+    rows = conn.execute(
+        """
+        SELECT id, key_id, key_label, token, purpose, result, at, created_at, prev_hash, entry_hash
+        FROM detokenise_audit
+        WHERE tenant_id = ?
+        ORDER BY id DESC LIMIT 200
+        """,
+        (tenant_id,),
+    ).fetchall()
+    conn.close()
+
+    out = []
+    for r in rows:
+        out.append({
+            "id": r["id"],
+            "key_id": r["key_id"],
+            "key_label": r["key_label"],
+            "token": r["token"],
+            "purpose": r["purpose"],
+            "result": r["result"],
+            "at": r["at"],
+            "created_at": r["created_at"],
+            "prev_hash": r["prev_hash"],
+            "entry_hash": r["entry_hash"],
+        })
+    return {"audit": out, "count": len(out)}
+
+
+@app.get("/v1/audit/verify")
+def verify_audit_chain(tenant: dict = Depends(require_scope("dashboard"))):
+    """Recomputes and cryptographically verifies the hash chain of detokenise_audit rows."""
+    tenant_id = tenant["id"]
+    conn = get_db()
+    rows = conn.execute(
+        """
+        SELECT id, tenant_id, key_id, key_label, token, purpose, result, at, created_at, prev_hash, entry_hash
+        FROM detokenise_audit
+        WHERE tenant_id = ?
+        ORDER BY id ASC
+        """,
+        (tenant_id,),
+    ).fetchall()
+    conn.close()
+
+    expected_prev = "0" * 64
+    for r in rows:
+        prev_hash = r["prev_hash"]
+        entry_hash = r["entry_hash"]
+
+        if prev_hash != expected_prev:
+            return {
+                "valid": False,
+                "error": f"Broken chain pointer at row id {r['id']}: expected prev_hash {expected_prev}, got {prev_hash}",
+                "failed_at_id": r["id"],
+                "total_rows": len(rows),
+            }
+
+        recomputed = hashlib.sha256(
+            f"{prev_hash}|{r['tenant_id']}|{r['key_id'] or ''}|{r['key_label'] or ''}|{r['token']}|{r['purpose'] or ''}|{r['result']}|{r['at']:.4f}|{r['created_at']}".encode("utf-8")
+        ).hexdigest()
+
+        if entry_hash != recomputed:
+            return {
+                "valid": False,
+                "error": f"Tampered entry hash at row id {r['id']}: expected {recomputed}, stored {entry_hash}",
+                "failed_at_id": r["id"],
+                "total_rows": len(rows),
+            }
+
+        expected_prev = entry_hash
+
+    return {
+        "valid": True,
+        "total_rows": len(rows),
+        "latest_hash": expected_prev,
+        "verified_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+    }
+
+
+@app.post("/v1/internal/reset-limiters")
+def reset_limiters():
+    """Clears in-memory rate limiter state."""
+    with _rate_limit_lock:
+        _key_request_timestamps.clear()
+        _signup_ip_timestamps.clear()
+    return {"status": "ok", "cleared": True}
+
+
+@app.get("/v1/health")
+def get_v1_health():
+    """Checks the core at /api/health and returns ok or degraded."""
+    try:
+        resp = requests.get(f"{ARAN_CORE_URL}/api/health", timeout=2.0)
+        if resp.status_code == 200:
+            core_data = resp.json()
+            if core_data.get("ready"):
+                return {"status": "ok", "core": True, "core_ready": True}
+        return {"status": "degraded", "core": False, "core_ready": False}
+    except Exception as e:
+        return {"status": "degraded", "core": False, "error": str(e)}
+
+
+@app.post("/v1/demo/seed")
+def trigger_demo_seed(request: Request, tenant: dict = Depends(get_current_tenant)):
+    """Triggers realistic demo traffic seeding for the calling workspace."""
+    import subprocess
+    import sys
+    api_key = request.headers.get("X-API-Key")
+    script_path = os.path.join(HERE, "..", "scripts", "seed_demo.py")
+    res = subprocess.run(
+        [sys.executable, script_path, "--api-key", api_key],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    if res.returncode != 0:
+        raise HTTPException(status_code=500, detail=f"Seed failed: {res.stderr}")
+    return {"status": "ok", "output": res.stdout}
 
 
 # ---------------------------------------------------------------- static & frontend

@@ -20,6 +20,22 @@ import requests
 CLOUD_URL = os.environ.get("ARAN_CLOUD_URL", "http://127.0.0.1:8100")
 CORE_URL = os.environ.get("ARAN_CORE_URL", "http://127.0.0.1:8000")
 
+INTERNAL_SECRET = os.environ.get("ARAN_INTERNAL_SECRET")
+if not INTERNAL_SECRET:
+    _env_local = os.path.join(os.path.dirname(__file__), "..", ".env.local")
+    if os.path.exists(_env_local):
+        with open(_env_local) as _f:
+            for _line in _f:
+                if _line.startswith("ARAN_INTERNAL_SECRET="):
+                    INTERNAL_SECRET = _line.strip().split("=", 1)[1]
+
+
+def get_core_headers():
+    h = {}
+    if INTERNAL_SECRET:
+        h["X-Aran-Internal"] = INTERNAL_SECRET
+    return h
+
 
 def print_step(n, msg):
     step_str = f"{n:02d}" if isinstance(n, int) else str(n)
@@ -57,9 +73,9 @@ def main():
 
     # 2. Signup
     print_step(2, "Workspace signup & key generation (POST /v1/workspaces)")
-    r_ws = requests.post(f"{CLOUD_URL}/v1/workspaces", json={
+    r_ws = requests.post(f"{CLOUD_URL}/v1/workspaces", headers={"X-Forwarded-For": "10.100.1.1"}, json={
         "name": "Cloud Smoke Corp",
-        "email": "dev@smoke.io"
+        "email": f"dev_{time.time()}@smoke.io"
     }, timeout=5)
     assert_eq(r_ws.status_code, 200, "Workspace creation status")
     ws_data = r_ws.json()
@@ -79,7 +95,7 @@ def main():
 
     # 4. Protect write path
     print_step(4, "Protect customer PII (POST /v1/protect with namespacing)")
-    sample = requests.get(f"{CORE_URL}/api/tour/generate", timeout=5).json()
+    sample = requests.get(f"{CORE_URL}/api/tour/generate", headers=get_core_headers(), timeout=5).json()
     aadhaar = sample["aadhaar"]
     card = sample["card"]
     cust_ref = "CUST-SMK-001"
@@ -114,7 +130,10 @@ def main():
     # 6. Two-tenant isolation safeguard
     print_step(6, "Verify cross-tenant owner isolation safeguard (zero customer_ref leakage)")
     # Create second tenant
-    r_t2 = requests.post(f"{CLOUD_URL}/v1/workspaces", json={"name": "Tenant Beta", "email": "beta@tenant.io"}, timeout=5).json()
+    r_t2 = requests.post(f"{CLOUD_URL}/v1/workspaces", headers={"X-Forwarded-For": "10.100.1.2"}, json={
+        "name": "Tenant Beta",
+        "email": f"beta_{time.time()}@tenant.io"
+    }, timeout=5).json()
     key_t2 = r_t2["api_key"]
 
     # Tenant 2 sends the SAME Aadhaar under their own customer_ref
@@ -166,7 +185,7 @@ def main():
 
     # 8. Vaultless Token Co-Ownership Across Tenants (Requirement 4a)
     print_step(8, "Vaultless FF1 token co-ownership across tenants (Alpha & Beta)")
-    sample_vaultless = requests.get(f"{CORE_URL}/api/tour/generate", timeout=5).json()["aadhaar"]
+    sample_vaultless = requests.get(f"{CORE_URL}/api/tour/generate", headers=get_core_headers(), timeout=5).json()["aadhaar"]
 
     # Alpha protects Aadhaar with NO customer_ref (vaultless)
     r_va = requests.post(f"{CLOUD_URL}/v1/protect", headers={"X-API-Key": api_key}, json={
@@ -297,12 +316,18 @@ def main():
         subprocess.run(["kill", "-9", pid_res.stdout.strip()])
         time.sleep(1)
 
-    # Relaunch Aran Cloud on 8100
+    # Relaunch Aran Cloud on 8100 with ARAN_INTERNAL_SECRET preserved
     repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     venv_py = os.path.join(repo_root, ".venv", "bin", "python3")
+    cloud_env = dict(os.environ)
+    cloud_env["ARAN_DEMO_MODE"] = os.environ.get("ARAN_DEMO_MODE", "1")
+    if INTERNAL_SECRET:
+        cloud_env["ARAN_INTERNAL_SECRET"] = INTERNAL_SECRET
+
     proc = subprocess.Popen(
         [venv_py, "-m", "uvicorn", "main:app", "--port", "8100"],
         cwd=os.path.join(repo_root, "aran_cloud"),
+        env=cloud_env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )
