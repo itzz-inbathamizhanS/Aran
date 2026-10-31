@@ -372,8 +372,17 @@ def test_rate_limits():
 
 
 def test_demo_mode_localhost_exemption_and_reset():
-    # Reset limiters first
-    r_reset = requests.post(f"{CLOUD_URL}/v1/internal/reset-limiters")
+    # The reset endpoint is operator-only: no token, no reset
+    r_anon = requests.post(f"{CLOUD_URL}/v1/internal/reset-limiters")
+    assert r_anon.status_code in (401, 403)
+    r_wrong = requests.post(f"{CLOUD_URL}/v1/internal/reset-limiters", headers={"X-Admin-Token": "wrong"})
+    assert r_wrong.status_code in (401, 403)
+
+    # Reset limiters with the operator token (ARAN_ADMIN_TOKEN, same value the cloud runs with)
+    admin_token = os.environ.get("ARAN_ADMIN_TOKEN")
+    if not admin_token:
+        pytest.skip("ARAN_ADMIN_TOKEN not set; reset endpoint is disabled")
+    r_reset = requests.post(f"{CLOUD_URL}/v1/internal/reset-limiters", headers={"X-Admin-Token": admin_token})
     assert r_reset.status_code == 200
     assert r_reset.json().get("cleared") is True
 

@@ -694,6 +694,24 @@ def erase_customer(customer_ref: str):
     }
 
 
+@app.get("/api/aran-summary")
+def aran_summary():
+    """Bank B only: this bank's own Aran Cloud workspace numbers, for the side-by-side page.
+    The browser never sees the bank's API key; the bank asks Aran Cloud and passes the metrics on."""
+    if BANK_MODE != "aran" or not ARAN_API_KEY:
+        return {"available": False, "reason": "only Bank B (Aran mode with an API key) has a workspace"}
+    if not ("8100" in ARAN_URL or "/v1" in ARAN_URL):
+        return {"available": False, "reason": "Bank B is wired straight to the core, not to Aran Cloud"}
+    try:
+        r = requests.get(f"{ARAN_URL}/v1/dashboard", headers=aran_headers(), timeout=5)
+        r.raise_for_status()
+        d = r.json()
+    except requests.exceptions.RequestException as err:
+        return {"available": False, "reason": f"Aran Cloud unreachable: {err.__class__.__name__}"}
+    t = d.get("tenant", {})
+    return {"available": True, "tenant": {"id": t.get("id"), "name": t.get("name")}, "metrics": d.get("metrics", {})}
+
+
 # Serve static files and templates
 @app.get("/")
 def serve_index():
@@ -712,3 +730,9 @@ def serve_compare():
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+# The Aran UI (the console's design system in app/ui) is shared by every Aran app:
+# its tokens, styles, component helpers and the kit for these pages are served at /aran.
+ARAN_UI_DIR = os.environ.get("ARAN_UI_DIR", os.path.join(HERE, "..", "app", "ui"))
+if os.path.isdir(ARAN_UI_DIR):
+    app.mount("/aran", StaticFiles(directory=ARAN_UI_DIR), name="aran-ui")

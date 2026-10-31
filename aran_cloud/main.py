@@ -9,6 +9,7 @@ Provides:
 
 from collections import defaultdict, deque
 import hashlib
+import hmac
 import json
 import os
 import re
@@ -48,10 +49,35 @@ _signup_ip_timestamps = defaultdict(deque)    # ip -> deque of timestamps
 _rate_limit_lock = threading.Lock()
 
 
-def is_demo_exempt(ip: str) -> bool:
+# X-Forwarded-For is only believed when the request really comes from a proxy we run.
+# ARAN_TRUSTED_PROXIES is a comma-separated list of proxy IPs (empty = trust no one).
+TRUSTED_PROXIES = {p.strip() for p in os.environ.get("ARAN_TRUSTED_PROXIES", "").split(",") if p.strip()}
+LOOPBACK = ("127.0.0.1", "::1", "localhost")
+
+
+def client_ip(request: Request) -> str:
+    """The caller's address: the socket peer, or the first forwarded hop when the peer is a trusted proxy."""
+    peer = request.client.host if request.client else "127.0.0.1"
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded and peer in TRUSTED_PROXIES:
+        return forwarded.split(",")[0].strip() or peer
+    return peer
+
+
+def is_demo_exempt(request: Request) -> bool:
+    """Demo mode skips the signup limit only for a real local caller, never for a forwarded header."""
     if not ARAN_DEMO_MODE:
         return False
-    return ip in ("127.0.0.1", "::1", "localhost")
+    peer = request.client.host if request.client else ""
+    return peer in LOOPBACK and not request.headers.get("X-Forwarded-For")
+
+
+def require_admin_token(x_admin_token: Optional[str] = Header(None)):
+    """Operator-only endpoints need ARAN_ADMIN_TOKEN; without one configured they stay off."""
+    if not ARAN_ADMIN_TOKEN:
+        raise HTTPException(status_code=403, detail="this endpoint is disabled: set ARAN_ADMIN_TOKEN to enable it")
+    if not x_admin_token or not hmac.compare_digest(x_admin_token, ARAN_ADMIN_TOKEN):
+        raise HTTPException(status_code=401, detail="missing or invalid X-Admin-Token")
 
 
 def check_key_rate_limit(key_hash: str):
@@ -72,14 +98,9 @@ def check_key_rate_limit(key_hash: str):
 
 
 def check_signup_rate_limit(request: Request):
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        ip = forwarded.split(",")[0].strip()
-    else:
-        ip = request.client.host if request.client else "127.0.0.1"
-
-    if is_demo_exempt(ip):
+    if is_demo_exempt(request):
         return
+    ip = client_ip(request)
 
     now = time.time()
     window = 3600.0  # 1 hour
@@ -1138,7 +1159,7 @@ def verify_audit_chain(tenant: dict = Depends(require_scope("dashboard"))):
 
 
 @app.post("/v1/internal/reset-limiters")
-def reset_limiters():
+def reset_limiters(_: None = Depends(require_admin_token)):
     """Clears in-memory rate limiter state."""
     with _rate_limit_lock:
         _key_request_timestamps.clear()
@@ -1161,7 +1182,7 @@ def get_v1_health():
 
 
 @app.post("/v1/demo/seed")
-def trigger_demo_seed(request: Request, tenant: dict = Depends(get_current_tenant)):
+def trigger_demo_seed(request: Request, tenant: dict = Depends(require_scope("admin"))):
     """Triggers realistic demo traffic seeding for the calling workspace."""
     import subprocess
     import sys
@@ -1195,3 +1216,9 @@ def serve_dashboard():
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+# The Aran UI (the console's design system in app/ui) is shared by every Aran app:
+# its tokens, styles, component helpers and the kit for these pages are served at /aran.
+ARAN_UI_DIR = os.environ.get("ARAN_UI_DIR", os.path.join(HERE, "..", "app", "ui"))
+if os.path.isdir(ARAN_UI_DIR):
+    app.mount("/aran", StaticFiles(directory=ARAN_UI_DIR), name="aran-ui")

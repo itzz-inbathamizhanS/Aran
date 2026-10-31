@@ -10,7 +10,7 @@ echo " Resetting Aran Demo Environment"
 echo "=========================================================="
 
 echo "▶ Resetting rate limiters..."
-curl -s -X POST http://127.0.0.1:8100/v1/internal/reset-limiters >/dev/null 2>&1 || true
+curl -s -X POST -H "X-Admin-Token: ${ARAN_ADMIN_TOKEN:-}" http://127.0.0.1:8100/v1/internal/reset-limiters >/dev/null 2>&1 || true
 
 echo "▶ Stopping demo processes on ports 8000, 8100, 9001, 9002..."
 for PORT in 8000 8100 9001 9002; do

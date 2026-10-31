@@ -1,122 +1,99 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <title>Aran Cloud (preview) - Zero-Knowledge Data-Flow Firewall</title>
-  <link rel="stylesheet" href="/static/css/cloud.css">
+<title>Aran Cloud</title>
+<meta name="description" content="Aran Cloud: create a workspace, get scoped API keys and put Aran in front of your databases, logs and AI prompts.">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23fff'/%3E%3Cpath d='M6 24V12h4v-4h4v4h4v-4h4v4h4v12z' fill='%23040508'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600&family=Instrument+Serif&family=Martian+Mono:wght@300;400&family=Noto+Sans+Tamil:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/aran/css/tokens.css">
+<link rel="stylesheet" href="/aran/css/style.css">
+<link rel="stylesheet" href="/aran/kit/kit.css">
 </head>
 <body>
-  <nav>
-    <a href="/" class="brand-logo">
-      <span>⚡</span> ARAN CLOUD
-    </a>
-    <div class="nav-links">
-      <span class="pill-preview">PREVIEW</span>
-      <a href="/connect" class="nav-link">Quick Connect</a>
-      <a href="/dashboard" class="nav-link">Dashboard</a>
-    </div>
-  </nav>
+<main id="view" tabindex="-1" class="page kit">
+  <header class="phead">
+    <div class="eyebrow">Aran Cloud · preview</div>
+    <h1 data-split>Protect customer data before it leaks</h1>
+    <p class="lede">Aran turns Aadhaar, PAN, card and phone numbers into purpose-bound vault tokens, with signed erasure receipts. Aran Cloud gives every bank its own workspace, scoped API keys, metering and a dashboard.</p>
+  </header>
 
-  <div class="container">
-    <div class="hero">
-      <h1>Protect Customer Data <span>Before It Leaks</span></h1>
-      <p>
-        The deterministic post-quantum firewall that converts Aadhaar, cards, and phone numbers into purpose-bound vault tokens with cryptographic receipts.
-      </p>
-    </div>
-
-    <div style="max-width: 600px; margin: 0 auto;">
-      <div class="card">
-        <h2>
-          <span>Create Developer Workspace</span>
-          <span style="font-size: 0.85rem; color: var(--accent-bright);">Free Plan (10,000 reqs/mo)</span>
-        </h2>
-        <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">
-          Get your instant API key to namespace and protect your customer databases, server logs, and LLM prompts.
-        </p>
-
-        <form id="form-signup">
-          <div class="form-group">
-            <label for="name">Workspace or Company Name</label>
-            <input type="text" id="name" required placeholder="e.g. Acme FinTech Corp">
-          </div>
-          <div class="form-group">
-            <label for="email">Work Email</label>
-            <input type="email" id="email" required placeholder="e.g. security@acme.com">
-          </div>
-          <button type="submit" class="btn btn-primary" style="width: 100%;">Create Workspace & Generate Key</button>
-        </form>
-
-        <div id="key-modal" style="display: none; margin-top: 1.5rem;">
-          <div style="background: var(--accent-subtle); border-left: 4px solid var(--accent-border); padding: 0.85rem 1rem; border-radius: 0 6px 6px 0; margin-bottom: 1rem;">
-            <strong>Workspace Created:</strong> <span id="ws-name"></span> (<span id="ws-id" class="mono"></span>)<br>
-            <span style="color: var(--accent-bright); font-size: 0.9rem;">Save your API key now. We only store a SHA-256 hash.</span>
-          </div>
-          <div class="key-box">
-            <span class="key-text" id="api-key-display"></span>
-            <button class="btn btn-secondary btn-sm" id="btn-copy-key">Copy Key</button>
-          </div>
-          <div style="display: flex; gap: 1rem; margin-top: 1.25rem;">
-            <a id="btn-goto-connect" href="/connect" class="btn btn-primary" style="flex: 1;">Connect Your App &rarr;</a>
-            <a id="btn-goto-dashboard" href="/dashboard" class="btn btn-secondary" style="flex: 1;">Open Dashboard</a>
-          </div>
-        </div>
+  <section class="grid g2" style="align-items:start">
+    <div class="card plus" id="signup-card">
+      <div class="between"><h3>Create a workspace</h3><span class="pill tok">Free · 10,000 requests a month</span></div>
+      <p class="muted small" style="margin:6px 0 20px">You get an admin key and a read-only dashboard key. Aran stores only their SHA-256 hashes, so save them when they are shown.</p>
+      <form class="kit-form" id="form-signup">
+        <label class="field">Workspace or company name<input id="name" required maxlength="120" placeholder="e.g. Demo Bank Ltd"></label>
+        <label class="field">Work email<input id="email" type="email" required maxlength="200" placeholder="e.g. security@demobank.example"></label>
+        <button class="btn" type="submit" id="btn-create"><span>Create workspace and keys</span><span class="arr">→</span></button>
+      </form>
+      <div id="signup-msg"></div>
+      <div id="keys" class="hidden">
+        <div class="note ok" id="ws-line"></div>
+        <div class="kit-gap-s"><div class="label">Admin key · all scopes · shown once</div><div class="kit-key"><code id="k-admin"></code><button class="btn secondary sm" data-copy="k-admin"><span>Copy</span></button></div></div>
+        <div class="kit-gap-s"><div class="label">Dashboard key · read only</div><div class="kit-key"><code id="k-dash"></code><button class="btn secondary sm" data-copy="k-dash"><span>Copy</span></button></div></div>
+        <div class="kit-row kit-gap-s"><a class="btn" id="go-connect" href="/connect"><span>Connect your app</span><span class="arr">→</span></a><a class="btn secondary" id="go-dash" href="/dashboard"><span>Open the dashboard</span></a></div>
       </div>
     </div>
-  </div>
 
-  <footer>
-    Aran Cloud (preview): separate keys, namespaces, metering and dashboards. Per-tenant engines and persistent vault storage are the next milestone.
-  </footer>
+    <div class="stack">
+      <div class="card">
+        <div class="label">Already have a key</div>
+        <form class="kit-inline" id="form-key">
+          <label class="field">API key<input id="have-key" class="mono" autocomplete="off" placeholder="aran_live_…"></label>
+          <button class="btn secondary" type="submit"><span>Open dashboard</span></button>
+        </form>
+      </div>
+      <div class="card">
+        <div class="label">Three places Aran sits</div>
+        <div class="kit-gap-s stack">
+          <div><b>Database writes</b><div class="small muted">Tokenise identifiers before the SQL insert, with <span class="mono">POST /v1/protect</span>.</div></div>
+          <div><b>Logs and telemetry</b><div class="small muted">Clean log lines before they reach Datadog, CloudWatch or ELK.</div></div>
+          <div><b>AI prompts</b><div class="small muted">Staff chatbots go through the AI gateway, so the model only sees placeholders, with <span class="mono">POST /v1/gateway</span>.</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="between"><div class="label" style="margin:0">Aran core</div><span class="kit-dot" id="health"><i></i><span>Checking</span></span></div>
+        <p class="small muted" style="margin-top:10px">Aran Cloud forwards every call to the Aran core and keeps each workspace's tokens, usage and audit log apart.</p>
+      </div>
+    </div>
+  </section>
+  <p class="small muted kit-gap">Aran Cloud (preview): separate keys, namespaces, metering and dashboards. Per-tenant engines are the next milestone.</p>
+</main>
 
-  <script>
-    const form = document.getElementById('form-signup');
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const name = document.getElementById('name').value.trim();
-      const email = document.getElementById('email').value.trim();
+<script src="/aran/vendor/gsap.min.js"></script>
+<script src="/aran/js/ui.js"></script>
+<script src="/aran/kit/kit.js"></script>
+<script>
+(function (A) {
+  const K = A.kit, U = A.ui, $ = U.$;
+  K.shell({ app: 'cloud', brand: 'Aran Cloud', env: 'Aran Cloud preview · workspaces, scoped keys and metering in front of the Aran core' });
+  K.reveal(document);
 
-      const res = await fetch('/v1/workspaces', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email })
-      });
-      const data = await res.json();
-
-      if (res.ok) {
-        document.getElementById('ws-name').innerText = data.name;
-        document.getElementById('ws-id').innerText = data.tenant_id;
-        document.getElementById('api-key-display').innerText = data.api_key;
-        document.getElementById('key-modal').style.display = 'block';
-        form.style.display = 'none';
-
-        const dashKey = data.dashboard_key || data.api_key;
-        const adminKey = data.admin_key || data.api_key;
-
-        // Save in browser session storage with try/catch
-        try {
-          sessionStorage.setItem('aran_dashboard_key', dashKey);
-          sessionStorage.setItem('aran_admin_key', adminKey);
-          sessionStorage.setItem('aran_tenant_name', data.name);
-        } catch (err) {
-          console.warn('sessionStorage unavailable', err);
-        }
-
-        // Set button links with URL fragment #key=... (never in query string)
-        document.getElementById('btn-goto-connect').href = `/connect#key=${encodeURIComponent(dashKey)}`;
-        document.getElementById('btn-goto-dashboard').href = `/dashboard#key=${encodeURIComponent(dashKey)}`;
-      } else {
-        alert('Failed: ' + (data.detail || 'Could not create workspace'));
-      }
+  $('#form-signup').onsubmit = async (e) => {
+    e.preventDefault(); $('#signup-msg').innerHTML = '';
+    await K.busy($('#btn-create'), async () => {
+      try {
+        const d = await K.api('/v1/workspaces', { body: { name: $('#name').value.trim(), email: $('#email').value.trim() } });
+        const dash = d.dashboard_key || d.api_key, admin = d.admin_key || d.api_key;
+        K.store.set('aran_dashboard_key', dash); K.store.set('aran_admin_key', admin); K.store.set('aran_tenant_name', d.name);
+        $('#ws-line').innerHTML = `Workspace <b>${K.esc(d.name)}</b> created <span class="mono">${K.esc(d.tenant_id)}</span>`;
+        $('#k-admin').textContent = admin; $('#k-dash').textContent = dash;
+        $('#go-connect').href = '/connect#key=' + encodeURIComponent(dash);
+        $('#go-dash').href = '/dashboard#key=' + encodeURIComponent(dash);
+        $('#form-signup').classList.add('hidden'); $('#keys').classList.remove('hidden');
+      } catch (err) { $('#signup-msg').innerHTML = U.note('err', K.esc(err.message)); }
     });
+  };
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-copy]'); if (b) K.copy($('#' + b.dataset.copy).textContent, b); });
+  $('#form-key').onsubmit = (e) => { e.preventDefault(); const k = $('#have-key').value.trim(); if (k) location.href = '/dashboard#key=' + encodeURIComponent(k); };
 
-    document.getElementById('btn-copy-key').addEventListener('click', () => {
-      const key = document.getElementById('api-key-display').innerText;
-      navigator.clipboard.writeText(key);
-      document.getElementById('btn-copy-key').innerText = 'Copied!';
-      setTimeout(() => document.getElementById('btn-copy-key').innerText = 'Copy Key', 2000);
-    });
-  </script>
+  const health = async () => { const el = $('#health'); try { const h = await K.api('/v1/health'); const ok = h.core || h.core_ready; el.className = 'kit-dot ' + (ok ? 'ok' : 'bad'); el.lastElementChild.textContent = ok ? 'Online' : 'Degraded'; } catch (e) { el.className = 'kit-dot bad'; el.lastElementChild.textContent = 'Offline'; } };
+  health(); setInterval(health, 5000);
+})(window.ARAN);
+</script>
 </body>
 </html>
-

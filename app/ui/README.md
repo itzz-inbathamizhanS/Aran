@@ -28,6 +28,7 @@ Design review boards: `#components` (C1 to C33 in every state), `#states` (empty
 | `js/sound.js` | Web Audio sounds (hover tick, click, charge whoosh, blast, shatter, chime, error). Off until the top-bar toggle is pressed. |
 | `js/tour.js` | Page 1: 13 chapters. `js/pages.js`: pages 2 to 8. `js/board.js`: review boards. `js/main.js`: shell and router. |
 | `js/standout.js`, `css/standout.css` | Demo pages: phone arena and live board, without/with Aran, leakage ledger, card photo scan, post-quantum, the customer's own view. Server side: `app/server/standout.py` (tests: `app/server/test_standout.py`). |
+| `kit/kit.js`, `kit/kit.css` | The shared kit for the other Aran apps (Aran Cloud on :8100, Bank A on :9001, Bank B on :9002). They serve this folder at `/aran` and load `css/tokens.css`, `css/style.css`, `js/ui.js` and the kit, so every app has the console's top bar, menu, theme, components and colours. `ARAN.kit.shell()` draws the chrome; `?embed=1` hides it inside the side-by-side iframes. See Learn 23. |
 | `js/i18n.js` | Language switch (English, Tamil, Hindi) for the menu, top bar, page headings and tour chapters. English is the source text and the fallback. Check with `node tools/check-i18n.js` ([Learn 19](../../docs/learning/19-translating-a-website.md)). |
 | `js/present.js`, `sw.js` | Presenter mode (`?present=1`): a fixed 3-minute path, PageDown/PageUp clicker keys, and offline replay of recorded server answers with a visible banner ([Learn 20](../../docs/learning/20-presenter-mode-and-offline-replay.md)). |
 

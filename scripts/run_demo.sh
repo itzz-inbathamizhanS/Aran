@@ -51,7 +51,7 @@ if lsof -Pi :8000 -sTCP:LISTEN -t >/dev/null ; then
     echo "✔ Aran core already running on port 8000"
 else
     echo "▶ Starting Aran core on port 8000 with persistence and lockdown (1 worker required)..."
-    (cd "$REPO_ROOT/app/server" && ARAN_STORE="$ARAN_STORE" ARAN_MASTER_KEY="$ARAN_MASTER_KEY" ARAN_INTERNAL_SECRET="$ARAN_INTERNAL_SECRET" "$VENV_PYTHON" -m uvicorn main:app --host 127.0.0.1 --port 8000 --workers 1 > /tmp/aran_server.log 2>&1 &)
+    (cd "$REPO_ROOT/app/server" && ARAN_STORE="$ARAN_STORE" ARAN_MASTER_KEY="$ARAN_MASTER_KEY" ARAN_INTERNAL_SECRET="$ARAN_INTERNAL_SECRET" ARAN_CONSOLE_OPEN=1 "$VENV_PYTHON" -m uvicorn main:app --host 127.0.0.1 --port 8000 --workers 1 > /tmp/aran_server.log 2>&1 &)
 fi
 
 # 2. Start Aran Cloud SaaS on Port 8100
@@ -59,7 +59,7 @@ if lsof -Pi :8100 -sTCP:LISTEN -t >/dev/null ; then
     echo "✔ Aran Cloud already running on port 8100"
 else
     echo "▶ Starting Aran Cloud SaaS on port 8100..."
-    (cd "$REPO_ROOT/aran_cloud" && PORT=8100 ARAN_DEMO_MODE=1 ARAN_SIGNUP_LIMIT="$ARAN_SIGNUP_LIMIT" ARAN_INTERNAL_SECRET="$ARAN_INTERNAL_SECRET" "$VENV_PYTHON" -m uvicorn main:app --port 8100 > /tmp/aran_cloud.log 2>&1 &)
+    (cd "$REPO_ROOT/aran_cloud" && PORT=8100 ARAN_DEMO_MODE=1 ARAN_SIGNUP_LIMIT="$ARAN_SIGNUP_LIMIT" ARAN_INTERNAL_SECRET="$ARAN_INTERNAL_SECRET" "$VENV_PYTHON" -m uvicorn main:app --port 8100 --no-proxy-headers > /tmp/aran_cloud.log 2>&1 &)
 fi
 
 # Wait for core health
@@ -127,5 +127,5 @@ echo " 4. Aran Cloud Dashboard:            http://127.0.0.1:8100/dashboard#key=$
 echo "    -> Dashboard Session Key:        $DEMO_DASHBOARD_KEY"
 echo "    -> Pre-loaded Admin Key:         $DEMO_ADMIN_KEY"
 echo " 5. Aran Cloud Quick Connect:        http://127.0.0.1:8100/connect#key=$DEMO_DASHBOARD_KEY"
-echo " 6. Aran Core Engine:                http://127.0.0.1:8000"
+echo " 6. Aran Console (core):            http://127.0.0.1:8000"
 echo "=========================================================="

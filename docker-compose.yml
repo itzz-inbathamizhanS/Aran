@@ -26,7 +26,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: python3 -m uvicorn aran_cloud.main:app --host 0.0.0.0 --port 8100
+    command: python3 -m uvicorn aran_cloud.main:app --host 0.0.0.0 --port 8100 --no-proxy-headers
     env_file:
       - .env.local
     environment:

@@ -1,243 +1,123 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <title>Quick Connect - Aran Cloud (preview)</title>
-  <link rel="stylesheet" href="/static/css/cloud.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23fff'/%3E%3Cpath d='M6 24V12h4v-4h4v4h4v-4h4v4h4v12z' fill='%23040508'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600&family=Instrument+Serif&family=Martian+Mono:wght@300;400&family=Noto+Sans+Tamil:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/aran/css/tokens.css">
+<link rel="stylesheet" href="/aran/css/style.css">
+<link rel="stylesheet" href="/aran/kit/kit.css">
+<title>Quick connect · Aran Cloud</title>
 </head>
 <body>
-  <nav>
-    <a href="/" class="brand-logo">
-      <span>⚡</span> ARAN CLOUD
-    </a>
-    <div class="nav-links">
-      <span class="pill-preview">PREVIEW</span>
-      <a href="/connect" class="nav-link active">Quick Connect</a>
-      <a href="/dashboard" class="nav-link">Dashboard</a>
+<main id="view" tabindex="-1" class="page kit">
+  <header class="phead">
+    <div class="eyebrow">Aran Cloud · quick connect</div>
+    <h1 data-split>Three drop-in places to stop raw identifiers</h1>
+    <p class="lede">Copy a request, then send a live one. Every result below comes from your workspace through Aran Cloud and the Aran core.</p>
+  </header>
+
+  <div class="card">
+    <div class="kit-inline">
+      <label class="field">Active API key (kept in this tab only)<input id="key" class="mono" autocomplete="off" placeholder="aran_live_…"></label>
+      <button class="btn secondary" id="save-key"><span>Use this key</span></button>
     </div>
-  </nav>
-
-  <div class="container">
-    <div class="hero" style="margin-bottom: 2rem;">
-      <h1>Integration <span>Quick Connect</span></h1>
-      <p>Three clean drop-in integration points to completely eliminate raw PII from your architecture.</p>
-    </div>
-
-    <!-- Active Key Bar -->
-    <div class="card" style="padding: 1rem 1.5rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-      <div>
-        <span style="color: var(--text-muted); font-size: 0.9rem;">Active Workspace API Key:</span>
-        <span class="mono" id="active-key-text" style="color: var(--accent-bright); margin-left: 0.5rem;">loading...</span>
-      </div>
-      <button class="btn btn-secondary btn-sm" id="btn-change-key">Change Key</button>
-    </div>
-
-    <!-- 3 Tabs Card -->
-    <div class="card">
-      <div class="tabs">
-        <button class="tab-btn active" data-tab="tab-writes">1. Protect Writes (Database)</button>
-        <button class="tab-btn" data-tab="tab-logs">2. Protect Logs (Observability)</button>
-        <button class="tab-btn" data-tab="tab-ai">3. Protect AI Prompts (LLM Gateway)</button>
-      </div>
-
-      <!-- Tab 1: Writes -->
-      <div id="tab-writes" class="tab-content">
-        <p style="color: var(--text-muted); margin-bottom: 1rem;">
-          Intercept incoming payload before SQL INSERT. Replaces Aadhaar, PAN, Cards and Phone numbers with vault tokens.
-        </p>
-        <pre><code id="snippet-writes">curl -X POST http://127.0.0.1:8100/v1/protect \
-  -H "X-API-Key: YOUR_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "text": "Customer Priya Patel with Aadhaar 895760490870 and Card 4532015112830366",
-    "customer_ref": "CUST-1001",
-    "purpose": "KYC",
-    "sink": "kyc-archive"
-  }'</code></pre>
-      </div>
-
-      <!-- Tab 2: Logs -->
-      <div id="tab-logs" class="tab-content" style="display: none;">
-        <p style="color: var(--text-muted); margin-bottom: 1rem;">
-          Sanitize application logs and telemetry before shipping to Datadog, CloudWatch, or ELK.
-        </p>
-        <pre><code id="snippet-logs">curl -X POST http://127.0.0.1:8100/v1/protect \
-  -H "X-API-Key: YOUR_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "text": "User payment confirmed for 9876543210 (Card 4532015112830366)",
-    "purpose": "Service",
-    "sink": "log-platform"
-  }'</code></pre>
-      </div>
-
-      <!-- Tab 3: AI Prompts -->
-      <div id="tab-ai" class="tab-content" style="display: none;">
-        <p style="color: var(--text-muted); margin-bottom: 1rem;">
-          Route AI and customer-care chatbot queries through the AI Gateway. External providers see only placeholders.
-        </p>
-        <pre><code id="snippet-ai">curl -X POST http://127.0.0.1:8100/v1/gateway \
-  -H "X-API-Key: YOUR_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "role": "customer-care",
-    "text": "Verify loan application eligibility for customer with Aadhaar 895760490870"
-  }'</code></pre>
-      </div>
-
-      <!-- Live Interactive Test -->
-      <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-card); padding-top: 1.5rem;">
-        <h3 style="font-size: 1.15rem; margin-bottom: 0.75rem;">Interactive Live Test</h3>
-        <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem;">
-          <input type="text" id="live-test-input" value="Customer Sunita Rao with Aadhaar 895760490870 applying for loan with card 4532015112830366" style="flex: 1;">
-          <button class="btn btn-primary" id="btn-run-live">Send live test request &rarr;</button>
-        </div>
-
-        <div id="live-output" style="display: none; background: #070B16; border: 1px solid var(--border-card); border-radius: 8px; padding: 1.25rem;">
-          <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;" id="live-output-label">Live Output (Vault Tokens Generated):</div>
-          <div id="live-after-text" style="font-size: 1.05rem; margin-bottom: 0.75rem; color: #FFFFFF;"></div>
-          <div id="live-findings-pills" style="display: flex; gap: 0.5rem; flex-wrap: wrap;"></div>
-        </div>
-      </div>
-    </div>
+    <div id="key-msg"></div>
   </div>
 
-  <footer>
-    Aran Cloud (preview): separate keys, namespaces, metering and dashboards. Per-tenant engines and persistent vault storage are the next milestone.
-  </footer>
+  <div class="card kit-gap-s">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="true" data-tab="writes">1 · Database writes</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="logs">2 · Logs</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="ai">3 · AI prompts</button>
+    </div>
+    <div data-panel="writes"><p class="muted small">Send the payload to Aran before the SQL insert. Aadhaar, PAN, card and phone numbers come back as vault tokens bound to a customer and a purpose.</p><pre class="kit-code" id="snip-writes"></pre></div>
+    <div data-panel="logs" class="hidden"><p class="muted small">Clean log lines before they leave for Datadog, CloudWatch or ELK.</p><pre class="kit-code" id="snip-logs"></pre></div>
+    <div data-panel="ai" class="hidden"><p class="muted small">Staff and customer-care chatbots go through the AI gateway. The model only sees placeholders, and the reply is masked for the role.</p><pre class="kit-code" id="snip-ai"></pre></div>
+    <div class="kit-row kit-gap-s"><button class="btn secondary sm" id="copy-snip"><span>Copy this request</span></button></div>
+  </div>
 
-  <script>
-    let activeKey = '';
+  <section class="kit-gap">
+    <div class="sechead"><h3>Send a live request</h3><span class="pill live tok" id="live-route">POST /v1/protect</span></div>
+    <div class="card">
+      <label class="field">Text to send<textarea id="live-text" class="mono" rows="3">Customer Sunita Rao with Aadhaar 895760490870 applying for a loan with card 4532015112830366, phone 9876543210</textarea></label>
+      <div class="kit-row kit-gap-s"><button class="btn" id="run"><span>Send through Aran</span><span class="arr">→</span></button><button class="btn ghost" id="sample"><span>New valid sample</span></button></div>
+      <div id="live-out"></div>
+    </div>
+  </section>
+</main>
+
+<script src="/aran/vendor/gsap.min.js"></script>
+<script src="/aran/js/ui.js"></script>
+<script src="/aran/kit/kit.js"></script>
+<script>
+(function (A) {
+  const K = A.kit, U = A.ui, $ = U.$;
+  K.shell({ app: 'cloud', page: 'connect', brand: 'Aran Cloud', env: 'Aran Cloud preview · requests go to your workspace only' });
+  K.reveal(document);
+
+  let key = K.takeKeyFromHash('aran_dashboard_key') || K.store.get('aran_dashboard_key');
+  let tab = 'writes';
+  const origin = location.origin;
+  const curl = (path, body) => `curl -X POST ${origin}${path} \\\n  -H "X-API-Key: ${key || 'YOUR_KEY'}" \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify(body, null, 2).replace(/\n/g, '\n  ')}'`;
+  const BODIES = {
+    writes: ['/v1/protect', { text: 'Customer Priya Patel with Aadhaar 895760490870 and card 4532015112830366', customer_ref: 'CUST-1001', purpose: 'KYC', sink: 'kyc-archive' }],
+    logs: ['/v1/protect', { text: 'Payment confirmed for 9876543210 (card 4532015112830366)', purpose: 'Service', sink: 'log-platform' }],
+    ai: ['/v1/gateway', { role: 'customer-care', text: 'Check loan eligibility for the customer with Aadhaar 895760490870' }],
+  };
+  const draw = () => {
+    $('#key').value = key || '';
+    Object.entries(BODIES).forEach(([id, [p, b]]) => ($('#snip-' + id).textContent = curl(p, b)));
+    $('#live-route').textContent = 'POST ' + BODIES[tab][0];
+  };
+  U.tabs(document.querySelector('.card.kit-gap-s'), (t) => { tab = t; draw(); $('#live-out').innerHTML = ''; });
+  $('#save-key').onclick = () => { key = $('#key').value.trim(); K.store.set('aran_dashboard_key', key); draw(); $('#key-msg').innerHTML = U.note('ok', 'Key saved for this tab.'); };
+  $('#copy-snip').onclick = (e) => K.copy($('#snip-' + tab).textContent, e.currentTarget);
+
+  /* a key with only the dashboard scope cannot protect: fall back to the admin key from sign-up, or ask for one */
+  const send = async (path, body) => {
+    const admin0 = K.store.get('aran_admin_key');
+    try { return await K.api(path, { body, key: admin0 || key }); }
+    catch (err) {
+      if (err.status !== 403) throw err;
+      const admin = K.store.get('aran_admin_key');
+      if (admin && admin !== key) return K.api(path, { body, key: admin });
+      throw new Error('This key has the dashboard scope only. Paste a key with the protect and gateway scopes (the admin key from sign-up) above.');
+    }
+  };
+  $('#run').onclick = (e) => K.busy(e.currentTarget, async () => {
+    const out = $('#live-out'), text = $('#live-text').value.trim();
+    if (!key) { out.innerHTML = U.note('err', 'Add an API key first.'); return; }
     try {
-      if (window.location.hash && window.location.hash.includes('key=')) {
-        const hashStr = window.location.hash.replace(/^#/, '');
-        const params = new URLSearchParams(hashStr);
-        const k = params.get('key');
-        if (k) {
-          activeKey = k.trim();
-          sessionStorage.setItem('aran_dashboard_key', activeKey);
-          const cleanUrl = window.location.pathname + (window.location.search || '');
-          window.history.replaceState(null, '', cleanUrl);
-        }
+      if (tab === 'ai') {
+        const r = await send('/v1/gateway', { role: 'customer-care', text });
+        const saw = (r.provider_saw || []).map((m) => m.content).join('\n');
+        out.innerHTML = `<div class="grid g2 kit-gap-s"><div><div class="label">What the AI provider saw</div><pre class="logline">${K.tokened(saw, [])}</pre></div><div><div class="label">Reply shown to customer care</div><pre class="logline">${K.esc(r.reply)}</pre></div></div><div class="kit-row kit-gap-s">${U.pill(r.findings_in_prompt + ' identifiers masked', 'tok')}${U.pill('audit chain ' + (r.audit_ok ? 'valid' : 'broken'), r.audit_ok ? 'ok' : 'danger')}${U.pill(K.esc(r.provider), '')}</div>`;
+      } else {
+        const b = Object.assign({}, BODIES[tab][1], { text, customer_ref: tab === 'writes' ? 'CUST-DEMO-LIVE' : undefined });
+        const r = await send('/v1/protect', b);
+        const f = r.findings || [];
+        out.innerHTML = `<div class="grid g2 kit-gap-s"><div><div class="label">Before · what your app sent</div><pre class="logline">${K.marked(r.before || text, f)}</pre></div><div><div class="label">After · what gets stored</div><pre class="logline">${K.tokened(r.after, f)}</pre></div></div>
+          <div class="kit-scroll kit-gap-s"><table class="tbl dense"><thead><tr><th>Type</th><th>Token</th><th>Purpose</th><th>Customer</th><th class="num">Confidence</th></tr></thead><tbody>${f.map((x) => `<tr><td>${K.esc(x.type)}</td><td>${x.token ? `<mark class="m-token">${K.esc(x.token)}</mark>` : '<span class="pill leak">not protected</span>'}</td><td class="mono">${K.esc(x.purpose || '–')}</td><td class="mono">${K.esc(x.customer_ref || '–')}</td><td class="num mono">${U.pct(x.p || 0)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">No identifiers found.</td></tr>'}</tbody></table></div>
+          <div class="kit-row kit-gap-s">${U.pill(f.filter((x) => x.protected).length + ' protected', 'tok')}${U.pill(r.latency_ms + ' ms', '')}${(r.notes || []).map((n) => U.pill(K.esc(n), 'warn')).join('')}</div>`;
       }
-      if (!activeKey) {
-        activeKey = sessionStorage.getItem('aran_dashboard_key') || 'aran_live_demo1234567890abcdef12345678';
-      }
-    } catch (e) {
-      console.warn('sessionStorage error', e);
-      activeKey = 'aran_live_demo1234567890abcdef12345678';
-    }
-    
-    function updateKeyDisplays() {
-      document.getElementById('active-key-text').innerText = activeKey;
-      document.getElementById('snippet-writes').innerText = `curl -X POST http://127.0.0.1:8100/v1/protect \\\n  -H "X-API-Key: ${activeKey}" \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "text": "Customer Priya Patel with Aadhaar 895760490870 and Card 4532015112830366",\n    "customer_ref": "CUST-1001",\n    "purpose": "KYC",\n    "sink": "kyc-archive"\n  }'`;
-      document.getElementById('snippet-logs').innerText = `curl -X POST http://127.0.0.1:8100/v1/protect \\\n  -H "X-API-Key: ${activeKey}" \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "text": "User payment confirmed for 9876543210 (Card 4532015112830366)",\n    "purpose": "Service",\n    "sink": "log-platform"\n  }'`;
-      document.getElementById('snippet-ai').innerText = `curl -X POST http://127.0.0.1:8100/v1/gateway \\\n  -H "X-API-Key: ${activeKey}" \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "role": "customer-care",\n    "text": "Verify loan application eligibility for customer with Aadhaar 895760490870"\n  }'`;
-    }
-
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-        btn.classList.add('active');
-        document.getElementById(btn.dataset.tab).style.display = 'block';
-      });
-    });
-
-    document.getElementById('btn-change-key').addEventListener('click', () => {
-      const k = prompt('Enter your Aran Cloud API key:', activeKey);
-      if (k) {
-        activeKey = k.trim();
-        try {
-          sessionStorage.setItem('aran_dashboard_key', activeKey);
-        } catch (e) {}
-        updateKeyDisplays();
-      }
-    });
-
-    document.getElementById('btn-run-live').addEventListener('click', async () => {
-      const text = document.getElementById('live-test-input').value.trim();
-      let keyToUse = activeKey;
-      let res = await fetch('/v1/protect', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': keyToUse
-        },
-        body: JSON.stringify({
-          text,
-          customer_ref: 'CUST-DEMO-LIVE',
-          purpose: 'KYC',
-          sink: 'kyc-archive'
-        })
-      });
-
-      // If active key is dashboard-only, request protect/admin key
-      if (res.status === 403) {
-        let adminK = '';
-        try { adminK = sessionStorage.getItem('aran_admin_key'); } catch(e){}
-        if (!adminK) {
-          adminK = prompt("Your active key has 'dashboard' scope only. Please enter a key with 'protect' or 'admin' scope to run live tests:");
-          if (adminK) {
-            try { sessionStorage.setItem('aran_admin_key', adminK.trim()); } catch(e){}
-          }
-        }
-        if (adminK) {
-          keyToUse = adminK.trim();
-          res = await fetch('/v1/protect', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-API-Key': keyToUse
-            },
-            body: JSON.stringify({
-              text,
-              customer_ref: 'CUST-DEMO-LIVE',
-              purpose: 'KYC',
-              sink: 'kyc-archive'
-            })
-          });
-        }
-      }
-
-      const data = await res.json();
-      if (!res.ok) {
-        alert('Error ' + res.status + ': ' + (data.detail || 'Request failed'));
-        return;
-      }
-
-      document.getElementById('live-output').style.display = 'block';
-      document.getElementById('live-output-label').innerText = 'Live Response (Live Test Request Executed):';
-      let after = data.after || '';
-      // Highlight tokens in green
-      after = after.replace(/<[A-Za-z0-9_:\-]+>|\b\d{12,16}\b/g, m => `<span class="pill-token">${m}</span>`);
-      document.getElementById('live-after-text').innerHTML = after;
-
-      const pills = (data.findings || []).map(f => `
-        <span class="pill-token">${f.type}: ${f.token || 'protected'} (latency: ${data.latency_ms || 1.2}ms)</span>
-      `).join('');
-      document.getElementById('live-findings-pills').innerHTML = pills;
-    });
-      const data = await res.json();
-      if (!res.ok) {
-        alert('Error ' + res.status + ': ' + (data.detail || 'Request failed'));
-        return;
-      }
-
-      document.getElementById('live-output').style.display = 'block';
-      let after = data.after || '';
-      // Highlight tokens in green
-      after = after.replace(/<[A-Za-z0-9_:\-]+>|\b\d{12,16}\b/g, m => `<span class="pill-token">${m}</span>`);
-      document.getElementById('live-after-text').innerHTML = after;
-
-      const pills = (data.findings || []).map(f => `
-        <span class="pill-token">${f.type}: ${f.token || 'protected'} (latency: ${data.latency_ms || 1.2}ms)</span>
-      `).join('');
-      document.getElementById('live-findings-pills').innerHTML = pills;
-    });
-
-    window.addEventListener('DOMContentLoaded', updateKeyDisplays);
-  </script>
+    } catch (err) { out.innerHTML = U.note('err', K.esc(err.message)); }
+  });
+  $('#sample').onclick = async () => {
+    /* valid Verhoeff Aadhaar and Luhn card from the browser, same maths as the console */
+    const d = [[0,1,2,3,4,5,6,7,8,9],[1,2,3,4,0,6,7,8,9,5],[2,3,4,0,1,7,8,9,5,6],[3,4,0,1,2,8,9,5,6,7],[4,0,1,2,3,9,5,6,7,8],[5,9,8,7,6,0,4,3,2,1],[6,5,9,8,7,1,0,4,3,2],[7,6,5,9,8,2,1,0,4,3],[8,7,6,5,9,3,2,1,0,4],[9,8,7,6,5,4,3,2,1,0]];
+    const p = [[0,1,2,3,4,5,6,7,8,9],[1,5,7,6,2,8,3,0,9,4],[5,8,0,3,7,9,6,1,4,2],[8,9,1,6,0,4,3,5,2,7],[9,4,5,3,1,2,6,8,7,0],[4,2,8,6,5,7,3,9,0,1],[2,7,9,3,8,0,6,4,1,5],[7,0,4,6,9,1,3,2,5,8]], inv = [0,4,3,2,1,5,6,7,8,9];
+    const rnd = (n) => Array.from({ length: n }, () => Math.floor(Math.random() * 10)).join('');
+    const ver = (s) => { let c = 0; [...(s + '0')].reverse().forEach((ch, i) => (c = d[c][p[i % 8][+ch]])); return s + inv[c]; };
+    const luhn = (s) => { let sum = 0; [...s].reverse().forEach((ch, i) => { let v = +ch; if (i % 2 === 0) { v *= 2; if (v > 9) v -= 9; } sum += v; }); return s + ((10 - (sum % 10)) % 10); };
+    const aad = ver(String(2 + Math.floor(Math.random() * 8)) + rnd(10)), card = luhn('4' + rnd(14)), mob = String(6 + Math.floor(Math.random() * 4)) + rnd(9);
+    $('#live-text').value = tab === 'ai' ? `Check loan eligibility for the customer with Aadhaar ${aad}` : `Customer Sunita Rao with Aadhaar ${aad} applying for a loan with card ${card}, phone ${mob}`;
+  };
+  draw();
+})(window.ARAN);
+</script>
 </body>
 </html>
-

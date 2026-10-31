@@ -21,7 +21,10 @@ async def check_internal_secret(request: Request, call_next):
     internal_secret = os.environ.get("ARAN_INTERNAL_SECRET")
     if internal_secret:
         path = request.url.path
-        if path != "/api/health":
+        # The console's own files (HTML, CSS, JS) are public. Its /api calls stay locked unless
+        # ARAN_CONSOLE_OPEN=1, for a core that only listens on 127.0.0.1 (scripts/run_demo.sh).
+        console_open = os.environ.get("ARAN_CONSOLE_OPEN", "0") in ("1", "true", "True")
+        if path != "/api/health" and path.startswith("/api") and not console_open:
             provided = request.headers.get("X-Aran-Internal") or ""
             if not hmac.compare_digest(provided, internal_secret):
                 return JSONResponse(

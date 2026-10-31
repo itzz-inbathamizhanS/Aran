@@ -37,6 +37,7 @@ Repo copies: Markdown in `docs/`, PDFs in `artifacts/learning/` and `artifacts/r
 | 19 | Aran Learn 19 - Translating a Website | `docs/learning/19-translating-a-website.md` |
 | 20 | Aran Learn 20 - Presenter Mode and Offline Replay | `docs/learning/20-presenter-mode-and-offline-replay.md` |
 | 22 | Aran Learn 22 - Cybersecurity Concepts in Aran | `docs/learning/22-cybersecurity-concepts-in-aran.md` |
+| 23 | Aran Learn 23 - One UI for the Console, Aran Cloud and the Demo Banks | `docs/learning/23-one-ui-for-cloud-and-banks.md` |
 
 Learn 1 to 7 were expanded on 15 Oct; the repo Markdown and PDFs hold the expanded text.
 
