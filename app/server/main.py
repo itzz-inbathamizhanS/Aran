@@ -78,6 +78,7 @@ class ProcessIn(BaseModel):
     trace_id: str | None = None
     customer_ref: str | None = None
     purpose: str | None = None
+    scope: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{1,64}$")
 
 
 class SampleIn(BaseModel):
@@ -151,7 +152,7 @@ def process(body: ProcessIn):
         raise HTTPException(429, "Dynamic customer enrolment limit reached (10,000 customers)")
     try:
         return e.process(body.text, body.source, body.sink, body.trace_id,
-                         customer_ref=body.customer_ref, purpose=body.purpose)
+                         customer_ref=body.customer_ref, purpose=body.purpose, scope=body.scope)
     except ValueError as err:
         raise HTTPException(400, str(err))
 

@@ -47,6 +47,9 @@ window.ARAN = window.ARAN || {};
       const sub = document.createElement('div'); sub.className = 'kit-sub';
       sub.innerHTML = `<nav class="kit-apps" aria-label="${esc(grp.label)}"><a href="${S.find(S.first).page.href}" class="back">← Console</a><span class="kit-sec">${esc(grp.label)}</span>${grp.pages.map((pg) => `<a href="${pg.href}" class="${pg.id === cur ? 'cur' : ''}" ${pg.id === cur ? 'aria-current="page"' : ''}>${esc(pg.label)}</a>`).join('')}</nav>`;
       menu.after(sub);
+      /* on a phone the bar scrolls sideways: bring the current page into view */
+      const bar = sub.firstElementChild, c = bar.querySelector('.cur');
+      if (c && bar.scrollWidth > bar.clientWidth) bar.scrollLeft = c.offsetLeft - (bar.clientWidth - c.offsetWidth) / 2;
     }
     const setMenu = (open) => { menu.classList.toggle('open', open); $('#menubtn').setAttribute('aria-expanded', open); document.body.style.overflow = open ? 'hidden' : ''; };
     $('#menubtn').onclick = () => setMenu(!menu.classList.contains('open'));

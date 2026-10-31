@@ -161,8 +161,14 @@ Aran also runs as a small product made of four services, all in the same Aran UI
 
 ```
 python -m venv .venv && source .venv/bin/activate
-pip install -r app/server/requirements.txt requests
+pip install -r app/server/requirements.txt
 ./scripts/run_demo.sh      # starts all four and prints every address and the demo keys
+```
+
+Or with Docker, no Python setup needed (secrets and Bank B's workspace are made on first start; see [Learn 25](docs/learning/25-accessibility-tenants-and-containers.md)):
+
+```
+docker compose up --build  # console :8000, Aran Cloud :8100, Bank A :9001, Bank B :9002
 ```
 
 ## Repository layout
@@ -285,6 +291,7 @@ The team is new to this technology, so read these in order before starting any b
 | 22 | [Cybersecurity Concepts in Aran](docs/learning/22-cybersecurity-concepts-in-aran.md) | Everyone, read early (Aasif and Inbathamizhan first) | ~3 h | Name every security idea in Aran (CIA triad, threat model, defence in depth, least privilege, tokenisation and FF1, the check-digit invariant, AES-GCM and the HSM, DLP errors, HMAC registries, evasion, canary-style attribution, aggregation attacks in bits, crypto-shredding, Merkle receipts, hash-chained audit, anomaly detection and insider drills, RBAC and prompt injection, red-teaming, post-quantum and downgrade attacks, Indian law) and point to the exact file that uses it | [PDF](artifacts/learning/Aran%20Learn%2022%20-%20Cybersecurity%20Concepts%20in%20Aran.pdf) |
 | 23 | [One UI for the Console, Aran Cloud and the Demo Banks](docs/learning/23-one-ui-for-cloud-and-banks.md) | Everyone who runs or changes Aran Cloud or the demo bank (Aasif first for keys and rate limits) | ~2 h | See how the four services fit together, share the console's design kit across apps with one static mount, keep tenants apart with namespaces, use API keys with scopes and least privilege, and make rate limits that a forged `X-Forwarded-For` header cannot bypass | [PDF](artifacts/learning/Aran%20Learn%2023%20-%20One%20UI%20for%20the%20Console%2C%20Cloud%20and%20Banks.pdf) |
 | 24 | [Site Structure and Navigation](docs/learning/24-site-structure-and-navigation.md) | Everyone who adds a page or changes a menu | ~1 h | Plan pages, groups, names and order (information architecture), keep one site map that every menu reads, give each page a name that says what it covers, and add search to the menu | [PDF](artifacts/learning/Aran%20Learn%2024%20-%20Site%20Structure%20and%20Navigation.pdf) |
+| 25 | [Accessibility, Tenant Isolation and Containers](docs/learning/25-accessibility-tenants-and-containers.md) | Everyone (Aasif first for tenant isolation) | ~1.5 h | Measure accessibility with axe-core and fix contrast and keyboard problems through design tokens, keep one bank from learning about another bank's customers with a tenant scope, and start the whole demo with one `docker compose up` | [PDF](artifacts/learning/Aran%20Learn%2025%20-%20Accessibility%2C%20Tenant%20Isolation%20and%20Containers.pdf) |
 
 ## Artifacts
 
@@ -302,6 +309,7 @@ The team is new to this technology, so read these in order before starting any b
 - Style mockups of the Overview page in three directions from those references: [A calm dark](artifacts/UI%20design%20spec/mockup-a-calm-dark.png), [B bank light](artifacts/UI%20design%20spec/mockup-b-bank-light.png), [C live data](artifacts/UI%20design%20spec/mockup-c-live-data.png) (sample numbers, for picking a direction).
 - [Aran UI integration](artifacts/Aran%20UI%20integration/): Aran Cloud (landing, Quick connect, dashboard), Bank A, Bank B and the side-by-side page rebuilt in the Aran UI and wired to the live services, with screenshots and [Learn 23](artifacts/Aran%20UI%20integration/Aran%20Learn%2023%20-%20One%20UI%20for%20the%20Console%2C%20Cloud%20and%20Banks.md) ([PDF](artifacts/Aran%20UI%20integration/Aran%20Learn%2023%20-%20One%20UI%20for%20the%20Console%2C%20Cloud%20and%20Banks.pdf)).
 - [Site structure](artifacts/Site%20structure/): a full audit of the site flow and the fix. The site opens on Overview, one numbered and searchable menu holds all 23 pages of the console, the demo banks and Aran Cloud in one order (Start, Firewall console, Live demos, Demo banks, Aran Cloud, Design review), and the Cloud dashboard's "Overview" is now "Workspace summary". [Audit](artifacts/Site%20structure/Aran%20-%20Site%20Audit%20and%20Menu%20Order.md), screenshots and [Learn 24](artifacts/Site%20structure/Aran%20Learn%2024%20-%20Site%20Structure%20and%20Navigation.md) ([PDF](artifacts/Site%20structure/Aran%20Learn%2024%20-%20Site%20Structure%20and%20Navigation.pdf)).
+- [Site improvements](artifacts/Site%20improvements/): every page checked on a computer and a phone, in dark and light, with an accessibility scanner. 25 serious problems fixed (contrast, keyboard access to wide tables, overlapping rows and a cut-off language picker on phones). One bank can no longer tell that a person banks elsewhere, and `docker compose up` now starts all four services. [Write-up](artifacts/Site%20improvements/Aran%20-%20Whole%20Site%20Improvements.md), screenshots and [Learn 25](artifacts/Site%20improvements/Aran%20Learn%2025%20-%20Accessibility%2C%20Tenant%20Isolation%20and%20Containers.md) ([PDF](artifacts/Site%20improvements/Aran%20Learn%2025%20-%20Accessibility%2C%20Tenant%20Isolation%20and%20Containers.pdf)).
 - [BanksAndCloud branch audit](artifacts/Branch%20audits/Aran%20-%20BanksAndCloud%20Branch%20Audit.md): review of the Aran Cloud, demo bank, SDK and persistence branch against main, with test results and fixes needed before merging.
 - [Artifacts index](artifacts/README.md): every artifact by thread, with live links. Older Markdown and PDF copies of the first docs are in [artifacts/Data-flow firewall research](artifacts/Data-flow%20firewall%20research/).
 - [Obsidian vault home](Home.md): open the repo folder as a vault; thread notes are in [notes/threads](notes/threads/), indexed in [notes/Threads.md](notes/Threads.md).

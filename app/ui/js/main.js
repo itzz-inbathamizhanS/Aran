@@ -33,6 +33,10 @@
   /* ---- sound ---- */
   $('#sound').onclick = () => { const on = A.sound.toggle(); $('#sound').setAttribute('aria-pressed', on); $('#sound-t').textContent = t(on ? 'Sound on' : 'Sound off'); };
   $('#lang').onchange = (e) => A.setLang && A.setLang(e.target.value);
+  /* on a phone the language picker shows a short name (EN, த, हि) so it is never cut off */
+  const SHORT = { en: 'EN', ta: 'த', hi: 'हि' }, narrow = matchMedia('(max-width: 760px)');
+  const langLabels = () => [...$('#lang').options].forEach((o) => { o.textContent = narrow.matches ? (SHORT[o.value] || o.value.toUpperCase()) : (A.LANGS || { en: 'English' })[o.value]; });
+  langLabels(); narrow.addEventListener ? narrow.addEventListener('change', langLabels) : narrow.addListener(langLabels);
   if (qs.get('present')) $('#present').hidden = true;
   document.addEventListener('pointerover', (e) => { const t = e.target.closest && e.target.closest('a, button, .li, tr.click'); if (t && !t.contains(e.relatedTarget)) A.sound.tick(); }, true);
   document.addEventListener('click', (e) => { if (e.target.closest('.btn, .chip, .tab')) A.sound.click(); });

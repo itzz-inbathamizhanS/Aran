@@ -6,3 +6,9 @@ app/web/dist
 notes
 docs
 artifacts
+**/*.db
+**/*.db-wal
+**/*.db-shm
+.venv
+**/.venv
+.env*

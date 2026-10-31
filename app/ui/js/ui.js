@@ -110,4 +110,23 @@ window.ARAN = window.ARAN || {};
 
   /* download-safe SVG chip for the pipeline */
   U.svgChip = (cls, text, w) => `<g class="chip-svg ${cls}"><rect x="${-w / 2}" y="-11" width="${w}" height="22"/><text y="4">${esc(text)}</text></g>`;
+
+  /* boxes that scroll sideways (wide tables, code) can be reached and scrolled with the keyboard:
+     each gets tabindex="0" and a name, on every page, including content drawn later */
+  const SCROLLERS = '.scroll, .kit-scroll, .scene-scroll, .kit-code, .cb-board .card';
+  const seen = {};
+  const tag = (root) => (root.querySelectorAll ? root.querySelectorAll(SCROLLERS) : []).forEach((el) => {
+    if (el.hasAttribute('tabindex')) return;
+    if (el.matches('.cb-board .card') && el.scrollWidth <= el.clientWidth) return; /* only when it really scrolls */
+    el.setAttribute('tabindex', '0');
+    if (!el.hasAttribute('role')) el.setAttribute('role', 'region');
+    if (!el.hasAttribute('aria-label')) {
+      const h = el.closest('section, .card'), t = h && h.querySelector('h2, h3, .label');
+      let name = (t ? t.textContent.trim().slice(0, 60) + ' · ' : '') + 'scrolls sideways';
+      seen[name] = (seen[name] || 0) + 1; if (seen[name] > 1) name += ' ' + seen[name]; /* each region gets its own name */
+      el.setAttribute('aria-label', name);
+    }
+  });
+  const startTagging = () => { tag(document); new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => { if (n.nodeType === 1) { if (n.matches(SCROLLERS)) tag(n.parentNode); tag(n); } }))).observe(document.body, { childList: true, subtree: true }); };
+  if (typeof MutationObserver !== 'undefined' && document.querySelectorAll) { if (document.body) startTagging(); else document.addEventListener('DOMContentLoaded', startTagging); }
 })(window.ARAN);

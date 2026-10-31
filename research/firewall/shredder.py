@@ -219,8 +219,15 @@ class PurposeVault:
             self.log = MerkleLog()
 
     # ------------------------------------------------------------ customers and keys
+    # scope keeps tenants apart: when a shared service (Aran Cloud) sets it to the calling
+    # tenant, "who owns this Aadhaar" is answered inside that tenant only, so one bank can
+    # never learn that a person is already a customer of another bank. The empty scope is
+    # the original global index, so existing owner records keep working.
+    scope = ""
+
     def _owner_key(self, typ, value):
-        return hmac.new(self.index_key, f"own|{typ}|{canonical(typ, value)}".encode(), hashlib.sha256).digest()
+        tag = f"own|{typ}|{canonical(typ, value)}" if not self.scope else f"own|{self.scope}|{typ}|{canonical(typ, value)}"
+        return hmac.new(self.index_key, tag.encode(), hashlib.sha256).digest()
 
     def enroll(self, customer_ref, identifiers, retain=None):
         """identifiers: {type: value}. retain: {purpose: retain-until timestamp}."""

@@ -40,7 +40,40 @@ ARAN_ADMIN_TOKEN = os.environ.get("ARAN_ADMIN_TOKEN")
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(HERE, "static")
 os.makedirs(STATIC_DIR, exist_ok=True)
-DB_PATH = os.path.join(HERE, f"data_{BANK_MODE}.db")
+DB_DIR = os.environ.get("BANK_DATA_DIR") or HERE  # a container keeps the data on a volume
+os.makedirs(DB_DIR, exist_ok=True)
+DB_PATH = os.path.join(DB_DIR, f"data_{BANK_MODE}.db")
+
+
+def _auto_workspace():
+    """Bank B with ARAN_AUTO_WORKSPACE=1 and no ARAN_API_KEY (docker compose): create this bank's
+    Aran Cloud workspace once, keep its admin key next to the bank's data, and reuse it on restart."""
+    key_file = os.path.join(DB_DIR, "aran_admin_key")
+    if os.path.exists(key_file):
+        with open(key_file) as f:
+            return f.read().strip() or None
+    import urllib.request
+    body = json.dumps({"name": "Bank B (demo)", "email": "security@bank-b.example"}).encode()
+    for _ in range(30):
+        try:
+            req = urllib.request.Request(f"{ARAN_URL}/v1/workspaces", data=body, method="POST",
+                                         headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                d = json.loads(resp.read().decode())
+            key = d.get("admin_key") or d.get("api_key")
+            fd = os.open(key_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "w") as f:
+                f.write(key)
+            print(f"Created Aran Cloud workspace {d.get('tenant_id')} for Bank B", flush=True)
+            return key
+        except Exception as err:  # the cloud may still be starting
+            print(f"Waiting for Aran Cloud at {ARAN_URL}: {err.__class__.__name__}", flush=True)
+            time.sleep(2)
+    return None
+
+
+if BANK_MODE == "aran" and not ARAN_API_KEY and os.environ.get("ARAN_AUTO_WORKSPACE") in ("1", "true", "True"):
+    ARAN_API_KEY = _auto_workspace()
 
 # In-memory token mapping for demo authorized officer view (Spec 3a)
 TOKEN_MAP = {}

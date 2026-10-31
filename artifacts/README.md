@@ -62,6 +62,9 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Site structure | Aran Learn 24 - Site Structure and Navigation (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/aran-ui-banks-cloud/docs/learning/24-site-structure-and-navigation.md |
 | Site structure | Screenshots: menu on desktop, menu search, menu inside Aran Cloud, workspace summary, section bar, menu on a phone | https://github.com/itzz-inbathamizhans/aran/tree/aran-ui-banks-cloud/artifacts/Site%20structure |
 | Site structure | The one site map every menu reads (sitemap.js) | https://github.com/itzz-inbathamizhans/aran/blob/aran-ui-banks-cloud/app/ui/kit/sitemap.js |
+| Site improvements | Aran - Whole Site Improvements (accessibility scan of all 23 pages, 9 fixes, tenant isolation, Docker Compose) | https://github.com/itzz-inbathamizhans/aran/blob/aran-ui-banks-cloud/artifacts/Site%20improvements/Aran%20-%20Whole%20Site%20Improvements.md |
+| Site improvements | Aran Learn 25 - Accessibility, Tenant Isolation and Containers (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/aran-ui-banks-cloud/docs/learning/25-accessibility-tenants-and-containers.md |
+| Site improvements | Screenshots: customer list and Bank A on a phone, workspace summary in light mode, erase buttons, results | https://github.com/itzz-inbathamizhans/aran/tree/aran-ui-banks-cloud/artifacts/Site%20improvements |
 
 Note: the Markdown copy replaces the embedded architecture diagram with a text placeholder; the PDF keeps it.
 

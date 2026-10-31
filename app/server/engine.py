@@ -257,8 +257,15 @@ class Engine:
             raise KeyError(kind)
         return dict(text=text, sink=SAMPLE_SINK[kind], source=SAMPLE_SOURCE[kind], trace_id=trace)
 
-    def process(self, text, source, sink, trace_id=None, record=True, observe=True,
-                customer_ref=None, purpose=None):
+    def process(self, *a, **kw):
+        with self.lock:  # re-entrant; the tenant scope is set and cleared under the same lock
+            try:
+                return self._process(*a, **kw)
+            finally:
+                self.vault.scope = ""  # never let one tenant's scope leak into the next call
+
+    def _process(self, text, source, sink, trace_id=None, record=True, observe=True,
+                 customer_ref=None, purpose=None, scope=None):
         if sink not in SINKS and not re.fullmatch(r"[a-z0-9][a-z0-9.\-]{1,60}", sink):
             raise ValueError("sink names are lower-case letters, digits, dots and dashes")
         with self.lock:
@@ -267,6 +274,10 @@ class Engine:
                     self.dynamic_customers.add(customer_ref)
                     self.vault.enroll(customer_ref, {})
                     self.customers[customer_ref] = dict(ref=customer_ref, name=customer_ref, created=time.time())
+            # tenant scope: given by the caller, or the prefix of a namespaced ref (t_ab12__CUST-1)
+            if scope is None and customer_ref and "__" in customer_ref:
+                scope = customer_ref.split("__", 1)[0]
+            self.vault.scope = scope or ""
             t0 = time.perf_counter()
             self.fw.conflicts = set()
             self.fw.conflict_notes = []

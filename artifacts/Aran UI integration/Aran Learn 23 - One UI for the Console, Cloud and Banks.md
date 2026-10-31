@@ -57,7 +57,7 @@ Aran Cloud keeps each bank apart in three ways:
 2. Customer refs are **namespaced** before they reach the core: `CUST-1001` from workspace `t_ab12` becomes `t_ab12__CUST-1001`. Two banks can both have a `CUST-1001`.
 3. `/v1/trace` and `/v1/detokenise` only answer for tokens this workspace issued.
 
-**Still open (audit item 5):** the core decides who "owns" an Aadhaar number globally. If Bank B sends a number Bank A already enrolled, the answer says "already enrolled elsewhere", which tells Bank B that this person banks with someone else. The fix is for the core to tokenise each tenant's identifiers under the tenant's own key. Until then, do not show this demo with two real banks.
+**Fixed since (audit item 5):** the core used to decide who "owns" an Aadhaar number globally, so if Bank B sent a number Bank A had already enrolled, the answer said "already enrolled elsewhere" and Bank B learned that the person banks with someone else. Now Aran Cloud sends its tenant id as a `scope`, and the core looks up ownership inside that tenant only. Learn 25 explains how.
 
 ## 4. API keys with scopes
 
@@ -109,7 +109,7 @@ The second hole was `POST /v1/internal/reset-limiters`, which anyone could call 
 1. Add a "Last used" column to Bank B's officer view that reads the Aran Cloud audit log. Which key scope does Bank B need?
 2. Add an eighth link to the app switcher in `kit.js` for the console's `#versus` page.
 3. Run `aran_cloud/test_cloud_security.py` twice: once with `ARAN_TRUSTED_PROXIES=127.0.0.1` and once without. Explain why the rate-limit test only passes with it.
-4. Sketch how the core could give each tenant its own token namespace (audit item 5). Which function in `app/server/engine.py` would change?
+4. Read `_owner_key` in `research/firewall/shredder.py`. Why does the empty scope keep the old key format?
 
 ## Words to know
 

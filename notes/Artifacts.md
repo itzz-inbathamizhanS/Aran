@@ -39,6 +39,7 @@ Repo copies: Markdown in `docs/`, PDFs in `artifacts/learning/` and `artifacts/r
 | 22 | Aran Learn 22 - Cybersecurity Concepts in Aran | `docs/learning/22-cybersecurity-concepts-in-aran.md` |
 | 23 | Aran Learn 23 - One UI for the Console, Aran Cloud and the Demo Banks | `docs/learning/23-one-ui-for-cloud-and-banks.md` |
 | 24 | Aran Learn 24 - Site Structure and Navigation | `docs/learning/24-site-structure-and-navigation.md` |
+| 25 | Aran Learn 25 - Accessibility, Tenant Isolation and Containers | `docs/learning/25-accessibility-tenants-and-containers.md` |
 
 Learn 1 to 7 were expanded on 15 Oct; the repo Markdown and PDFs hold the expanded text.
 

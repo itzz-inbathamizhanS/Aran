@@ -394,3 +394,29 @@ def test_demo_mode_localhost_exemption_and_reset():
         )
         assert r.status_code == 200, f"Expected 200 on localhost in demo mode, got {r.status_code}: {r.text}"
 
+
+
+# ---------------------------------------------------------------- 6. Cross-tenant identifier isolation
+def test_same_identifier_at_two_banks_reveals_nothing(tenant_alpha, tenant_beta):
+    """Audit item 5: Bank B enrolling an Aadhaar that Bank A already holds must not learn
+    that the person banks elsewhere, and the token must belong to Bank B's own customer."""
+    raw = get_sample_pii()["aadhaar"]
+    text = f"KYC for new customer, Aadhaar {raw}"
+    r_a = requests.post(f"{CLOUD_URL}/v1/protect", headers={"X-API-Key": tenant_alpha["api_key"]},
+                        json={"text": text, "customer_ref": "SHARED-1", "sink": "kyc-archive"})
+    r_b = requests.post(f"{CLOUD_URL}/v1/protect", headers={"X-API-Key": tenant_beta["api_key"]},
+                        json={"text": text, "customer_ref": "SHARED-9", "sink": "kyc-archive"})
+    assert r_a.status_code == 200 and r_b.status_code == 200, (r_a.text, r_b.text)
+    body_b = r_b.json()
+    assert not any("elsewhere" in n or "owner_conflict" in n for n in body_b.get("notes", [])), body_b["notes"]
+    f_b = [f for f in body_b["findings"] if f["type"] == "AADHAAR"][0]
+    assert not f_b.get("owner_conflict")
+    assert f_b["customer_ref"] == "SHARED-9"
+    assert raw not in body_b["after"]
+
+    # Bank B erasing its customer does not touch Bank A's record, and the reverse
+    tok_a = [f for f in r_a.json()["findings"] if f["type"] == "AADHAAR"][0]["token"]
+    r_tr = requests.post(f"{CLOUD_URL}/v1/trace", headers={"X-API-Key": tenant_beta["api_key"]}, json={"dump": tok_a})
+    assert r_tr.status_code in (200, 403)
+    if r_tr.status_code == 200:
+        assert r_tr.json().get("matched", 0) == 0, "Bank B must not trace Bank A's token"

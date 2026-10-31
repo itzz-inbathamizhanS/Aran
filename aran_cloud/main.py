@@ -34,7 +34,7 @@ ARAN_ADMIN_TOKEN = os.environ.get("ARAN_ADMIN_TOKEN")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(HERE, "static")
-DB_PATH = os.path.join(HERE, "cloud.db")
+DB_PATH = os.environ.get("ARAN_CLOUD_DB") or os.path.join(HERE, "cloud.db")  # a container keeps it on a volume
 
 VALID_SCOPES = {"admin", "protect", "gateway", "trace", "detokenise", "erase", "verify", "dashboard"}
 DEFAULT_ADMIN_SCOPES = "admin,protect,gateway,trace,detokenise,erase,verify,dashboard"
@@ -667,6 +667,7 @@ def protect(body: ProtectIn, tenant: dict = Depends(require_scope("protect"))):
         "sink": body.sink or "kyc-archive",
         "customer_ref": namespaced_ref,
         "purpose": body.purpose or "KYC",
+        "scope": tenant_id,  # identifier ownership is looked up inside this tenant only
     }
 
     core_res, latency_ms = call_core("POST", "/api/process", core_payload)
