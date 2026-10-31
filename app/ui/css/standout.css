@@ -39,7 +39,7 @@
 .breach { margin-top: var(--space-3); padding: var(--space-4); border-radius: var(--radius-input); animation: pop .4s both; }
 .breach.bad { background: var(--leak-bg-color); border: 1px solid var(--leak-color); }
 .breach.good { background: var(--token-bg-color); border: 1px solid var(--token-color); }
-.breach h3 { margin-bottom: var(--space-2); }
+.breach h2.h3 { margin-bottom: var(--space-2); }
 
 /* ---- ledger ---- */
 .ledger-bar { margin: var(--space-2) 0; }

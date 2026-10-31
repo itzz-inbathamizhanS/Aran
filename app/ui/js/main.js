@@ -65,7 +65,7 @@
       $$('[data-go-next]', view).forEach((b) => (b.onclick = () => (location.hash = 'tour/1')));
       const sel = $('.chap-select', view); sel && (sel.onchange = () => (location.hash = 'tour/' + sel.value));
     } else if (pg) {
-      view.innerHTML = `<div class="page">${U.phead(t(pg.eyebrow), t(pg.title), t(pg.lede))}<div class="pagebody">${pg.view()}</div></div>`;
+      view.innerHTML = `<div class="page">${U.phead(t(pg.eyebrow), t(pg.title), t(pg.lede))}<div class="pagebody">${pg.view()}</div>${A.site.pagerHTML(page, { t })}</div>`;
       U.revealHeading($('h1[data-split]', view)); const c = pg.mount && pg.mount($('.pagebody', view)); c && cleanup.push(c); U.reveal(view);
     } else { view.innerHTML = `<div class="page"><div class="card plus startcard"><h2>Page not found</h2><p class="muted" style="margin-top:12px">Pick a page from the menu.</p></div></div>`; }
     ScrollTrigger.refresh(); syncBar();

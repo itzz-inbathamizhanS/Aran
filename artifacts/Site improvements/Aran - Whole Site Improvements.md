@@ -25,9 +25,17 @@ Date: 31 Oct 2026. Branch `aran-ui-banks-cloud`. This pass follows the [site aud
 
 Before: 25 serious accessibility problems over the 46 runs. After: none. No console errors, no failed requests, and no sideways overflow on any page.
 
+## Round 2
+
+| # | Problem | Where | Fix |
+|---|---|---|---|
+| 10 | **Heading levels skipped** from the page title (h1) to card titles (h3) | Every page | Card and section titles are now h2 with the same look (`class="h3"`); the tour's column titles moved up a level too. The scanner now reports **zero** problems of any kind on all 46 runs |
+| 11 | **Three demos crashed** once Aran Cloud had enrolled customers in the core: Leakage ledger (500), Beat the firewall and the tour packet (KeyError). Those customers only have a ref, not an Aadhaar, card or phone number | `standout.py`, `engine.py` | Demos pick only customers with all four identifiers on file; the ledger answers 404 instead of crashing; `/api/customers` says which customers are `full`. New test `test_demos_skip_customers_enrolled_without_identifiers` |
+| 12 | **The landing page was all zeros** on a fresh server, with a blank "Values found by type" card and a red alert card even with no alerts | Overview | First-run card with **Send 6 bank requests**, **Start normal traffic** and **Take the guided tour**; the numbers fill in from the live firewall. Empty cards say what will appear; the alert card turns red only when an alert is open |
+| 13 | **No path through the site:** after a page, the only way on was the menu | Every page in every app | **Previous / Next** links at the foot of each page, in site order, with the page number and section (`A.site.pagerHTML`). Translated into Tamil and Hindi |
+
 ## Still open
 
-- **Heading levels:** most pages go from the page title (h1) straight to card titles (h3). This is a moderate finding that screen-reader users notice when they jump by heading. The fix is to change the card titles to h2 in each page template, keeping their look.
 - **`test_core_lockdown`** expects the core to refuse `/api` calls without the internal secret. It fails when the core is started with `ARAN_CONSOLE_OPEN=1`, which is how `run_demo.sh` and Docker Compose start it so that the console works. That is the intended trade-off for a core that only listens on this computer. The test should skip when console-open is set.
 
 ## Screenshots
@@ -39,5 +47,9 @@ Before: 25 serious accessibility problems over the 46 runs. After: none. No cons
 | `03-workspace-summary-phone.png` | Aran Cloud workspace summary, light mode, darker token pills |
 | `04-erase-buttons-dark.png` | Erase buttons with readable dark text |
 | `05-results-desktop.png` | Results page, where the tables can now be scrolled by keyboard |
+| `06-overview-first-run.png` | Overview on a fresh server, with the first-run buttons |
+| `07-overview-after-send.png` | Overview after one click: a real Aadhaar and its token, live numbers |
+| `08-pager.png` | Previous / Next links at the foot of a page |
+| `09-pager-phone.png` | The same on a phone |
 
 Beginner doc for these ideas: [Learn 25](Aran%20Learn%2025%20-%20Accessibility%2C%20Tenant%20Isolation%20and%20Containers.md).

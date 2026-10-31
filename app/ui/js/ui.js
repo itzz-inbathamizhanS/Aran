@@ -94,7 +94,7 @@ window.ARAN = window.ARAN || {};
   /* toast + C31 confirm dialog */
   U.toast = (msg) => { let t = U.$('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); } t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1800); };
   U.confirm = ({ title, body, confirmLabel }) => new Promise((resolve) => {
-    const back = U.html(`<div class="dialog-back open" role="dialog" aria-modal="true" aria-labelledby="dlg-t"><div class="dialog"><h3 id="dlg-t">${title}</h3><p class="muted">${body}</p><div class="actions"><button class="btn secondary" data-a="no">Cancel</button><button class="btn danger" data-a="yes">${confirmLabel || 'Confirm'}</button></div></div></div>`);
+    const back = U.html(`<div class="dialog-back open" role="dialog" aria-modal="true" aria-labelledby="dlg-t"><div class="dialog"><h2 class="h3" id="dlg-t">${title}</h2><p class="muted">${body}</p><div class="actions"><button class="btn secondary" data-a="no">Cancel</button><button class="btn danger" data-a="yes">${confirmLabel || 'Confirm'}</button></div></div></div>`);
     const done = (v) => { back.remove(); document.removeEventListener('keydown', onKey); resolve(v); };
     const onKey = (e) => { if (e.key === 'Escape') done(false); };
     back.onclick = (e) => { if (e.target === back) done(false); const a = e.target.closest('[data-a]'); if (a) done(a.dataset.a === 'yes'); };

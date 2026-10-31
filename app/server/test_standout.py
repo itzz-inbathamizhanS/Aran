@@ -80,3 +80,17 @@ def test_pqc_receipt_reports_sizes_after_an_erasure(eng):
     assert d["ed25519_sig_bytes"] == 64
     if d["alg"] != "Ed25519":
         assert d["ml_dsa_sig_bytes"] > 3000 and d["ml_dsa_pub_bytes"] > 1900
+
+
+def test_demos_skip_customers_enrolled_without_identifiers(eng):
+    # customers created through /api/process (for example by Aran Cloud) have only a ref;
+    # the ledger, the arena and the tour used to crash with a KeyError when they picked one
+    eng.process("hello", "core-banking", "kyc-archive", customer_ref="AA__ONLY-REF", purpose="KYC")
+    assert eng.customer_view("AA__ONLY-REF")["full"] is False
+    with pytest.raises(S.HTTPException) as err:
+        S.ledger_state("AA__ONLY-REF", "CARD")
+    assert err.value.status_code == 404
+    for _ in range(20):
+        S.ARENA["challenge"] = None
+        assert S.arena_challenge()["customer"] != "AA__ONLY-REF"
+        eng.sample("callnote", who="customer")  # used to raise KeyError on a ref-only customer

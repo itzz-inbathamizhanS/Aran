@@ -89,5 +89,14 @@ window.ARAN = window.ARAN || {};
     new MutationObserver(() => { if (menu.classList.contains('open')) { q.value = ''; run(); if (matchMedia('(pointer: fine)').matches) setTimeout(() => q.focus({ preventScroll: true }), 30); } }).observe(menu, { attributes: true, attributeFilter: ['class'] });
   };
 
-  A.site = { menuHTML, wireMenu, links, local, hasApps, groups: numbered, find, consolePages: () => GROUPS.filter((g) => g.pages.every((p) => p[2] === 'console')).flatMap((g) => g.pages.map(([id, label]) => [id, label])), first: 'overview' };
+  /* previous / next page in site order, at the foot of every page, so the site reads as one path */
+  const pagerHTML = (id, o) => {
+    o = o || {}; const t = o.t || ((x) => x);
+    const all = numbered().flatMap((g) => g.pages.map((p) => Object.assign({ group: g.label }, p)));
+    const i = all.findIndex((p) => p.id === id); if (i < 0) return '';
+    const link = (p, cls, arrow) => (p ? `<a class="pager-${cls}" href="${p.href}"><span class="label">${cls === 'prev' ? '← ' : ''}${esc(t(cls === 'prev' ? 'Previous' : 'Next'))} · ${String(p.n).padStart(2, '0')} · ${esc(t(p.group))}${cls === 'next' ? ' →' : ''}</span><b>${esc(t(p.label))}</b></a>` : '<span></span>');
+    return `<nav class="pager" aria-label="${esc(t('Previous and next page'))}">${link(all[i - 1], 'prev')}${link(all[i + 1], 'next')}</nav>`;
+  };
+
+  A.site = { menuHTML, wireMenu, pagerHTML, links, local, hasApps, groups: numbered, find, consolePages: () => GROUPS.filter((g) => g.pages.every((p) => p[2] === 'console')).flatMap((g) => g.pages.map(([id, label]) => [id, label])), first: 'overview' };
 })(window.ARAN);

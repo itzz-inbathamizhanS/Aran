@@ -202,6 +202,10 @@ class Engine:
                 )
             return self.customers[ref]
 
+    @staticmethod
+    def _full(c):
+        return all(c.get(t) for t in ("AADHAAR", "CARD", "MOBILE", "PAN"))
+
     def customer_view(self, ref):
         c = self.customers[ref]
         aad = c.get("AADHAAR", "")
@@ -214,8 +218,10 @@ class Engine:
             MOBILE=mob if mob.startswith("XXXX") else ("XXXXXX" + mob[-4:] if mob else "–"),
             PAN=pan if "XXXX" in pan else (pan[:2] + "XXXXXX" + pan[-2:] if len(pan) >= 4 else "–")
         )
-        return dict(ref=ref, name=c.get("name", ref), masked=masked, keys=self.vault.key_status(ref))
-        return dict(ref=ref, name=c.get("name", ref), masked=masked, keys=self.vault.key_status(ref))
+        # full: the customer has all four identifiers on file (the seeded demo customers do; customers
+        # enrolled through /api/process, for example by Aran Cloud, only have a ref)
+        full = all(c.get(t) for t in ("AADHAAR", "CARD", "MOBILE", "PAN"))
+        return dict(ref=ref, name=c.get("name", ref), masked=masked, keys=self.vault.key_status(ref), full=full)
 
     # ------------------------------------------------------------ requests
     def sample(self, kind, who="customer", ref=None):
@@ -224,8 +230,8 @@ class Engine:
         r = self.rand
         if ref is not None:
             c = self.customers[ref]
-        elif who == "customer" and self.customers:
-            c = self.customers[r.choice(sorted(self.customers))]
+        elif who == "customer" and any(self._full(v) for v in self.customers.values()):
+            c = self.customers[r.choice(sorted(k for k, v in self.customers.items() if self._full(v)))]
         else:
             c = dict(name=synth.gen_name(r, "test"), AADHAAR=re.sub(r"\D", "", synth.gen_aadhaar(r)),
                      CARD=re.sub(r"\D", "", synth.gen_card(r)), MOBILE=re.sub(r"\D", "", synth.gen_mobile(r))[-10:],

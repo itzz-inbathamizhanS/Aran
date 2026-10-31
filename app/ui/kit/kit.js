@@ -51,6 +51,7 @@ window.ARAN = window.ARAN || {};
       const bar = sub.firstElementChild, c = bar.querySelector('.cur');
       if (c && bar.scrollWidth > bar.clientWidth) bar.scrollLeft = c.offsetLeft - (bar.clientWidth - c.offsetWidth) / 2;
     }
+    const main = $('main#view'); if (main && !$('.pager', main) && !document.documentElement.classList.contains('embed')) main.insertAdjacentHTML('beforeend', S.pagerHTML(cur));
     const setMenu = (open) => { menu.classList.toggle('open', open); $('#menubtn').setAttribute('aria-expanded', open); document.body.style.overflow = open ? 'hidden' : ''; };
     $('#menubtn').onclick = () => setMenu(!menu.classList.contains('open'));
     menu.addEventListener('click', (e) => { if (e.target.closest('a')) setMenu(false); });

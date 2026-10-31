@@ -41,6 +41,14 @@ Some problems only show up when you look at the page. On a phone:
 - **A cut-off language picker** that read "Englis". Fix: on a narrow screen it shows EN, த or हि.
 - **The section bar** in Aran Cloud and the banks could hide the current page off to the side. Fix: it scrolls the current page into view.
 
+### A clean heading outline
+
+Screen-reader users jump through a page by its headings, like a table of contents. The levels must not skip: the page title is **h1**, its sections are **h2**, and parts of a section are **h3**. Many Aran pages went from h1 straight to h3, because h3 had the size we wanted. The fix keeps the look and corrects the level: `<h2 class="h3">`. **Choose the tag for its meaning and the class for its look.**
+
+### Empty states and a path through the site
+
+A page with only zeros tells a first-time visitor nothing. The Overview now shows an **empty state**: one sentence on what will appear, and buttons that make it appear (send six real requests through the firewall, start the normal-traffic replay, or take the tour). Every page also ends with **Previous / Next** links, worked out from the site map (Learn 24), so the site reads as one path from Overview to the design boards.
+
 ## 2. Tenant isolation
 
 Aran Cloud serves many banks (**tenants**, Learn 23). Each bank's customer refs were already kept apart with a prefix (`t_ab12__CUST-1`). One leak was left. The core kept a single **owner index**: "this Aadhaar number belongs to customer X". If Bank B sent an Aadhaar number that Bank A had already enrolled, the core answered "already enrolled elsewhere" and filed the token under Bank A's customer. That tells Bank B that the person banks with someone else. It is a privacy leak, and under the DPDP Act it is personal data disclosed without a purpose.

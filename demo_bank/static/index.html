@@ -23,7 +23,7 @@
 
   <div class="grid g2" style="align-items:start">
     <section class="card">
-      <div class="between"><h3>1 · Customer sign-up</h3><button class="btn ghost sm" id="sample"><span>Fill a valid sample</span></button></div>
+      <div class="between"><h2 class="h3">1 · Customer sign-up</h2><button class="btn ghost sm" id="sample"><span>Fill a valid sample</span></button></div>
       <p class="small muted" id="write-hint">The write path: what this bank stores when a customer opens an account.</p>
       <form class="kit-form kit-gap-s" id="signup">
         <label class="field">Full name<input id="f-name" required placeholder="e.g. Sunita Rao"></label>
@@ -35,7 +35,7 @@
     </section>
 
     <section class="card">
-      <div class="between"><h3>2 · Staff AI assistant</h3><span class="pill">role · customer-care</span></div>
+      <div class="between"><h2 class="h3">2 · Staff AI assistant</h2><span class="pill">role · customer-care</span></div>
       <p class="small muted" id="ai-hint"></p>
       <div class="kit-chat kit-gap-s" id="chat" aria-live="polite"><div class="kit-bub bot">Hello, I am the staff banking assistant. Ask me to look up a customer’s KYC details or account status.</div></div>
       <form class="kit-inline" id="chat-form"><label class="field">Ask the assistant<input id="chat-in" required placeholder="Look up the balance for Aadhaar 432988345081"></label><button class="btn" type="submit"><span>Ask</span></button></form>
@@ -43,28 +43,28 @@
   </div>
 
   <section class="card kit-gap-s hidden" id="officer">
-    <div class="between"><h3>3 · Authorised officer view</h3><span class="pill tok">Aran only</span></div>
+    <div class="between"><h2 class="h3">3 · Authorised officer view</h2><span class="pill tok">Aran only</span></div>
     <p class="small muted">A demo role switch, not real sign-in. Each role sees a different view of the same tokenised record, and every reveal is written to the Aran Cloud audit log.</p>
     <div class="kit-cols-4 kit-gap-s" style="grid-template-columns:1.4fr 1.4fr auto"><label class="field">Customer<select id="o-cust"></select></label><label class="field">Role<select id="o-role"><option value="teller">Teller · masked</option><option value="compliance">Compliance · full value</option><option value="developer">Developer · tokens only</option></select></label><button class="btn secondary" id="o-go"><span>Inspect record</span></button></div>
     <div id="o-out" class="kit-gap-s"></div>
   </section>
 
   <section class="kit-gap">
-    <div class="sechead"><h3>What is actually in this bank’s database</h3><div class="kit-row"><span class="pill leak" id="lg-raw">raw identifier</span><span class="pill tok" id="lg-tok">Aran token</span><button class="btn secondary sm" id="refresh"><span>Refresh</span></button></div></div>
+    <div class="sechead"><h2 class="h3">What is actually in this bank’s database</h2><div class="kit-row"><span class="pill leak" id="lg-raw">raw identifier</span><span class="pill tok" id="lg-tok">Aran token</span><button class="btn secondary sm" id="refresh"><span>Refresh</span></button></div></div>
     <div class="card"><div class="tabs" role="tablist"><button class="tab" role="tab" aria-selected="true" data-tab="customers">customers</button><button class="tab" role="tab" aria-selected="false" data-tab="logs">logs</button><button class="tab" role="tab" aria-selected="false" data-tab="chat">chat_history</button></div>
       <div data-panel="customers" class="kit-scroll" id="t-customers"></div><div data-panel="logs" class="kit-scroll hidden" id="t-logs"></div><div data-panel="chat" class="kit-scroll hidden" id="t-chat"></div></div>
   </section>
 
   <div class="grid g2 kit-gap" style="align-items:start">
     <section class="card">
-      <h3>4 · A breach</h3>
+      <h2 class="h3">4 · A breach</h2>
       <p class="small muted">Dump every table the way an attacker would, then ask Aran what leaked.</p>
       <div class="kit-row"><button class="btn danger" id="breach"><span>Dump the database</span></button><button class="btn secondary" id="trace" disabled><span>Trace the dump</span></button></div>
       <textarea id="dump" class="mono kit-gap-s" rows="7" readonly placeholder="The stolen dump appears here"></textarea>
       <div id="trace-out"></div>
     </section>
     <section class="card danger">
-      <h3>5 · Right to erasure</h3>
+      <h2 class="h3">5 · Right to erasure</h2>
       <p class="small muted">The customer asks the bank to delete their data (DPDP Act s.12). Compare deleting a row with shredding a key.</p>
       <div class="kit-inline kit-gap-s"><label class="field">Customer<select id="e-cust"></select></label><button class="btn danger" id="erase"><span>Delete my data</span></button></div>
       <div id="erase-out"></div>

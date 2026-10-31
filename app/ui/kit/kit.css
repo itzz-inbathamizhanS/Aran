@@ -84,7 +84,7 @@ html.embed .phead h1 { font-size: var(--text-size-h2); }
 
 /* empty state */
 .kit-empty { text-align: center; padding: var(--space-7) var(--space-5); }
-.kit-empty h3 { margin-bottom: var(--space-3); }
+.kit-empty h3, .kit-empty h2.h3 { margin-bottom: var(--space-3); }
 .kit-empty p { max-width: 520px; margin: 0 auto var(--space-5); }
 
 /* key gate (asks for an API key without browser prompt boxes) */

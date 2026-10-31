@@ -4,7 +4,7 @@
 window.ARAN = window.ARAN || {};
 (function (A) {
   const U = A.ui, H = A.helpers, $ = U.$;
-  const sec = (t, body, note) => `<div class="cb-board"><h3>${t}</h3><div class="card plus">${body}${note ? `<p class="caption muted" style="margin-top:12px">${note}</p>` : ''}</div></div>`;
+  const sec = (t, body, note) => `<div class="cb-board"><h2 class="h3">${t}</h2><div class="card plus">${body}${note ? `<p class="caption muted" style="margin-top:12px">${note}</p>` : ''}</div></div>`;
   const row = (...x) => `<div class="row" style="align-items:center">${x.join('')}</div>`;
   // real marks: the newest live event that had findings
   const evOf = () => A.events.find((e) => e.findings.length) || { before: 'Send a request first to see real marks here.', after: '', findings: [] };
@@ -41,7 +41,7 @@ window.ARAN = window.ARAN || {};
   A.pages.states = {
     eyebrow: 'DESIGN BOARD', title: 'States, empty and failing', lede: 'Whole-app and per-page states from spec 2.4 and the section 15 checklist. Open the app with <code>?state=starting</code>, <code>?state=failed</code> or <code>?state=offline</code> to see them full screen.',
     view() {
-      const start = (t, p, c) => `<div class="card plus" style="text-align:center;padding:48px 24px"><div class="spinner"></div><h3>${t}</h3><p class="${c || 'muted'} small" style="max-width:480px;margin:8px auto 0">${p}</p></div>`;
+      const start = (t, p, c) => `<div class="card plus" style="text-align:center;padding:48px 24px"><div class="spinner"></div><h2 class="h3">${t}</h2><p class="${c || 'muted'} small" style="max-width:480px;margin:8px auto 0">${p}</p></div>`;
       return [
         sec('Starting (health.ready = false)', start('Starting Aran', 'Loading the trained detector, NER and context models, and enrolling customers. This takes a few seconds after a cold start.')),
         sec('Load failed (health.error set)', start('Starting Aran', 'Load failed: ModuleNotFoundError("No module named \'sklearn_crfsuite\'")', 't-leak')),
@@ -49,7 +49,7 @@ window.ARAN = window.ARAN || {};
         sec('Overview, empty server', `<div class="card plus" style="display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap"><p>No traffic yet on this server. Send a first request to see Aran work.</p><a class="btn" href="#traffic"><span>Send a request</span><span class="arr">→</span></a></div><div class="grid g4" style="margin-top:16px">${U.stat('Requests protected', '0', '25 enrolled customers')}${U.stat('Values tokenised', '0', '0 passed raw')}${U.stat('Added latency p95', '–', 'no requests yet')}${U.stat('Immune alerts', '0', '0 open · mode: idle')}</div>`),
         sec('Live traffic: passed raw and monitor-only', `<div class="between" style="margin-bottom:12px"><span><b>employee-desktop</b> → <b>llm-gateway</b> ${U.pill('monitor-only', 'danger')}</span><span class="mono small muted">2 found · 3.1 ms · 4s ago</span></div><table class="tbl"><thead><tr><th>Type</th><th>Value</th><th>Became</th><th class="num">Confidence</th></tr></thead><tbody><tr><td>Mobile</td><td class="mono">9876543210</td><td>${U.pill('passed raw', 'danger')}</td><td class="num mono">41%</td></tr></tbody></table>`),
         sec('Customers: no selection, KYC refused, detokenise', `<div class="card muted">Pick a customer to see their keys and erase a purpose. Send some bank requests first so they have tokens in the sinks.</div>${U.note('err', '🔒 Refused: KYC records are under a retention lock until 16/10/2031 (PMLA, 5 years).')}${U.note('ok', 'Value: <code>482933107745</code>')}${U.note('err', 'This token’s key was destroyed. The value can never be read again.')}${U.note('err', 'Not a vault token. Vaultless FF1 tokens are reversed only inside the bank’s key boundary.')}`),
-        sec('Leak trace', `${U.note('err', 'crm-notes has not received anything yet. Send some traffic to it first.')}<div class="card" style="margin-top:12px"><h3>No Aran tokens found</h3><p class="small muted">0 of 9 candidate values matched a token issued by this server. <b class="t-leak">4 raw identifiers</b> in the dump were never tokenised, so they leaked before Aran or through a bypass.</p></div>`),
+        sec('Leak trace', `${U.note('err', 'crm-notes has not received anything yet. Send some traffic to it first.')}<div class="card" style="margin-top:12px"><h2 class="h3">No Aran tokens found</h2><p class="small muted">0 of 9 candidate values matched a token issued by this server. <b class="t-leak">4 raw identifiers</b> in the dump were never tokenised, so they leaked before Aran or through a bypass.</p></div>`),
         sec('Results: job states, missing file', `<div class="grid g3"><div class="card"><b>Never run</b><p class="small muted">Button: Run now</p></div><div class="card"><b class="t-ok">✓ Passed in 38s</b></div><div class="card"><b class="t-leak">✗ Exit code 1</b></div></div><p class="muted small" style="margin-top:12px">No result file yet. Run the experiment to create it.</p>`),
         sec('Immune: idle, learning, watching', '<p class="small muted">Use the radio switch on the Immune layer page or tour chapter 10 to review each state, and the drill / alert states below it.</p>'),
       ].join('');
