@@ -58,6 +58,10 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Aran UI integration | Aran Learn 23 - One UI for the Console, Aran Cloud and the Demo Banks (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/aran-ui-banks-cloud/docs/learning/23-one-ui-for-cloud-and-banks.md |
 | Aran UI integration | Screenshots: Aran Cloud landing, Quick connect, dashboard (overview, keys, audit), Bank A, Bank B, side by side, phone and light | https://github.com/itzz-inbathamizhans/aran/tree/aran-ui-banks-cloud/artifacts/Aran%20UI%20integration |
 | Aran UI integration | Shared design kit for the other Aran apps (kit.js, kit.css) | https://github.com/itzz-inbathamizhans/aran/tree/aran-ui-banks-cloud/app/ui/kit |
+| Site structure | Aran - Site Audit and Menu Order (7 problems found, the fixes, the 23-page order) | https://github.com/itzz-inbathamizhans/aran/blob/aran-ui-banks-cloud/artifacts/Site%20structure/Aran%20-%20Site%20Audit%20and%20Menu%20Order.md |
+| Site structure | Aran Learn 24 - Site Structure and Navigation (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/aran-ui-banks-cloud/docs/learning/24-site-structure-and-navigation.md |
+| Site structure | Screenshots: menu on desktop, menu search, menu inside Aran Cloud, workspace summary, section bar, menu on a phone | https://github.com/itzz-inbathamizhans/aran/tree/aran-ui-banks-cloud/artifacts/Site%20structure |
+| Site structure | The one site map every menu reads (sitemap.js) | https://github.com/itzz-inbathamizhans/aran/blob/aran-ui-banks-cloud/app/ui/kit/sitemap.js |
 
 Note: the Markdown copy replaces the embedded architecture diagram with a text placeholder; the PDF keeps it.
 

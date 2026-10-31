@@ -74,6 +74,7 @@
 
 <script src="/aran/vendor/gsap.min.js"></script>
 <script src="/aran/js/ui.js"></script>
+<script src="/aran/kit/sitemap.js"></script>
 <script src="/aran/kit/kit.js"></script>
 <script>
 (function (A) {
@@ -92,6 +93,7 @@
   async function config() {
     C = await K.api('/api/config'); aran = C.bank_mode === 'aran';
     K.shell({ app: aran ? 'bankB' : 'bankA', brand: aran ? 'Bank B' : 'Bank A', env: aran ? 'Bank B · every write, log line and AI prompt goes through Aran Cloud' : 'Bank A · legacy, stores and sends raw identifiers', envShort: aran ? 'protected by Aran' : 'legacy, unprotected' });
+    document.title = (aran ? 'Bank B · with Aran' : 'Bank A · legacy') + ' · Aran';
     $('#eyebrow').textContent = aran ? 'Bank B · protected by Aran' : 'Bank A · legacy';
     $('#title').textContent = aran ? 'Aran Secure Bank' : 'Legacy Bank';
     $('#lede').textContent = aran ? 'The same bank, with Aran in front of the database, the logs and the staff AI. Identifiers are stored as tokens; officers see only what their role allows.' : 'A typical bank: raw Aadhaar, card and phone numbers in the database, in plain log lines and inside prompts sent to an outside AI.';

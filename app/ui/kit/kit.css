@@ -106,3 +106,7 @@ html.embed .phead h1 { font-size: var(--text-size-h2); }
 /* section tabs scroll sideways on phones instead of wrapping */
 .page.kit .tabs { overflow-x: auto; scrollbar-width: none; }
 .page.kit .tab { white-space: nowrap; flex: none; }
+
+/* section bar: "← Console", the section name, then its pages */
+.kit-apps .back { color: var(--text-color); }
+.kit-apps .kit-sec { align-self: center; padding: 0 6px 0 10px; border-left: 1px solid var(--glass-line-color); font: 400 .6875rem/1 var(--font-mono); text-transform: uppercase; letter-spacing: -.02em; color: var(--accent-color); white-space: nowrap; }

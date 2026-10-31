@@ -69,3 +69,14 @@ def test_pqc_hybrid_survives_the_simulated_quantum_attack(eng):
 
 def test_mosca(eng):
     assert S.pqc_mosca(10, 3, 10)["exposed_years"] == 3
+
+
+def test_pqc_receipt_reports_sizes_after_an_erasure(eng):
+    # the ML-DSA public key is stored as PEM, not bare base64; the endpoint used to crash on it
+    ref = next(iter(eng.customers))
+    purpose = next(k["purpose"] for k in eng.vault.key_status(ref) if k["alive"] and k["purpose"] != "KYC")
+    eng.erase(ref, purpose)
+    d = S.pqc_receipt()["receipt"]
+    assert d["ed25519_sig_bytes"] == 64
+    if d["alg"] != "Ed25519":
+        assert d["ml_dsa_sig_bytes"] > 3000 and d["ml_dsa_pub_bytes"] > 1900

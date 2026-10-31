@@ -431,3 +431,28 @@ details.hood .body { margin-top: var(--space-4); max-width: 820px; color: var(--
   .btn, .pillbtn, .chip, .tab, button.chip, .li { min-height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+
+/* the site menu: one site map for every Aran app (kit/sitemap.js).
+   Search on top, one column per group, numbered pages, current page and group marked. */
+.menu-grid.wide { display: flex; flex-direction: column; gap: var(--space-6); min-height: calc(100vh - 160px); }
+.menu-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
+.menu-search { display: flex; flex-direction: column; gap: 8px; flex: 1; max-width: 560px; }
+.menu-search input { width: 100%; font-size: 1.05rem; background: color-mix(in srgb, var(--input-color) 80%, transparent); }
+.menu-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: var(--space-6) var(--space-7); align-content: start; }
+.menu-group > .label { display: flex; justify-content: space-between; padding-bottom: 10px; margin-bottom: 4px; border-bottom: 1px solid var(--text-2-color); }
+.menu-group > .label .rng { color: var(--text-2-color); }
+.menu-group.here > .label { color: var(--accent-color); border-bottom-color: var(--accent-color); }
+.menu-cols .menu-link { font-size: clamp(1.15rem, 1.7vw, 1.55rem); line-height: 1.2; padding: 9px 0; gap: var(--space-3); align-items: center; }
+.menu-cols .menu-link.cur { color: var(--text-color); }
+.menu-cols .menu-link.cur .n { color: var(--accent-color); }
+.menu-cols .menu-link.cur::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-color); margin-left: auto; flex: none; }
+.menu-link .ext { margin-left: auto; font: 400 .75rem/1 var(--font-mono); color: var(--text-2-color); letter-spacing: 0; }
+.menu-link.cur .ext { margin-left: 8px; }
+.menu-link[hidden], .menu-group[hidden] { display: none; }
+.menu-foot { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-5); padding-top: var(--space-5); border-top: 1px solid var(--glass-line-color); font-size: var(--text-size-small); }
+.menu-foot p { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; color: var(--text-color); }
+.menu-foot a:hover { color: var(--accent-color); }
+@media (max-width: 760px) {
+  .menu-cols { grid-template-columns: 1fr; gap: var(--space-5); }
+  .menu-cols .menu-link { font-size: 1.2rem; min-height: 44px; }
+}

@@ -413,7 +413,14 @@ def pqc_receipt():
     if not rs:
         return dict(receipt=None)
     r = rs[-1]
-    size = lambda k: len(base64.b64decode(r[k])) if r.get(k) else 0
+    def size(k):
+        """Byte length of a base64 value, or of the DER body of a PEM public key (the ML-DSA key is PEM)."""
+        v = r.get(k)
+        if not v:
+            return 0
+        if v.lstrip().startswith("-----BEGIN"):
+            v = "".join(line for line in v.splitlines() if line and not line.startswith("-----"))
+        return len(base64.b64decode(v))
     return dict(receipt=dict(alg=r.get("alg", "Ed25519"), customer=r["event"].get("customer"),
                              purpose=r["event"].get("purpose"), ed25519_sig_bytes=size("signature"),
                              ml_dsa_sig_bytes=size("pq_signature"), ml_dsa_pub_bytes=size("pq_public_key")),

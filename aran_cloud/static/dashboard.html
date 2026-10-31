@@ -10,13 +10,13 @@
 <link rel="stylesheet" href="/aran/css/tokens.css">
 <link rel="stylesheet" href="/aran/css/style.css">
 <link rel="stylesheet" href="/aran/kit/kit.css">
-<title>Dashboard · Aran Cloud</title>
+<title>Workspace dashboard · Aran Cloud</title>
 </head>
 <body>
 <main id="view" tabindex="-1" class="page kit">
   <header class="phead" style="margin-bottom:var(--space-5)">
     <div class="eyebrow" id="eyebrow">Aran Cloud · workspace</div>
-    <h1 id="title">Dashboard</h1>
+    <h1 id="title">Workspace dashboard</h1>
     <p class="lede" id="lede"></p>
   </header>
   <div class="between" style="margin-bottom:var(--space-4)">
@@ -29,20 +29,21 @@
 
 <script src="/aran/vendor/gsap.min.js"></script>
 <script src="/aran/js/ui.js"></script>
+<script src="/aran/kit/sitemap.js"></script>
 <script src="/aran/kit/kit.js"></script>
 <script>
 (function (A) {
   const K = A.kit, U = A.ui, $ = U.$, $$ = U.$$, esc = K.esc;
   const VIEWS = [
-    ['overview', 'Overview', 'Live security posture for this workspace: what was protected, where it went and how fast.'],
+    ['summary', 'Workspace summary', 'This workspace only: what was protected, where it went and how fast. The console’s Overview shows the whole Aran core.'],
     ['audit', 'Audit log', 'Every detokenise attempt, hash-chained so that any edit to an old row breaks the chain.'],
-    ['trace', 'Trace a leak', 'Paste a leaked dump. Only tokens this workspace issued are traced back to the place they were sent.'],
+    ['trace', 'Leak trace', 'Paste a leaked dump. Only tokens this workspace issued are traced back to the place they were sent.'],
     ['receipts', 'Erasure & receipts', 'Shred a customer’s purpose key (DPDP Act s.12) and keep the signed, post-quantum receipt.'],
     ['keys', 'API keys', 'Scoped keys for each service. Secrets are shown once and stored only as SHA-256 hashes.'],
     ['usage', 'Usage & plan', 'Requests this month against the plan, by endpoint.'],
   ];
   K.shell({ app: 'cloud', page: 'dashboard', brand: 'Aran Cloud', env: 'Aran Cloud preview · this dashboard shows your workspace only' });
-  $('#nav').innerHTML = VIEWS.map(([id, l]) => `<a class="tab" role="tab" href="#${id}" data-v="${id}">${l}</a>`).join('');
+  $('#nav').innerHTML = VIEWS.map(([id, l]) => `<a class="tab" role="tab" href="#${id}" data-v="${id}">${id === 'summary' ? 'Summary' : l}</a>`).join('');
 
   /* ---- keys ---- */
   let key = K.takeKeyFromHash('aran_dashboard_key') || K.store.get('aran_dashboard_key');
@@ -86,7 +87,7 @@
   const ranks = (obj, empty) => { const e = Object.entries(obj || {}).sort((a, b) => b[1] - a[1]); if (!e.length) return `<p class="muted small">${empty}</p>`; const m = Math.max(...e.map((x) => x[1]), 1); return e.map(([k, v], i) => U.rankRow(`<span class="mono small">${esc(k)}</span>`, v / m, U.fmt(v), i)).join(''); };
 
   const R = {};
-  R.overview = () => {
+  R.summary = () => {
     if (!data) return U.skeleton(300);
     const m = data.metrics;
     if (!m.requests_this_month) return `<div class="card plus kit-empty"><h3>No traffic yet</h3><p class="muted">The workspace is ready. Send a request from Quick connect, sign a customer up at Bank B, or run 40 demo requests now.</p><div class="kit-row" style="justify-content:center"><button class="btn" data-seed><span>Run demo traffic</span><span class="arr">→</span></button><a class="btn secondary" href="/connect"><span>Quick connect</span></a></div><div data-seed-out></div></div>`;
@@ -113,7 +114,7 @@
     try { data = await K.api('/v1/dashboard', { key }); }
     catch (err) { if (err.status === 401) { clearInterval(timer); gate('That key was not accepted.'); } return; }
     $('#ws').textContent = data.tenant.name + ' · ' + data.tenant.id;
-    if (view() === 'overview' || view() === 'usage') paint(false);
+    if (view() === 'summary' || view() === 'usage') paint(false);
   };
   const loadAudit = async () => {
     const box = $('#audit'); if (!box) return;
@@ -127,12 +128,12 @@
   };
 
   /* ---- router ---- */
-  const view = () => { const v = location.hash.slice(1).split('&')[0]; return VIEWS.some((x) => x[0] === v) ? v : 'overview'; };
+  const view = () => { const v = location.hash.slice(1).split('&')[0]; return VIEWS.some((x) => x[0] === v) ? v : 'summary'; };
   let painted = null;
   function paint(fresh) {
     const v = view(), meta = VIEWS.find((x) => x[0] === v);
     $$('#nav .tab').forEach((t) => t.setAttribute('aria-selected', t.dataset.v === v));
-    if (fresh || painted !== v) { $('#title').textContent = meta[1]; $('#lede').textContent = meta[2]; $('#eyebrow').textContent = 'Aran Cloud · ' + meta[1].toLowerCase(); }
+    if (fresh || painted !== v) { $('#title').textContent = meta[1]; $('#lede').textContent = meta[2]; $('#eyebrow').textContent = 'Workspace dashboard · ' + meta[1].toLowerCase(); }
     const scrollY = window.scrollY, active = document.activeElement && document.activeElement.id;
     if (!fresh && painted === v && (v === 'trace' || v === 'receipts' || v === 'keys' || v === 'audit')) return; /* keep forms as they are */
     $('#body').innerHTML = R[v]();

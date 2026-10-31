@@ -10,19 +10,9 @@ window.ARAN = window.ARAN || {};
   const esc = U.esc, $ = U.$, $$ = U.$$;
   K.esc = esc;
 
-  /* ---- where the four apps live ---- */
-  const host = location.hostname || '127.0.0.1', proto = location.protocol === 'file:' ? 'http:' : location.protocol;
-  const at = (port) => `${proto}//${host}:${port}`;
-  K.links = Object.assign({ console: at(8000), cloud: at(8100), bankA: at(9001), bankB: at(9002) }, window.ARAN_LINKS || {});
-  const APPS = [
-    ['console', 'Console', () => K.links.console + '/'],
-    ['cloud', 'Aran Cloud', () => K.links.cloud + '/'],
-    ['connect', 'Quick connect', () => K.links.cloud + '/connect'],
-    ['dashboard', 'Dashboard', () => K.links.cloud + '/dashboard'],
-    ['bankA', 'Bank A · legacy', () => K.links.bankA + '/'],
-    ['bankB', 'Bank B · Aran', () => K.links.bankB + '/'],
-    ['compare', 'Side by side', () => K.links.bankB + '/compare'],
-  ];
+  /* ---- where the four apps live and the one site map (kit/sitemap.js) ---- */
+  const S = A.site;
+  K.links = S.links;
 
   /* ---- embedded inside the compare page: no chrome ---- */
   const qs = new URLSearchParams(location.search);
@@ -47,12 +37,15 @@ window.ARAN = window.ARAN || {};
     const cur = o.page || o.app;
     let top = $('#topbar'); if (!top) { top = document.createElement('header'); top.className = 'topbar'; top.id = 'topbar'; document.body.prepend(top); }
     let menu = $('#menu'); if (!menu) { menu = document.createElement('nav'); menu.className = 'menu'; menu.id = 'menu'; menu.setAttribute('aria-label', 'Menu'); top.after(menu); }
-    top.innerHTML = `<a class="logo" href="${APPS.find((a) => a[0] === o.app) ? APPS.find((a) => a[0] === o.app)[2]() : '/'}" aria-label="Aran">${mark}<span>${esc(o.brand || 'Aran')}</span><span class="tamil">அரண்</span></a><div class="env"><span class="long"><b>LIVE</b> · ${esc(o.env || 'every value comes from the Aran API · identifiers are generated, never real people')}</span><span class="short"><b>LIVE</b> · ${esc(o.envShort || 'generated IDs only')}</span></div><div class="tools">${o.tools || ''}<button class="pillbtn" id="theme" aria-label="Toggle theme"><span id="theme-i" aria-hidden="true"></span><span class="txt" id="theme-t"></span></button><button class="pillbtn solid menubtn rollhost" id="menubtn" aria-expanded="false" aria-controls="menu"><span class="ln" aria-hidden="true"></span>${U.roll('Menu')}</button></div>`;
-    const local = o.nav || [];
-    menu.innerHTML = `<div class="menu-grid"><nav class="menu-list" aria-label="Pages">${(local.length ? local : APPS.map(([id, l, h]) => [h(), l, id])).map(([href, l, id], i) => `<a class="menu-link rollhost ${id === cur ? 'cur' : ''}" href="${href}"><span class="n">${String(i + 1).padStart(2, '0')}</span>${U.roll(l)}</a>`).join('')}</nav><aside class="menu-side"><div><div class="label">Aran apps</div><p style="margin-top:8px;display:flex;flex-direction:column;gap:6px">${APPS.map(([id, l, h]) => `<a href="${h()}">${esc(l)} →</a>`).join('')}</p></div><div><div class="label">Environment</div><p style="margin-top:8px;color:var(--text-color)">Every number comes from the running Aran services. Identifiers are generated and belong to no one.</p></div><div><div class="label">Links</div><p style="margin-top:8px;display:flex;flex-direction:column;gap:6px"><a href="https://github.com/itzz-inbathamizhans/aran" target="_blank" rel="noreferrer">Source on GitHub ↗</a><span class="muted">Team Iravora Void · KARE · Banking &amp; FinTech</span></p></div></aside></div>`;
-    if (!$('.kit-sub')) {
+    const here = S.find(cur), grp = here && here.group;
+    top.innerHTML = `<a class="logo" href="${here ? here.page.href : S.links.console + '/'}" aria-label="${esc(o.brand || 'Aran')}, home">${mark}<span>${esc(o.brand || 'Aran')}</span><span class="tamil">அரண்</span></a><div class="env"><span class="long"><b>LIVE</b> · ${esc(o.env || 'every value comes from the Aran API · identifiers are generated, never real people')}</span><span class="short"><b>LIVE</b> · ${esc(o.envShort || 'generated IDs only')}</span></div><div class="tools">${o.tools || ''}<button class="pillbtn" id="theme" aria-label="Toggle theme"><span id="theme-i" aria-hidden="true"></span><span class="txt" id="theme-t"></span></button><button class="pillbtn solid menubtn rollhost" id="menubtn" aria-expanded="false" aria-controls="menu"><span class="ln" aria-hidden="true"></span>${U.roll('Menu')}</button></div>`;
+    /* the full-screen menu: every page of every app, grouped and numbered in site order */
+    menu.innerHTML = S.menuHTML(cur, { roll: U.roll, side: `<div><div class="label">Environment</div><p>Every number comes from the running Aran services. Identifiers are generated and belong to no one.</p></div>` });
+    S.wireMenu(menu);
+    /* the section bar: a way back to the console, then the pages of this section in order */
+    if (!$('.kit-sub') && grp) {
       const sub = document.createElement('div'); sub.className = 'kit-sub';
-      sub.innerHTML = `<nav class="kit-apps" aria-label="Aran apps">${APPS.map(([id, l, h]) => `<a href="${h()}" class="${id === cur ? 'cur' : ''}" ${id === cur ? 'aria-current="page"' : ''}>${esc(l)}</a>`).join('')}</nav>`;
+      sub.innerHTML = `<nav class="kit-apps" aria-label="${esc(grp.label)}"><a href="${S.find(S.first).page.href}" class="back">← Console</a><span class="kit-sec">${esc(grp.label)}</span>${grp.pages.map((pg) => `<a href="${pg.href}" class="${pg.id === cur ? 'cur' : ''}" ${pg.id === cur ? 'aria-current="page"' : ''}>${esc(pg.label)}</a>`).join('')}</nav>`;
       menu.after(sub);
     }
     const setMenu = (open) => { menu.classList.toggle('open', open); $('#menubtn').setAttribute('aria-expanded', open); document.body.style.overflow = open ? 'hidden' : ''; };
