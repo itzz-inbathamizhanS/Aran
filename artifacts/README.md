@@ -54,6 +54,7 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Explainer video | Video source: script, voice and animation code | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/Explainer%20video/source |
 | Explainer video | Aran Learn 21 - How the Explainer Video Is Made (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/21-making-the-explainer-video.md |
 | Cybersecurity concepts | Aran Learn 22 - Cybersecurity Concepts in Aran (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/22-cybersecurity-concepts-in-aran.md |
+| Branch audits | Aran - BanksAndCloud Branch Audit (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Branch%20audits/Aran%20-%20BanksAndCloud%20Branch%20Audit.md |
 
 Note: the Markdown copy replaces the embedded architecture diagram with a text placeholder; the PDF keeps it.
 
