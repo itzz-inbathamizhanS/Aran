@@ -1,0 +1,114 @@
+# The whole Aran demo in containers: the core with the console, Aran Cloud, Bank A and Bank B.
+#   docker compose up --build
+# then open http://localhost:8000 (console), :8100 (Aran Cloud), :9001 (Bank A), :9002 (Bank B)
+# and :9002/compare (side by side). Secrets are made on first start (scripts/compose_entry.sh);
+# put your own ARAN_MASTER_KEY and ARAN_INTERNAL_SECRET in .env.local to choose them.
+x-common: &common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: aran:local
+  env_file:
+    - path: .env.local
+      required: false
+  networks:
+    - aran-net
+
+services:
+  core:
+    <<: *common
+    command: aran-entry python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1
+    environment:
+      - ARAN_STORE=/srv/data/aran.db
+      - ARAN_PORT=8000
+      - ARAN_CONSOLE_OPEN=1  # the console's own /api calls; the port is published on localhost only
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - aran-data:/srv/data
+      - secrets:/srv/secrets
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8000/api/health | grep -q '\"ready\":true'"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 10s
+
+  cloud:
+    <<: *common
+    working_dir: /srv
+    command: aran-entry python3 -m uvicorn aran_cloud.main:app --host 0.0.0.0 --port 8100 --no-proxy-headers
+    environment:
+      - ARAN_CORE_URL=http://core:8000
+      - ARAN_CLOUD_DB=/srv/data/cloud.db
+      - ARAN_DEMO_MODE=1
+      - PORT=8100
+    ports:
+      - "8100:8100"
+    volumes:
+      - cloud-data:/srv/data
+      - secrets:/srv/secrets
+    depends_on:
+      core:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8100/v1/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  bank-a:
+    <<: *common
+    working_dir: /srv
+    command: python3 -m uvicorn demo_bank.app:app --host 0.0.0.0 --port 9001
+    environment:
+      - BANK_MODE=legacy
+      - PORT=9001
+      - BANK_DATA_DIR=/srv/data
+    ports:
+      - "9001:9001"
+    volumes:
+      - bank-a-data:/srv/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9001/api/config || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  bank-b:
+    <<: *common
+    working_dir: /srv
+    command: aran-entry python3 -m uvicorn demo_bank.app:app --host 0.0.0.0 --port 9002
+    environment:
+      - BANK_MODE=aran
+      - PORT=9002
+      - ARAN_URL=http://cloud:8100
+      - BANK_DATA_DIR=/srv/data
+      - ARAN_AUTO_WORKSPACE=1  # creates Bank B's workspace once and keeps its key on the volume
+    ports:
+      - "9002:9002"
+    volumes:
+      - bank-b-data:/srv/data
+      - secrets:/srv/secrets
+    depends_on:
+      cloud:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9002/api/config || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+networks:
+  aran-net:
+    driver: bridge
+
+volumes:
+  secrets:
+  aran-data:
+  cloud-data:
+  bank-a-data:
+  bank-b-data:

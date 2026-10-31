@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23fff'/%3E%3Cpath d='M6 24V12h4v-4h4v4h4v-4h4v4h4v12z' fill='%23040508'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600&family=Instrument+Serif&family=Martian+Mono:wght@300;400&family=Noto+Sans+Tamil:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/aran/css/tokens.css">
+<link rel="stylesheet" href="/aran/css/style.css">
+<link rel="stylesheet" href="/aran/kit/kit.css">
+<title>Side by side · Aran</title>
+</head>
+<body>
+<main id="view" tabindex="-1" class="page kit wide">
+  <header class="phead" style="margin-bottom:var(--space-5)">
+    <div class="eyebrow">Side by side · the same customer, two banks</div>
+    <h1 data-split>With and without Aran</h1>
+    <p class="lede">Sign one customer up at both banks at once. Bank A stores the real numbers. Bank B sends them through Aran Cloud and stores tokens.</p>
+  </header>
+
+  <div class="grid g4" id="tiles">
+    <div class="card stat loading plus"><div class="v">0</div><div class="l">Identifiers protected</div></div>
+    <div class="card stat loading plus"><div class="v">0</div><div class="l">Requests</div></div>
+    <div class="card stat loading plus"><div class="v">0</div><div class="l">Latency</div></div>
+    <div class="card stat loading plus"><div class="v">0</div><div class="l">Erasure receipts</div></div>
+  </div>
+  <p class="small muted" id="tiles-note" style="margin-top:8px"></p>
+
+  <section class="card kit-gap-s">
+    <div class="between"><h2 class="h3">Sign the same customer up at both banks</h2><button class="btn ghost sm" id="sample"><span>Fill a valid sample</span></button></div>
+    <form class="kit-cols-4 kit-gap-s" id="both">
+      <label class="field">Name<input id="s-name" required placeholder="e.g. Sunita Rao"></label>
+      <label class="field">Mobile<input id="s-mobile" class="mono" required placeholder="e.g. 98765 43210"></label>
+      <label class="field">Aadhaar<input id="s-aadhaar" class="mono" required placeholder="12 digits"></label>
+      <label class="field">Card<input id="s-card" class="mono" required placeholder="16 digits"></label>
+      <button class="btn" type="submit" id="send"><span>Send to both</span><span class="arr">→</span></button>
+    </form>
+    <div id="both-out"><p class="small muted" style="margin-top:12px">Sample data only. Press <b>Fill a valid sample</b>, then <b>Send to both</b> to see what each bank stores.</p></div>
+  </section>
+
+  <div class="kit-split kit-gap-s">
+    <div class="kit-frame legacy"><header><div class="kit-row"><span class="pill leak">Bank A · legacy</span><span class="small muted" id="a-addr"></span></div><button class="btn secondary sm" data-reload="frame-a"><span>Reload</span></button></header><iframe id="frame-a" title="Bank A, legacy"></iframe></div>
+    <div class="kit-frame aran"><header><div class="kit-row"><span class="pill tok">Bank B · Aran</span><span class="small muted" id="b-addr"></span></div><div class="kit-row"><a class="btn secondary sm" id="dash" target="_blank" rel="noopener"><span>Aran Cloud dashboard ↗</span></a><button class="btn secondary sm" data-reload="frame-b"><span>Reload</span></button></div></header><iframe id="frame-b" title="Bank B, protected by Aran"></iframe></div>
+  </div>
+</main>
+
+<script src="/aran/vendor/gsap.min.js"></script>
+<script src="/aran/js/ui.js"></script>
+<script src="/aran/kit/sitemap.js"></script>
+<script src="/aran/kit/kit.js"></script>
+<script>
+(function (A) {
+  const K = A.kit, U = A.ui, $ = U.$, esc = K.esc, L = K.links;
+  K.shell({ app: 'compare', brand: 'Aran', env: 'Side by side · Bank A legacy and Bank B protected by Aran Cloud' });
+  K.reveal(document);
+  $('#frame-a').src = L.bankA + '/?embed=1'; $('#frame-b').src = L.bankB + '/?embed=1';
+  $('#a-addr').textContent = L.bankA.replace(/^https?:\/\//, ''); $('#b-addr').textContent = L.bankB.replace(/^https?:\/\//, '');
+  $('#dash').href = L.cloud + '/dashboard';
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-reload]'); if (b) { const f = $('#' + b.dataset.reload); f.src = f.src; } });
+
+  let first = true;
+  const tiles = async () => {
+    try {
+      const s = await K.api(L.bankB + '/api/aran-summary');
+      if (!s.available) { $('#tiles-note').textContent = s.reason || 'Bank B has no Aran Cloud workspace.'; return; }
+      const m = s.metrics, types = Object.entries(m.by_type || {}).map(([k, v]) => `${k} ${v}`).join(' · ');
+      $('#tiles').innerHTML = U.stat('Identifiers protected', '', types || 'tokenised by Bank B', { count: m.identifiers_protected }) + U.stat('Requests', '', `${m.usage_percent}% of the plan`, { count: m.requests_this_month }) + U.stat('Latency p50 / p95', `<span>${m.p50_ms}</span><span class="small muted"> / ${m.p95_ms} ms</span>`, 'through Aran Cloud') + U.stat('Erasure receipts', '', 'signed, post-quantum', { count: m.receipts_count });
+      first ? U.runCounts($('#tiles')) : U.setCounts($('#tiles')); first = false;
+      $('#tiles-note').textContent = `Live from Bank B’s Aran Cloud workspace “${s.tenant.name}”.`;
+    } catch (e) { $('#tiles-note').textContent = 'Bank B is not reachable at ' + L.bankB + '.'; }
+  };
+  tiles(); setInterval(() => !document.hidden && tiles(), 3000);
+
+  $('#sample').onclick = async () => { try { const s = await K.api(L.bankB + '/api/sample-customer'); $('#s-name').value = s.name; $('#s-mobile').value = s.mobile; $('#s-aadhaar').value = s.aadhaar; $('#s-card').value = s.card; } catch (e) { U.toast('Could not load a sample'); } };
+  $('#both').onsubmit = (e) => { e.preventDefault(); K.busy($('#send'), async () => {
+    const ref = 'CUST-DEMO-' + Math.random().toString(36).slice(2, 7).toUpperCase();
+    const body = { name: $('#s-name').value.trim(), mobile: $('#s-mobile').value.trim(), aadhaar: $('#s-aadhaar').value.trim(), card: $('#s-card').value.trim(), customer_ref: ref };
+    const [a, b] = await Promise.allSettled([K.api(L.bankA + '/api/customers', { body }), K.api(L.bankB + '/api/customers', { body })]);
+    const line = (r, n) => (r.status === 'fulfilled' ? `${n}: <b class="mono">${esc(r.value.customer_ref)}</b> opened` : `${n}: <span class="t-leak">${esc(r.reason.message)}</span>`);
+    if (a.status !== 'fulfilled' || b.status !== 'fulfilled') { $('#both-out').innerHTML = U.note('err', `${line(a, 'Bank A')} · ${line(b, 'Bank B')}`); return; }
+    /* what each bank actually wrote to its database, field by field, next to what was typed */
+    const F = [['name', 'Name'], ['mobile', 'Mobile'], ['aadhaar', 'Aadhaar'], ['card', 'Card']], A_ = a.value, B_ = b.value;
+    const raw = (r) => F.filter(([k]) => String(r[k]) === body[k]).length;
+    const cellv = (v, typed) => (String(v) === typed ? `<mark class="m-raw">${esc(v)}</mark>` : `<mark class="m-token">${esc(v)}</mark>`);
+    $('#both-out').innerHTML = `<div class="kit-gap-s">${U.note('ok', `${line(a, 'Bank A')} · ${line(b, 'Bank B')}`)}</div>
+      <div class="kit-cmp kit-gap-s"><div class="kit-cmp-v"><span class="label">Bank A · readable in its database</span><b class="t-leak">${raw(A_)} of ${F.length}</b></div><div class="kit-cmp-v"><span class="label">Bank B · readable in its database</span><b class="t-token">${raw(B_)} of ${F.length}</b></div></div>
+      <div class="kit-scroll kit-gap-s"><table class="tbl dense"><thead><tr><th>Field</th><th>Typed</th><th>Bank A stored</th><th>Bank B stored</th></tr></thead><tbody>${F.map(([k, n]) => `<tr><td>${n}</td><td class="mono">${esc(body[k])}</td><td>${cellv(A_[k], body[k])}</td><td>${cellv(B_[k], body[k])}</td></tr>`).join('')}</tbody></table></div>
+      <p class="small muted" style="margin-top:8px">Red is the real value, readable by anyone who gets the database. Teal is an Aran token: useless on its own, and unreadable for good once the customer is erased.</p>`;
+    ['frame-a', 'frame-b'].forEach((id) => { const f = $('#' + id); f.src = f.src; }); tiles();
+  }); };
+})(window.ARAN);
+</script>
+</body>
+</html>

@@ -32,6 +32,7 @@
   --token-bg-color: rgba(92, 225, 208, .13);
   --leak-color: #ee5a3f;
   --leak-bg-color: rgba(238, 90, 63, .14);
+  --on-danger-color: #040508;  /* dark text on the red-orange button: 6:1, white was 3.4:1 */
   --success-color: #7bd88f;
   --success-bg-color: rgba(123, 216, 143, .13);
   --warning-color: #f2d55c;
@@ -39,6 +40,9 @@
   --clean-color: #6f7683;
   --band-color: rgba(123, 216, 143, .16);
   --chart-grid-color: #2a2f3a;
+  /* chart fills, checked with the dataviz palette validator (lightness, chroma, colour-blind separation) */
+  --chart-protected-color: #33a99a;
+  --chart-raw-color: #e5583d;
   --bar-track-color: #151922;
   --bar-fill-color: #d8d8d8;
   --threshold-marker-color: #ffffff;
@@ -119,17 +123,21 @@
 
   --real-data-color: #8f5300;
   --real-data-bg-color: rgba(143, 83, 0, .12);
-  --token-color: #006f66;
-  --token-bg-color: rgba(0, 111, 102, .11);
-  --leak-color: #b6301a;
-  --leak-bg-color: rgba(182, 48, 26, .11);
-  --success-color: #1c7a38;
-  --success-bg-color: rgba(28, 122, 56, .11);
-  --warning-color: #7d6200;
+  /* light meaning colours are dark enough for 4.5:1 on their own tinted pills (WCAG AA) */
+  --token-color: #005c55;
+  --token-bg-color: rgba(0, 92, 85, .11);
+  --leak-color: #a2280f;
+  --leak-bg-color: rgba(162, 40, 15, .11);
+  --success-color: #166a2f;
+  --success-bg-color: rgba(22, 106, 47, .11);
+  --warning-color: #685200;
+  --on-danger-color: #ffffff;
   --info-color: #2f4bc4;
   --clean-color: #6a6f79;
   --band-color: rgba(28, 122, 56, .16);
   --chart-grid-color: #b9b9b3;
+  --chart-protected-color: #16907f;
+  --chart-raw-color: #c4401f;
   --bar-track-color: #cfcfc9;
   --bar-fill-color: #0b0c10;
   --threshold-marker-color: #0b0c10;

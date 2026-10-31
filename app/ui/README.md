@@ -2,7 +2,7 @@
 
 This is Aran's main web console. It started as a static HTML/CSS/JS design (Trionn-style 3D look: near-black `#040508`, mono labels, glass lines, rolling-letter links, GSAP word reveals, Lenis smooth scroll, a WebGL line-field hero with **hold-to-blast** and procedural sound) and is now wired to the real Aran API: every number, token, receipt and alert on screen comes from the server.
 
-There is no build step. The FastAPI server in `app/server` serves this folder at `/`; the earlier React console stays at `/classic`.
+There is no build step. The FastAPI server in `app/server` serves this folder at `/`.
 
 ## Open it
 
@@ -13,7 +13,7 @@ python -m uvicorn main:app --port 8000
 
 Then open http://localhost:8000. While the models load you see the "Starting Aran" screen (it polls `GET /api/health` every 2 s and shows the load error if there is one); then the console opens. GSAP, Lenis and three.js are served from `vendor/`, so only the Google fonts need internet (the page falls back to system fonts without it).
 
-Routes (hash based, as in the spec): `#tour` and `#tour/0` to `#tour/12`, `#overview`, `#traffic`, `#customers`, `#trace`, `#immune`, `#results`, `#about`. Demo pages: `#arena-live` (big screen with QR code), `#arena` (the judge's phone), `#versus`, `#ledger`, `#scan`, `#quantum`, `#me`. Presenter mode: `?present=1`.
+Routes (hash based, as in the spec). The console opens on `#overview` (an empty address goes there). `#tour` and `#tour/0` to `#tour/12`, `#overview`, `#traffic`, `#customers`, `#trace`, `#immune`, `#results`, `#about`. Demo pages: `#arena-live` (big screen with QR code), `#arena` (the judge's phone), `#versus`, `#ledger`, `#scan`, `#quantum`, `#me`. Presenter mode: `?present=1`.
 Design review boards: `#components` (C1 to C33 in every state), `#states` (empty, failing, locked, refused). Whole-app state previews: `?state=starting`, `?state=failed`, `?state=offline`.
 
 ## What is in the box
@@ -28,6 +28,8 @@ Design review boards: `#components` (C1 to C33 in every state), `#states` (empty
 | `js/sound.js` | Web Audio sounds (hover tick, click, charge whoosh, blast, shatter, chime, error). Off until the top-bar toggle is pressed. |
 | `js/tour.js` | Page 1: 13 chapters. `js/pages.js`: pages 2 to 8. `js/board.js`: review boards. `js/main.js`: shell and router. |
 | `js/standout.js`, `css/standout.css` | Demo pages: phone arena and live board, without/with Aran, leakage ledger, card photo scan, post-quantum, the customer's own view. Server side: `app/server/standout.py` (tests: `app/server/test_standout.py`). |
+| `kit/kit.js`, `kit/kit.css` | The shared kit for the other Aran apps (Aran Cloud on :8100, Bank A on :9001, Bank B on :9002). They serve this folder at `/aran` and load `css/tokens.css`, `css/style.css`, `js/ui.js` and the kit, so every app has the console's top bar, menu, theme, components and colours. `ARAN.kit.shell()` draws the chrome; `?embed=1` hides it inside the side-by-side iframes. See Learn 23. |
+| `kit/sitemap.js` | The one site map: every page of the console, the demo banks and Aran Cloud in six numbered groups. The console menu (`js/main.js`), the kit menus and the Previous / Next links at the foot of every page all draw from it, and `tools/check-i18n.js` reads the labels from it. To add a page, add one line here. See Learn 24. |
 | `js/i18n.js` | Language switch (English, Tamil, Hindi) for the menu, top bar, page headings and tour chapters. English is the source text and the fallback. Check with `node tools/check-i18n.js` ([Learn 19](../../docs/learning/19-translating-a-website.md)). |
 | `js/present.js`, `sw.js` | Presenter mode (`?present=1`): a fixed 3-minute path, PageDown/PageUp clicker keys, and offline replay of recorded server answers with a visible banner ([Learn 20](../../docs/learning/20-presenter-mode-and-offline-replay.md)). |
 

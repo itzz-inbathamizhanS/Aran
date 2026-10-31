@@ -42,7 +42,8 @@ KINDS = {"AADHAAR": "Aadhaar", "CARD": "Card", "MOBILE": "Mobile"}
 def _new_challenge():
     e = eng()
     with e.lock:
-        c = e.customers[e.rand.choice(sorted(e.customers))]
+        full = sorted(k for k, v in e.customers.items() if all(v.get(t) for t in KINDS)) or sorted(e.customers)
+        c = e.customers[e.rand.choice(full)]
         typ = e.rand.choice(sorted(KINDS))
         ARENA["challenge"] = dict(id=secrets.token_hex(4), type=typ, label=KINDS[typ], value=c[typ], customer=c["ref"],
                                   issued=time.time())
@@ -250,6 +251,8 @@ def ledger_disclose(body: DiscloseIn):
         raise HTTPException(400, "type is AADHAAR, CARD or MOBILE")
     if not re.fullmatch(r"[a-z0-9][a-z0-9.\-]{1,40}", body.sink):
         raise HTTPException(400, "sink names are lower-case letters, digits, dots and dashes")
+    if not e.customers[body.customer_ref].get(body.type):
+        raise HTTPException(404, f"{body.customer_ref} has no {body.type} on file")
     l = _ledger()
     digits = e.customers[body.customer_ref][body.type]
     n = LENGTH[body.type]
@@ -278,6 +281,8 @@ def ledger_state(customer_ref: str, type: str = "CARD"):
     e = eng()
     if customer_ref not in e.customers or type not in LENGTH:
         raise HTTPException(404, "no such customer or type")
+    if not e.customers[customer_ref].get(type):
+        raise HTTPException(404, f"{customer_ref} has no {type} on file")
     l = _ledger()
     digits = e.customers[customer_ref][type]
     doms = []
@@ -373,7 +378,7 @@ def pqc_harvest(body: PqcIn):
     import hashlib
     H = _pqc()
     e = eng()
-    ref = body.customer_ref if body.customer_ref in e.customers else sorted(e.customers)[0]
+    ref = body.customer_ref if body.customer_ref in e.customers else (sorted(k for k, v in e.customers.items() if v.get("AADHAAR")) or sorted(e.customers))[0]
     keys = {p: secrets.token_bytes(32) for p in ("Service", "Loans", "Marketing")}
     out = {}
     for name, cls in (("classical", H.ClassicalKEM), ("hybrid", H.HybridKEM)):
@@ -413,7 +418,14 @@ def pqc_receipt():
     if not rs:
         return dict(receipt=None)
     r = rs[-1]
-    size = lambda k: len(base64.b64decode(r[k])) if r.get(k) else 0
+    def size(k):
+        """Byte length of a base64 value, or of the DER body of a PEM public key (the ML-DSA key is PEM)."""
+        v = r.get(k)
+        if not v:
+            return 0
+        if v.lstrip().startswith("-----BEGIN"):
+            v = "".join(line for line in v.splitlines() if line and not line.startswith("-----"))
+        return len(base64.b64decode(v))
     return dict(receipt=dict(alg=r.get("alg", "Ed25519"), customer=r["event"].get("customer"),
                              purpose=r["event"].get("purpose"), ed25519_sig_bytes=size("signature"),
                              ml_dsa_sig_bytes=size("pq_signature"), ml_dsa_pub_bytes=size("pq_public_key")),

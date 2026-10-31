@@ -39,7 +39,7 @@
 .breach { margin-top: var(--space-3); padding: var(--space-4); border-radius: var(--radius-input); animation: pop .4s both; }
 .breach.bad { background: var(--leak-bg-color); border: 1px solid var(--leak-color); }
 .breach.good { background: var(--token-bg-color); border: 1px solid var(--token-color); }
-.breach h3 { margin-bottom: var(--space-2); }
+.breach h2.h3 { margin-bottom: var(--space-2); }
 
 /* ---- ledger ---- */
 .ledger-bar { margin: var(--space-2) 0; }
@@ -88,7 +88,7 @@ html[lang="ta"] body { font-family: var(--font-tamil), var(--font-body); }
 @media (max-width: 760px) { .present-bar .ttl, .present-bar .dotsm { display: none; } .phone-frame { border-width: 6px; border-radius: 32px; } }
 html[lang="hi"] body { font-family: "Noto Sans Devanagari", var(--font-body); }
 [hidden] { display: none !important; }
-@media (max-width: 760px) { .tools #present { display: none; } .langsel { max-width: 64px; padding: 0 4px; } .tools { gap: 4px; } .menubtn { padding: 0 12px; } }
+@media (max-width: 760px) { .tools #present, .tools #sound { display: none; } .langsel { max-width: 64px; padding: 0 6px; } .tools { gap: 4px; } .menubtn { padding: 0 12px; } }
 /* phones: no room for the generated-IDs note next to the tools */
 @media (max-width: 480px) { .topbar .env { display: none; } .topbar .logo { margin-right: auto; } }
 @media (max-width: 370px) { .tools #sound { display: none; } }

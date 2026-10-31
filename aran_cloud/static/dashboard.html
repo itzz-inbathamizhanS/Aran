@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23fff'/%3E%3Cpath d='M6 24V12h4v-4h4v4h4v-4h4v4h4v12z' fill='%23040508'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600&family=Instrument+Serif&family=Martian+Mono:wght@300;400&family=Noto+Sans+Tamil:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/aran/css/tokens.css">
+<link rel="stylesheet" href="/aran/css/style.css">
+<link rel="stylesheet" href="/aran/kit/kit.css">
+<title>Workspace dashboard · Aran Cloud</title>
+</head>
+<body>
+<main id="view" tabindex="-1" class="page kit">
+  <header class="phead" style="margin-bottom:var(--space-5)">
+    <div class="eyebrow" id="eyebrow">Aran Cloud · workspace</div>
+    <h1 id="title">Workspace dashboard</h1>
+    <p class="lede" id="lede"></p>
+  </header>
+  <div class="between" style="margin-bottom:var(--space-4)">
+    <div class="kit-row"><span class="pill info" id="ws">workspace</span><span class="pill tok">vault isolated</span><span class="kit-dot" id="health"><i></i><span>Checking</span></span></div>
+    <div class="kit-row"><button class="btn secondary sm" id="switch-key"><span>Switch key</span></button></div>
+  </div>
+  <nav class="tabs" role="tablist" aria-label="Dashboard sections" id="nav"></nav>
+  <div id="body"></div>
+</main>
+
+<script src="/aran/vendor/gsap.min.js"></script>
+<script src="/aran/js/ui.js"></script>
+<script src="/aran/kit/sitemap.js"></script>
+<script src="/aran/kit/kit.js"></script>
+<script>
+(function (A) {
+  const K = A.kit, U = A.ui, $ = U.$, $$ = U.$$, esc = K.esc;
+  const VIEWS = [
+    ['summary', 'Workspace summary', 'This workspace only: what was protected, where it went and how fast. The console’s Overview shows the whole Aran core.'],
+    ['audit', 'Audit log', 'Every detokenise attempt, hash-chained so that any edit to an old row breaks the chain.'],
+    ['trace', 'Leak trace', 'Paste a leaked dump. Only tokens this workspace issued are traced back to the place they were sent.'],
+    ['receipts', 'Erasure & receipts', 'Shred a customer’s purpose key (DPDP Act s.12) and keep the signed, post-quantum receipt.'],
+    ['keys', 'API keys', 'Scoped keys for each service. Secrets are shown once and stored only as SHA-256 hashes.'],
+    ['usage', 'Usage & plan', 'Requests this month against the plan, by endpoint.'],
+  ];
+  K.shell({ app: 'cloud', page: 'dashboard', brand: 'Aran Cloud', env: 'Aran Cloud preview · this dashboard shows your workspace only' });
+  $('#nav').innerHTML = VIEWS.map(([id, l]) => `<a class="tab" role="tab" href="#${id}" data-v="${id}">${id === 'summary' ? 'Summary' : l}</a>`).join('');
+
+  /* ---- keys ---- */
+  let key = K.takeKeyFromHash('aran_dashboard_key') || K.store.get('aran_dashboard_key');
+  const adminKey = () => K.store.get('aran_admin_key');
+  let data = null, timer = null;
+
+  /* actions that need more than the dashboard scope use the admin key, asked for inline */
+  const needAdmin = (box) => new Promise((resolve) => {
+    const have = adminKey(); if (have) return resolve(have);
+    box.innerHTML = `<div class="card kit-gap-s"><div class="label">This action needs a key with more scopes</div><form class="kit-inline" data-admin><label class="field">Admin key<input class="mono" autocomplete="off" placeholder="aran_live_…" required></label><button class="btn sm" type="submit"><span>Use key</span></button></form></div>`;
+    $('[data-admin]', box).onsubmit = (e) => { e.preventDefault(); const v = $('input', e.target).value.trim(); K.store.set('aran_admin_key', v); box.innerHTML = ''; resolve(v); };
+  });
+  const call = async (path, o, box) => {
+    try { return await K.api(path, Object.assign({ key }, o)); }
+    catch (err) {
+      if (err.status === 403 && box) { const k = await needAdmin(box); return K.api(path, Object.assign({}, o, { key: k })); }
+      throw err;
+    }
+  };
+
+  /* ---- key gate ---- */
+  const gate = (msg) => {
+    $('#title').textContent = 'Open your dashboard'; $('#lede').textContent = 'Paste the dashboard key (or the admin key) you got when the workspace was created.';
+    $('#nav').classList.add('hidden');
+    $('#body').innerHTML = `<div class="card plus kit-gate">${msg ? U.note('err', esc(msg)) : ''}<form class="kit-form" id="gate"><label class="field">API key<input id="gate-key" class="mono" autocomplete="off" required placeholder="aran_live_…"></label><button class="btn" type="submit"><span>Open dashboard</span><span class="arr">→</span></button></form><p class="small muted kit-gap-s">No workspace yet? <a href="/" style="text-decoration:underline">Create one</a>.</p></div>`;
+    $('#gate').onsubmit = (e) => { e.preventDefault(); key = $('#gate-key').value.trim(); K.store.set('aran_dashboard_key', key); $('#nav').classList.remove('hidden'); start(); };
+  };
+  $('#switch-key').onclick = () => { K.store.set('aran_dashboard_key', ''); K.store.set('aran_admin_key', ''); key = ''; clearInterval(timer); gate(); };
+
+  /* ---- health ---- */
+  const health = async () => { const el = $('#health'); try { const h = await K.api('/v1/health'); const ok = h.core || h.core_ready; el.className = 'kit-dot ' + (ok ? 'ok' : 'bad'); el.lastElementChild.textContent = ok ? 'Core online' : 'Core degraded'; } catch (e) { el.className = 'kit-dot bad'; el.lastElementChild.textContent = 'Offline'; } };
+
+  /* ---- views ---- */
+  const chart = (events) => {
+    const now = Date.now() / 1000, b = new Array(60).fill(0);
+    (events || []).forEach((e) => { const m = Math.floor((now - e.at) / 60); if (m >= 0 && m < 60) b[59 - m]++; });
+    const max = Math.max(...b, 5), x = (i) => 40 + i * (750 / 59), y = (v) => 130 - (v / max) * 110;
+    const line = b.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
+    return `<svg class="kit-chart" viewBox="0 0 800 160" preserveAspectRatio="none" role="img" aria-label="${b.reduce((a, c) => a + c, 0)} requests in the last 60 minutes"><line class="grid-l" x1="40" y1="20" x2="790" y2="20"/><line class="grid-l" x1="40" y1="75" x2="790" y2="75"/><line class="grid-l" x1="40" y1="130" x2="790" y2="130"/><text class="ax" x="32" y="24" text-anchor="end">${max}</text><text class="ax" x="32" y="134" text-anchor="end">0</text><path class="area" d="${line} L790 130 L40 130 Z"/><path class="line" d="${line}"/><circle class="dot" cx="790" cy="${y(b[59]).toFixed(1)}" r="4"/><text class="ax" x="40" y="152">−60 min</text><text class="ax" x="415" y="152" text-anchor="middle">−30 min</text><text class="ax" x="790" y="152" text-anchor="end">now</text></svg>`;
+  };
+  const ranks = (obj, empty) => { const e = Object.entries(obj || {}).sort((a, b) => b[1] - a[1]); if (!e.length) return `<p class="muted small">${empty}</p>`; const m = Math.max(...e.map((x) => x[1]), 1); return e.map(([k, v], i) => U.rankRow(`<span class="mono small">${esc(k)}</span>`, v / m, U.fmt(v), i)).join(''); };
+
+  const R = {};
+  R.summary = () => {
+    if (!data) return U.skeleton(300);
+    const m = data.metrics;
+    if (!m.requests_this_month) return `<div class="card plus kit-empty"><h2 class="h3">No traffic yet</h2><p class="muted">The workspace is ready. Send a request from Quick connect, sign a customer up at Bank B, or run 40 demo requests now.</p><div class="kit-row" style="justify-content:center"><button class="btn" data-seed><span>Run demo traffic</span><span class="arr">→</span></button><a class="btn secondary" href="/connect"><span>Quick connect</span></a></div><div data-seed-out></div></div>`;
+    const types = Object.entries(m.by_type || {}).map(([k, v]) => `${k} ${v}`).join(' · ');
+    return `<div class="grid g4">${U.stat('Identifiers protected', '', types || 'tokenised', { count: m.identifiers_protected })}${U.stat('Passed unprotected', '', `${U.fmt(m.not_valid_ids_ignored)} failed their checksum and were ignored`, { count: m.passed_unprotected, tone: m.passed_unprotected ? 'danger' : '' })}${U.stat('Latency p50 / p95', `<span>${m.p50_ms}</span><span class="small muted"> / ${m.p95_ms} ms</span>`, 'inline, per request')}${U.stat('Erasure receipts', '', 'Ed25519 + ML-DSA-65 signed', { count: m.receipts_count })}</div>
+      <section class="card kit-gap-s"><div class="between"><h2 class="h3">Requests, last 60 minutes</h2><div class="kit-row"><span class="pill live ok">live · 3 s</span><button class="btn secondary sm" data-seed><span>Run demo traffic</span></button></div></div><div data-seed-out></div>${chart(data.recent_activity)}</section>
+      <div class="grid g2 kit-gap-s"><section class="card"><h2 class="h3">Tokens by destination</h2>${ranks(m.destinations, 'No traffic yet.')}</section><section class="card"><h2 class="h3">Protected by type</h2>${ranks(m.by_type, 'No identifiers yet.')}</section></div>
+      <section class="card kit-gap-s"><div class="between"><h2 class="h3">Recent activity</h2><span class="small muted">last 8 requests</span></div><div class="kit-scroll"><table class="tbl dense"><thead><tr><th>Time</th><th>Endpoint</th><th>Destination</th><th>Protected</th><th>Customer</th><th class="num">Latency</th><th>Status</th></tr></thead><tbody>${(data.recent_activity || []).slice(0, 8).map((a) => `<tr><td class="mono">${K.time(a.at)}</td><td class="mono">${esc(a.endpoint)}</td><td>${esc(a.sink || '–')}</td><td>${U.pill(a.protected_count + ' protected', a.protected_count ? 'tok' : '')}</td><td class="mono">${esc(a.customer_ref || '–')}</td><td class="num mono">${a.latency_ms} ms</td><td>${U.pill(esc(a.status), a.status === 'ok' ? 'ok' : a.status === 'shredded' ? 'leak' : 'warn')}</td></tr>`).join('')}</tbody></table></div></section>`;
+  };
+  R.audit = () => `<div class="card"><div class="between"><h2 class="h3">Detokenise access log</h2><div class="kit-row"><span id="verify-out"></span><button class="btn secondary sm" id="verify"><span>Verify the chain</span></button></div></div><div class="kit-scroll kit-gap-s" id="audit">${U.skeleton(160)}</div></div>`;
+  R.trace = () => `<div class="card"><label class="field">Leaked dump<textarea id="dump" class="mono" rows="7" placeholder="Paste rows from a leaked table, a log file or a chat export"></textarea></label><div class="kit-row kit-gap-s"><button class="btn" id="run-trace"><span>Trace the leak</span><span class="arr">→</span></button></div><div id="trace-out"></div></div>`;
+  R.receipts = () => `<div class="card danger"><h2 class="h3">Erase a customer</h2><p class="small muted">Shreds the purpose key. Every token made under it stops resolving for good, in every copy, and Aran signs a receipt.</p><div class="kit-cols-4 kit-gap-s" style="grid-template-columns:2fr 1fr auto"><label class="field">Customer ref<input id="er-ref" class="mono" placeholder="CUST-1001"></label><label class="field">Purpose<select id="er-p"><option>KYC</option><option>Service</option><option>Marketing</option></select></label><button class="btn danger" id="er-go"><span>Shred purpose key</span></button></div><div id="er-out"></div></div>
+    <section class="card kit-gap-s"><h2 class="h3">Receipts</h2><div class="kit-scroll">${data && data.receipts.length ? `<table class="tbl dense"><thead><tr><th>Time</th><th>Customer</th><th>Purpose</th><th>Algorithm</th><th>Merkle root</th><th>Status</th></tr></thead><tbody>${data.receipts.map((r) => `<tr><td class="mono">${K.time(r.at)}</td><td class="mono">${esc(r.customer_ref)}</td><td>${esc(r.purpose)}</td><td class="mono">${esc(r.alg)}</td><td class="mono">${esc(String(r.root || '').slice(0, 20))}…</td><td>${U.pill(r.verified ? 'verified' : 'unverified', r.verified ? 'ok' : 'warn')}</td></tr>`).join('')}</tbody></table>` : '<p class="muted small">No erasures yet.</p>'}</div></section>`;
+  R.keys = () => `<div class="card"><div class="between"><h2 class="h3">Workspace keys</h2></div><div class="kit-scroll kit-gap-s" id="keys">${U.skeleton(140)}</div></div>
+    <div class="card kit-gap-s"><h2 class="h3">Mint a scoped key</h2><div class="kit-cols-4 kit-gap-s" style="grid-template-columns:1.2fr 2fr auto"><label class="field">Label<input id="mk-l" value="Application service key"></label><div class="field">Scopes<div class="kit-row" id="mk-s" style="margin:0">${['protect', 'gateway', 'trace', 'detokenise', 'erase', 'verify', 'dashboard', 'admin'].map((s) => `<label class="chip"><input type="checkbox" value="${s}" ${s === 'protect' || s === 'dashboard' ? 'checked' : ''}> ${s}</label>`).join('')}</div></div><button class="btn" id="mk-go"><span>Mint key</span></button></div><div id="mk-out"></div></div>`;
+  R.usage = () => {
+    if (!data) return U.skeleton(200);
+    const m = data.metrics, by = {}; (data.recent_activity || []).forEach((a) => (by[a.endpoint] = (by[a.endpoint] || 0) + 1));
+    return `<div class="grid g3">${U.stat('Requests this month', '', `of ${U.fmt(m.plan_limit)} on the free plan`, { count: m.requests_this_month })}${U.stat('Plan used', `${m.usage_percent}%`, 'resets monthly')}${U.stat('Plaintext reads', '', 'successful detokenise calls', { count: m.plaintext_reads })}</div><section class="card kit-gap-s"><h2 class="h3">Quota</h2>${U.bar(Math.min(1, m.usage_percent / 100))}<h2 class="h3 kit-gap">Recent requests by endpoint</h2>${ranks(by, 'No requests yet.')}</section>`;
+  };
+
+  /* ---- loaders ---- */
+  const load = async () => {
+    try { data = await K.api('/v1/dashboard', { key }); }
+    catch (err) { if (err.status === 401) { clearInterval(timer); gate('That key was not accepted.'); } return; }
+    $('#ws').textContent = data.tenant.name + ' · ' + data.tenant.id;
+    if (view() === 'summary' || view() === 'usage') paint(false);
+  };
+  const loadAudit = async () => {
+    const box = $('#audit'); if (!box) return;
+    try { const d = await K.api('/v1/audit', { key }); box.innerHTML = d.audit.length ? `<table class="tbl dense"><thead><tr><th>Time</th><th>Key</th><th>Token</th><th>Purpose</th><th>Result</th><th>Entry hash</th></tr></thead><tbody>${d.audit.map((r) => `<tr><td class="mono">${esc(r.created_at || K.time(r.at))}</td><td>${esc(r.key_label || '–')}</td><td><mark class="m-token">${esc(r.token)}</mark></td><td>${esc(r.purpose || '–')}</td><td>${U.pill(esc(r.result), r.result === 'ok' ? 'ok' : 'leak')}</td><td class="mono">${esc((r.entry_hash || '').slice(0, 16))}…</td></tr>`).join('')}</tbody></table>` : '<p class="muted small">No detokenise attempts yet. Bank B’s officer view writes here.</p>'; }
+    catch (err) { box.innerHTML = U.note('err', esc(err.message)); }
+  };
+  const loadKeys = async () => {
+    const box = $('#keys'); if (!box) return;
+    try { const d = await K.api('/v1/keys', { key }); box.innerHTML = `<table class="tbl dense"><thead><tr><th>Prefix</th><th>Label</th><th>Scopes</th><th>Created</th><th>Last used</th><th>Status</th><th></th></tr></thead><tbody>${d.keys.map((k) => `<tr><td class="mono">${esc(k.prefix)}…</td><td>${esc(k.label || 'API key')}</td><td>${k.scopes.map((s) => U.pill(esc(s), s === 'admin' ? 'warn' : '')).join(' ')}</td><td class="mono">${esc(k.created)}</td><td class="mono">${esc(k.last_used || '–')}</td><td>${U.pill(k.revoked ? 'revoked' : 'active', k.revoked ? 'leak' : 'ok')}</td><td>${k.revoked ? '' : `<button class="btn ghost sm" data-revoke="${k.id}"><span>Revoke</span></button>`}</td></tr>`).join('')}</tbody></table><div id="rv-out"></div>`; }
+    catch (err) { box.innerHTML = U.note('err', esc(err.message)); }
+  };
+
+  /* ---- router ---- */
+  const view = () => { const v = location.hash.slice(1).split('&')[0]; return VIEWS.some((x) => x[0] === v) ? v : 'summary'; };
+  let painted = null;
+  function paint(fresh) {
+    const v = view(), meta = VIEWS.find((x) => x[0] === v);
+    $$('#nav .tab').forEach((t) => t.setAttribute('aria-selected', t.dataset.v === v));
+    if (fresh || painted !== v) { $('#title').textContent = meta[1]; $('#lede').textContent = meta[2]; $('#eyebrow').textContent = 'Workspace dashboard · ' + meta[1].toLowerCase(); }
+    const scrollY = window.scrollY, active = document.activeElement && document.activeElement.id;
+    if (!fresh && painted === v && (v === 'trace' || v === 'receipts' || v === 'keys' || v === 'audit')) return; /* keep forms as they are */
+    $('#body').innerHTML = R[v]();
+    if (fresh || painted !== v) U.runCounts($('#body')); else U.setCounts($('#body'));
+    painted = v; if (!fresh) window.scrollTo(0, scrollY); if (active && $('#' + active)) $('#' + active).focus();
+    wire(v);
+  }
+  function wire(v) {
+    $$('[data-seed]').forEach((b) => (b.onclick = () => K.busy(b, async () => {
+      const out = $('[data-seed-out]');
+      try { await call('/v1/demo/seed', { method: 'POST', body: {} }, out); U.toast('Demo traffic sent'); await load(); paint(true); }
+      catch (err) { out && (out.innerHTML = U.note('err', esc(err.message))); }
+    })));
+    if (v === 'audit') { loadAudit(); $('#verify').onclick = (e) => K.busy(e.currentTarget, async () => { try { const r = await K.api('/v1/audit/verify', { key }); $('#verify-out').innerHTML = r.valid ? U.pill(`chain valid · ${r.total_rows} rows`, 'ok') : U.pill('tampered · ' + esc(r.error || ''), 'leak'); } catch (err) { $('#verify-out').innerHTML = U.pill(esc(err.message), 'leak'); } }); }
+    if (v === 'keys') {
+      loadKeys();
+      $('#body').onclick = async (e) => { const b = e.target.closest('[data-revoke]'); if (!b) return; if (!(await U.confirm({ title: 'Revoke this key?', body: 'Apps using it stop working at once. This cannot be undone.', confirmLabel: 'Revoke key' }))) return; const out = $('#rv-out'); try { await call('/v1/keys/' + b.dataset.revoke, { method: 'DELETE' }, out); U.toast('Key revoked'); loadKeys(); } catch (err) { out.innerHTML = U.note('err', esc(err.message)); } };
+      $('#mk-go').onclick = (e) => K.busy(e.currentTarget, async () => { const out = $('#mk-out'); const scopes = $$('#mk-s input:checked').map((i) => i.value); try { const r = await call('/v1/keys', { body: { label: $('#mk-l').value.trim() || 'API key', scopes } }, out); out.innerHTML = `${U.note('ok', 'Key minted. Copy it now, it is not shown again.')}<div class="kit-key kit-gap-s"><code id="mk-key">${esc(r.api_key)}</code><button class="btn secondary sm" data-copy><span>Copy</span></button></div>`; $('[data-copy]', out).onclick = (ev) => K.copy(r.api_key, ev.currentTarget); loadKeys(); } catch (err) { out.innerHTML = U.note('err', esc(err.message)); } });
+    }
+    if (v === 'trace') $('#run-trace').onclick = (e) => K.busy(e.currentTarget, async () => {
+      const out = $('#trace-out'), dump = $('#dump').value.trim(); if (!dump) { out.innerHTML = U.note('err', 'Paste a dump first.'); return; }
+      try { const r = await call('/v1/trace', { body: { dump } }, out);
+        out.innerHTML = `${r.top ? U.verdict(true, `Most tokens trace back to <b>${esc(r.top.sink)}</b> (${Math.round(r.top.share * 100)}% of matched tokens).`) : U.verdict(false, 'No token in this dump was issued by this workspace.')}<div class="kit-row kit-gap-s">${U.pill(r.candidates + ' candidates', '')}${U.pill(r.matched + ' matched', 'tok')}${U.pill(r.raw_identifiers_in_dump + ' raw identifiers', r.raw_identifiers_in_dump ? 'leak' : 'ok')}</div>${r.ranking.length ? `<div class="kit-gap-s">${r.ranking.map((x, i) => U.rankRow(esc(x.sink), x.share, x.tokens + ' tokens', i)).join('')}</div>` : ''}`;
+      } catch (err) { out.innerHTML = U.note('err', esc(err.message)); }
+    });
+    if (v === 'receipts') $('#er-go').onclick = (e) => K.busy(e.currentTarget, async () => {
+      const out = $('#er-out'), ref = $('#er-ref').value.trim(), purpose = $('#er-p').value; if (!ref) { out.innerHTML = U.note('err', 'Enter a customer ref.'); return; }
+      if (!(await U.confirm({ title: `Erase ${esc(ref)} for ${esc(purpose)}?`, body: 'The purpose key is destroyed. Tokens made under it can never be turned back into the real values.', confirmLabel: 'Shred key' }))) return;
+      try { const r = await call('/v1/erase', { body: { customer_ref: ref, purpose } }, out); out.innerHTML = `${U.verdict(true, 'Purpose key shredded. Receipt signed and added to the Merkle log.')}<pre class="logline out kit-gap-s">${esc(JSON.stringify(r, null, 2))}</pre>`; await load(); }
+      catch (err) { out.innerHTML = U.note('err', esc(err.message)); }
+    });
+  }
+  window.addEventListener('hashchange', () => paint(true));
+
+  function start() { clearInterval(timer); paint(true); load().then(() => paint(true)); timer = setInterval(load, 3000); }
+  health(); setInterval(health, 5000);
+  if (!key) gate(); else start();
+})(window.ARAN);
+</script>
+</body>
+</html>

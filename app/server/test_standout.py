@@ -69,3 +69,36 @@ def test_pqc_hybrid_survives_the_simulated_quantum_attack(eng):
 
 def test_mosca(eng):
     assert S.pqc_mosca(10, 3, 10)["exposed_years"] == 3
+
+
+def test_pqc_receipt_reports_sizes_after_an_erasure(eng):
+    # the ML-DSA public key is stored as PEM, not bare base64; the endpoint used to crash on it
+    ref = next(iter(eng.customers))
+    purpose = next(k["purpose"] for k in eng.vault.key_status(ref) if k["alive"] and k["purpose"] != "KYC")
+    eng.erase(ref, purpose)
+    d = S.pqc_receipt()["receipt"]
+    assert d["ed25519_sig_bytes"] == 64
+    if d["alg"] != "Ed25519":
+        assert d["ml_dsa_sig_bytes"] > 3000 and d["ml_dsa_pub_bytes"] > 1900
+
+
+def test_demos_skip_customers_enrolled_without_identifiers(eng):
+    # customers created through /api/process (for example by Aran Cloud) have only a ref;
+    # the ledger, the arena and the tour used to crash with a KeyError when they picked one
+    eng.process("hello", "core-banking", "kyc-archive", customer_ref="AA__ONLY-REF", purpose="KYC")
+    assert eng.customer_view("AA__ONLY-REF")["full"] is False
+    with pytest.raises(S.HTTPException) as err:
+        S.ledger_state("AA__ONLY-REF", "CARD")
+    assert err.value.status_code == 404
+    for _ in range(20):
+        S.ARENA["challenge"] = None
+        assert S.arena_challenge()["customer"] != "AA__ONLY-REF"
+        eng.sample("callnote", who="customer")  # used to raise KeyError on a ref-only customer
+
+
+def test_stats_has_a_30_minute_series_that_counts_requests(eng):
+    before = eng.stats()["per_minute"]
+    assert len(before) == 30 and before[0]["t"] < before[-1]["t"]
+    eng.process("Aadhaar 2345 6789 0124 for the KYC file", "core-banking", "kyc-archive")
+    after = eng.stats()["per_minute"][-1]
+    assert after["requests"] >= before[-1]["requests"] + 1
