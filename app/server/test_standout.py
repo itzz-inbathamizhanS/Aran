@@ -94,3 +94,11 @@ def test_demos_skip_customers_enrolled_without_identifiers(eng):
         S.ARENA["challenge"] = None
         assert S.arena_challenge()["customer"] != "AA__ONLY-REF"
         eng.sample("callnote", who="customer")  # used to raise KeyError on a ref-only customer
+
+
+def test_stats_has_a_30_minute_series_that_counts_requests(eng):
+    before = eng.stats()["per_minute"]
+    assert len(before) == 30 and before[0]["t"] < before[-1]["t"]
+    eng.process("Aadhaar 2345 6789 0124 for the KYC file", "core-banking", "kyc-archive")
+    after = eng.stats()["per_minute"][-1]
+    assert after["requests"] >= before[-1]["requests"] + 1

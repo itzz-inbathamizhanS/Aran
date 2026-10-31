@@ -118,6 +118,7 @@ class Engine:
         self.customers = {}
         self.dynamic_customers = set()
         self.events = deque(maxlen=300)
+        self.per_minute = {}  # minute (unix // 60) -> [requests, values protected, values left raw], last 30 minutes
         self.sink_store = defaultdict(lambda: deque(maxlen=500))  # what each sink actually received
         self.latency_ms = deque(maxlen=2000)
         self.counts = defaultdict(int)
@@ -337,6 +338,11 @@ class Engine:
                 self.counts["requests"] += 1
                 self.counts["values_protected"] += len(findings) - raw_left
                 self.counts["values_raw"] += raw_left
+                m = int(time.time() // 60)
+                row = self.per_minute.setdefault(m, [0, 0, 0])
+                row[0] += 1; row[1] += len(findings) - raw_left; row[2] += raw_left
+                for old in [k for k in self.per_minute if k < m - 29]:
+                    del self.per_minute[old]
                 for f in findings:
                     self.by_type[f["type"]] += 1
             notes = list(self.fw.conflict_notes)
@@ -454,7 +460,15 @@ class Engine:
                         customers=len(self.customers), tokens_issued=len(self.fw.index) + len(self.vault.vault),
                         vault_tokens=len(self.vault.vault), keys_destroyed=len(self.vault.destroyed),
                         merkle_size=len(self.vault.log.leaves), uptime_s=round(time.time() - self.started),
-                        immune=self.immune.state, replay=self.replay.status(), model_load_seconds=self.load_seconds)
+                        immune=self.immune.state, replay=self.replay.status(), model_load_seconds=self.load_seconds,
+                        per_minute=self._series())
+
+    def _series(self):
+        """The last 30 minutes, oldest first, one row per minute (zeros where nothing happened)."""
+        now = int(time.time() // 60)
+        return [dict(t=(now - i) * 60, requests=self.per_minute.get(now - i, [0, 0, 0])[0],
+                     protected=self.per_minute.get(now - i, [0, 0, 0])[1], raw=self.per_minute.get(now - i, [0, 0, 0])[2])
+                for i in range(29, -1, -1)]
 
     def close(self):
         """Clean shutdown of background threads and persistent database connections."""

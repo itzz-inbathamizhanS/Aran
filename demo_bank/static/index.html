@@ -20,6 +20,7 @@
     <p class="lede" id="lede">Loading this bank’s settings…</p>
   </header>
   <div class="kit-row" style="margin-bottom:var(--space-5)"><span class="pill" id="mode">mode</span><span class="pill" id="port"></span><span class="small muted">Sample data only. Never type real Aadhaar, card or phone numbers.</span></div>
+  <div class="grid g4" id="bank-tiles" style="margin-bottom:var(--space-5)" aria-live="polite"></div>
 
   <div class="grid g2" style="align-items:start">
     <section class="card">
@@ -106,8 +107,17 @@
     K.reveal(document);
   }
 
+  /* what this bank holds right now, read from its own database (GET /api/db-view) */
+  let tilesFirst = true;
+  const tiles = (d) => {
+    const n = (x) => (x || []).length;
+    $('#bank-tiles').innerHTML = U.stat('Customers', '', 'rows in the customers table', { count: n(d.customers) }) + U.stat('Log lines', '', aran ? 'cleaned by Aran before writing' : 'written exactly as logged', { count: n(d.logs) }) + U.stat('AI chats', '', aran ? 'the AI provider saw placeholders' : 'the AI provider saw the raw text', { count: n(d.chat_history) }) + U.stat('Identifiers stored as', aran ? 'Tokens' : 'Raw', aran ? 'useless if the database leaks' : 'readable if the database leaks', { tone: aran ? '' : 'danger' });
+    tilesFirst ? U.runCounts($('#bank-tiles')) : U.setCounts($('#bank-tiles')); tilesFirst = false;
+  };
+
   async function db() {
     const d = await K.api('/api/db-view'), cs = d.customers || [];
+    tiles(d);
     $('#t-customers').innerHTML = cs.length ? `<table class="tbl dense"><thead><tr><th>Ref</th><th>Name</th><th>Mobile</th><th>Aadhaar</th><th>Card</th><th>Created</th></tr></thead><tbody>${cs.map((c) => `<tr><td class="mono">${esc(c.customer_ref)}</td><td>${cell(c.name)}</td><td>${cell(c.mobile)}</td><td>${cell(c.aadhaar)}</td><td>${cell(c.card)}</td><td class="mono">${esc(c.created_at)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted small">No customers yet. Open an account above.</p>';
     $('#t-logs').innerHTML = (d.logs || []).length ? `<table class="tbl dense"><thead><tr><th>#</th><th>Time</th><th>Level</th><th>Message</th></tr></thead><tbody>${d.logs.map((l) => `<tr><td class="mono">${l.id}</td><td class="mono">${esc(l.created_at)}</td><td>${U.pill(esc(l.level), '')}</td><td>${hl(l.message)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted small">No log lines yet.</p>';
     $('#t-chat').innerHTML = (d.chat_history || []).length ? `<table class="tbl dense"><thead><tr><th>#</th><th>Time</th><th>Staff prompt</th><th>What the AI provider saw</th><th>Reply</th></tr></thead><tbody>${d.chat_history.map((h) => `<tr><td class="mono">${h.id}</td><td class="mono">${esc(h.created_at)}</td><td>${K.hl(h.prompt)}</td><td>${hl(h.provider_saw)}</td><td>${esc(h.reply)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted small">No chats yet.</p>';

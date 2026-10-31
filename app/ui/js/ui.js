@@ -69,6 +69,38 @@ window.ARAN = window.ARAN || {};
   /* C15 confidence bar, C16 gauge, C17 rank row */
   U.bar = (p, thr) => `<div class="bar" role="img" aria-label="confidence ${U.pct(p)}"><i style="width:${Math.max(1, p * 100)}%"></i>${thr != null ? `<span class="thr" style="left:${thr * 100}%" data-tip="threshold ${thr}"></span>` : ''}</div>`;
   U.gauge = (p, thr) => { const a = (v) => Math.PI * (1 - v), pt = (v, r) => [100 + r * Math.cos(a(v)), 100 - r * Math.sin(a(v))]; const arc = 251.3, [tx1, ty1] = pt(thr, 74), [tx2, ty2] = pt(thr, 92); return `<svg class="gauge" viewBox="0 0 200 118" role="img" aria-label="probability ${U.pct(p)}"><path class="bg" d="M 20 100 A 80 80 0 0 1 180 100"/><path class="fg" d="M 20 100 A 80 80 0 0 1 180 100" stroke-dasharray="${(arc * p).toFixed(1)} ${arc}"/><line class="thr" x1="${tx1}" y1="${ty1}" x2="${tx2}" y2="${ty2}"><title>threshold ${thr}</title></line><line class="needle" x1="100" y1="100" x2="100" y2="34" style="transform:rotate(${(p * 180 - 90).toFixed(1)}deg)"/><circle class="hub" cx="100" cy="100" r="5"/><text class="gt" x="100" y="86">${U.pct(p)}</text></svg>`; };
+  /* per-minute stacked bars: values protected (bottom) and values left raw (top), last 30 minutes.
+     series = [{t, requests, protected, raw}] oldest first (GET /api/stats → per_minute) */
+  U.minuteChart = (series) => {
+    const W = 800, H = 170, L = 36, R = 8, T = 10, B = 26, n = series.length, slot = (W - L - R) / n, bw = Math.max(4, slot - 4);
+    const max = Math.max(1, ...series.map((d) => d.protected + d.raw)), nice = max <= 5 ? max : Math.ceil(max / 5) * 5;
+    const y = (v) => T + (H - T - B) * (1 - v / nice), base = H - B, total = series.reduce((a, d) => a + d.protected + d.raw, 0);
+    const bars = series.map((d, i) => {
+      const x = L + i * slot + (slot - bw) / 2, p = d.protected, r = d.raw, yp = y(p), yr = y(p + r);
+      const seg = (cls, y0, y1, top) => (y1 - y0 > 0.5 ? `<rect class="${cls}" x="${x.toFixed(1)}" y="${y0.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0, y1 - y0).toFixed(1)}" rx="${top ? 2 : 0}"/>` : '');
+      const gap = p && r ? 2 : 0; /* 2px surface gap between the two segments */
+      const tm = new Date(d.t * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return `<g>${seg('pr', yp, base, !r)}${seg('rw', yr, yp - gap, true)}<rect class="hit" x="${(L + i * slot).toFixed(1)}" y="${T}" width="${slot.toFixed(1)}" height="${H - T - B}" data-tip="${tm} · ${d.requests} request${d.requests === 1 ? '' : 's'} · ${p} protected · ${r} left raw"/></g>`;
+    }).join('');
+    const table = `<table class="sr-only"><caption>Values per minute, last 30 minutes</caption><thead><tr><th>Minute</th><th>Requests</th><th>Protected</th><th>Left raw</th></tr></thead><tbody>${series.filter((d) => d.requests).map((d) => `<tr><td>${new Date(d.t * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td><td>${d.requests}</td><td>${d.protected}</td><td>${d.raw}</td></tr>`).join('') || '<tr><td colspan="4">No requests yet</td></tr>'}</tbody></table>`;
+    return `<div class="mchart"><div class="mchart-legend" aria-hidden="true"><span><i class="pr"></i>Protected</span><span><i class="rw"></i>Left raw</span></div><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${total} values in the last 30 minutes; table below"><line class="g" x1="${L}" x2="${W - R}" y1="${y(nice)}" y2="${y(nice)}"/><line class="g" x1="${L}" x2="${W - R}" y1="${y(nice / 2)}" y2="${y(nice / 2)}"/><line class="g0" x1="${L}" x2="${W - R}" y1="${base}" y2="${base}"/><text class="ax" x="${L - 6}" y="${y(nice) + 4}" text-anchor="end">${nice}</text><text class="ax" x="${L - 6}" y="${base + 4}" text-anchor="end">0</text>${bars}<text class="ax" x="${L}" y="${H - 6}">−30 min</text><text class="ax" x="${(L + W - R) / 2}" y="${H - 6}" text-anchor="middle">−15 min</text><text class="ax" x="${W - R}" y="${H - 6}" text-anchor="end">now</text></svg><div class="mchart-tip" hidden></div>${table}</div>`;
+  };
+  /* one tooltip for every minute chart on the page */
+  let lastPt = null;
+  const showTip = (target, clientX) => {
+      const hit = target && target.closest && target.closest('.mchart .hit'); const box = hit ? hit.closest('.mchart') : null;
+      document.querySelectorAll('.mchart-tip').forEach((t) => { if (!box || !box.contains(t)) t.hidden = true; });
+      document.querySelectorAll('.mchart g.on').forEach((g) => g !== (hit && hit.parentNode) && g.classList.remove('on'));
+      if (!hit) return;
+      const tip = box.querySelector('.mchart-tip'), r = box.getBoundingClientRect();
+      tip.textContent = hit.dataset.tip; tip.hidden = false; hit.parentNode.classList.add('on');
+      const half = tip.offsetWidth / 2 + 4, x = Math.min(Math.max(clientX - r.left, half), r.width - half); tip.style.left = x + 'px'; /* never past either edge */
+  };
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('mousemove', (e) => { lastPt = [e.clientX, e.clientY]; showTip(e.target, e.clientX); });
+  }
+  /* live pages redraw every few seconds; call this after a redraw so the tooltip under a still mouse stays */
+  U.keepTip = () => { if (lastPt && document.elementFromPoint) showTip(document.elementFromPoint(lastPt[0], lastPt[1]), lastPt[0]); };
   U.rankRow = (label, share, val, i) => `<div class="rank"><span>${label}</span><div class="bar"><i style="width:${share * 100}%;animation-delay:${(i || 0) * 80}ms"></i></div><span class="val">${val}</span></div>`;
   /* C19 notes, C20 skeleton, C21 spinner, C22 disclosure, C25 verdict */
   U.note = (kind, msg) => `<div class="note ${kind}" role="${kind === 'err' ? 'alert' : 'status'}">${kind === 'ok' ? '✓ ' : ''}${msg}</div>`;

@@ -46,6 +46,15 @@ Before: 25 serious accessibility problems over the 46 runs. After: none. No cons
 
 The full check was run again after these changes: no errors, no sideways overflow, and zero accessibility problems on all 46 runs.
 
+## Round 4
+
+| # | Problem | Where | Fix |
+|---|---|---|---|
+| 19 | **Numbers but no trend:** the landing page showed totals only, so you could not see traffic arrive | Overview | A live chart, **Values in the last 30 minutes**: one bar per minute, values protected (teal) stacked under values left raw (red), with a legend, a tooltip per minute and a hidden table for screen readers. It is fed by a new `per_minute` series in `GET /api/stats` (new test). The two bar colours were checked with the palette validator for lightness, chroma, colour-blind separation and contrast, in dark and light |
+| 20 | **The bank pages started with a form**, so the point of each bank was not visible at a glance | Bank A, Bank B | A row of live tiles from the bank's own database: customers, log lines, AI chats, and **Identifiers stored as Raw** (red, Bank A) or **Tokens** (Bank B). Hidden inside the side-by-side frames |
+
+The full check was run again: no errors, no sideways overflow, zero accessibility problems on all 46 runs.
+
 ## Still open
 
 - **`test_core_lockdown`** expects the core to refuse `/api` calls without the internal secret. It fails when the core is started with `ARAN_CONSOLE_OPEN=1`, which is how `run_demo.sh` and Docker Compose start it so that the console works. That is the intended trade-off for a core that only listens on this computer. The test should skip when console-open is set.
@@ -64,5 +73,7 @@ The full check was run again after these changes: no errors, no sideways overflo
 | `08-pager.png` | Previous / Next links at the foot of a page |
 | `09-pager-phone.png` | The same on a phone |
 | `10-side-by-side-stored.png` | Side by side after "Send to both": what each bank stored |
+| `11-overview-chart-dark.png`, `11-overview-chart-light.png` | The per-minute chart with its tooltip, dark and light |
+| `12-bank-a-tiles.png` | Bank A's live tiles |
 
 Beginner doc for these ideas: [Learn 25](Aran%20Learn%2025%20-%20Accessibility%2C%20Tenant%20Isolation%20and%20Containers.md).

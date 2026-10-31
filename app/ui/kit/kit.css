@@ -82,7 +82,7 @@ html.embed .topbar, html.embed .kit-sub, html.embed .menu { display: none !impor
 html.embed .page.kit { padding-top: 24px; }
 html.embed .phead h1 { font-size: var(--text-size-h2); }
 /* inside the side-by-side frames the frame header already says which bank it is */
-html.embed .phead .eyebrow, html.embed .phead .lede, html.embed .pager { display: none; }
+html.embed .phead .eyebrow, html.embed .phead .lede, html.embed .pager, html.embed #bank-tiles { display: none; }
 html.embed .phead { margin-bottom: var(--space-3) !important; }
 
 /* empty state */

@@ -40,6 +40,9 @@
   --clean-color: #6f7683;
   --band-color: rgba(123, 216, 143, .16);
   --chart-grid-color: #2a2f3a;
+  /* chart fills, checked with the dataviz palette validator (lightness, chroma, colour-blind separation) */
+  --chart-protected-color: #33a99a;
+  --chart-raw-color: #e5583d;
   --bar-track-color: #151922;
   --bar-fill-color: #d8d8d8;
   --threshold-marker-color: #ffffff;
@@ -133,6 +136,8 @@
   --clean-color: #6a6f79;
   --band-color: rgba(28, 122, 56, .16);
   --chart-grid-color: #b9b9b3;
+  --chart-protected-color: #16907f;
+  --chart-raw-color: #c4401f;
   --bar-track-color: #cfcfc9;
   --bar-fill-color: #0b0c10;
   --threshold-marker-color: #0b0c10;
