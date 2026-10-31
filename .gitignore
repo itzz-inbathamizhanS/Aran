@@ -4,3 +4,13 @@
 .trash/
 node_modules/
 app/web/dist/
+design_skills/
+
+# Local databases and secrets
+*.db
+*.db-wal
+*.db-shm
+.env.local
+data/
+.venv/
+__pycache__/

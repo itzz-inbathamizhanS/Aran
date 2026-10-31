@@ -11,6 +11,7 @@ never be used outside a bank.
 """
 import glob
 import json
+import logging
 import math
 import os
 import pickle
@@ -37,6 +38,8 @@ from firewall.aran_firewall import card_offset  # noqa: E402
 from firewall.normalise import Normaliser  # noqa: E402
 from firewall.registry import CustomerRegistry, OtpRegistry, canonical  # noqa: E402
 from firewall.shredder import PURPOSES, Erased, PurposeFirewall, PurposeVault, verify_receipt  # noqa: E402
+from firewall.store import AranStore, BACKUP_POLICY_STATEMENT  # noqa: E402
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM  # noqa: E402
 from immune.ais import tune_self_radius  # noqa: E402
 from immune.flows import FlowFeaturizer  # noqa: E402
 
@@ -82,24 +85,38 @@ def _p95(xs):
 
 
 class Engine:
-    def __init__(self, n_customers=25, seed=None):
+    def __init__(self, n_customers=25, seed=None, store_path=None, master_key=None):
         t0 = time.time()
         with open(MODELS, "rb") as fh:
             base = pickle.load(fh)
-        self.key = secrets.token_bytes(32)  # AES-256 for FF1: Grover leaves 128-bit strength
+
+        # Persistence Lite support
+        store_path = store_path or os.environ.get("ARAN_STORE")
+        if store_path:
+            master_key = master_key or os.environ.get("ARAN_MASTER_KEY")
+            self.store = AranStore(data_path=store_path, master_key=master_key)
+            self.key = self.store.load_system_key("ff1_key")
+            if self.key is None:
+                self.key = secrets.token_bytes(32)
+                self.store.save_system_key("ff1_key", self.key)
+        else:
+            self.store = None
+            self.key = secrets.token_bytes(32)  # AES-256 for FF1: Grover leaves 128-bit strength
+
         self.registry = CustomerRegistry(secrets.token_bytes(32), capacity=100_000)
         self.otp_registry = OtpRegistry(secrets.token_bytes(32), ttl=300.0)
         self.det = Detector(base.ner, base.otp_clf, base.upi_clf, normaliser=Normaliser(),
                             registry=self.registry, otp_registry=self.otp_registry)
         self.det.stack, self.det.iso = base.stack, base.iso
-        self.vault = PurposeVault()
+        self.vault = PurposeVault(store=self.store)
         self.fw = _IndexingFirewall(self.det, self.key, self.vault, {s: p for s, (p, _) in SINKS.items()},
-                                    thresholds={s: t for s, (_, t) in SINKS.items()})
+                                    thresholds={s: t for s, (_, t) in SINKS.items()}, eng=self)
         self.ff1 = FF1(self.key)
         self.lock = threading.RLock()
         self.rand = random.Random(seed if seed is not None else secrets.randbits(64))
         self.started = time.time()
         self.customers = {}
+        self.dynamic_customers = set()
         self.events = deque(maxlen=300)
         self.sink_store = defaultdict(lambda: deque(maxlen=500))  # what each sink actually received
         self.latency_ms = deque(maxlen=2000)
@@ -109,9 +126,43 @@ class Engine:
         self.immune = Immune(self)
         self.replay = Replay(self)
         self.jobs = {}
-        for _ in range(n_customers):
-            self.add_customer()
+
+        # Rehydrate customer profiles and registry if store exists
+        if self.store is not None:
+            profiles = self.store.load_all_customer_profiles()
+            for prof in profiles:
+                ref = prof["ref"]
+                self.dynamic_customers.add(ref)
+                if (ref, "KYC") in self.vault.keys:
+                    kyc_key = bytes(self.vault.keys[(ref, "KYC")])
+                    try:
+                        raw_ids_json = AESGCM(kyc_key).decrypt(
+                            prof["nonce"], prof["encrypted_ids"], ref.encode("utf-8")
+                        ).decode("utf-8")
+                        ids = json.loads(raw_ids_json)
+                        self.customers[ref] = dict(ref=ref, name=prof["name"], upi=prof["upi"], created=prof["created"], **ids)
+                        for t, v in ids.items():
+                            self.registry.add(t, v)
+                    except Exception:
+                        masked = json.loads(prof["masked_json"])
+                        self.customers[ref] = dict(ref=ref, name=prof["name"], upi=prof["upi"], created=prof["created"], **masked)
+                else:
+                    masked = json.loads(prof["masked_json"])
+                    self.customers[ref] = dict(ref=ref, name=prof["name"], upi=prof["upi"], created=prof["created"], _erased=True, **masked)
+
+        if not self.customers:
+            for _ in range(n_customers):
+                self.add_customer()
         self.load_seconds = round(time.time() - t0, 1)
+        if self.replay.logs:
+            def _auto_learn():
+                secs = int(os.environ.get("ARAN_LEARN_SECONDS", "75"))
+                self.immune.start_learning(secs)
+                if not self.replay.running:
+                    self.replay.start(self.replay.rate)
+            threading.Thread(target=_auto_learn, daemon=True).start()
+        else:
+            logging.warning("Log data missing in %s; skipping immune auto-learning", LOGS_DIR)
 
     # ------------------------------------------------------------ customers
     def add_customer(self, name=None):
@@ -130,13 +181,41 @@ class Engine:
             # KYC records are kept for 5 years after the relationship ends (PMLA rules)
             self.vault.enroll(ref, dict(ids, UPI=upi), retain={"KYC": time.time() + 5 * 365 * 86400})
             self.customers[ref] = dict(ref=ref, name=name, upi=upi, created=time.time(), **ids)
+            if self.store is not None:
+                kyc_key = bytes(self.vault.keys[(ref, "KYC")])
+                nonce = secrets.token_bytes(12)
+                enc_ids = AESGCM(kyc_key).encrypt(nonce, json.dumps(ids).encode("utf-8"), ref.encode("utf-8"))
+                masked = {
+                    "AADHAAR": "XXXX XXXX " + aad[-4:],
+                    "CARD": "XXXX XXXX XXXX " + card[-4:],
+                    "MOBILE": "XXXXXX" + mob[-4:],
+                    "PAN": pan[:2] + "XXXXXX" + pan[-2:] if len(pan) >= 4 else "–",
+                }
+                self.store.save_customer_profile(
+                    customer_ref=ref,
+                    name=name,
+                    upi=upi,
+                    encrypted_ids=enc_ids,
+                    nonce=nonce,
+                    masked_json=json.dumps(masked),
+                    created_at=time.time(),
+                )
             return self.customers[ref]
 
     def customer_view(self, ref):
         c = self.customers[ref]
-        masked = dict(AADHAAR="XXXX XXXX " + c["AADHAAR"][-4:], CARD="XXXX XXXX XXXX " + c["CARD"][-4:],
-                      MOBILE="XXXXXX" + c["MOBILE"][-4:], PAN=c["PAN"][:2] + "XXXXXX" + c["PAN"][-2:])
-        return dict(ref=ref, name=c["name"], masked=masked, keys=self.vault.key_status(ref))
+        aad = c.get("AADHAAR", "")
+        card = c.get("CARD", "")
+        mob = c.get("MOBILE", "")
+        pan = c.get("PAN", "")
+        masked = dict(
+            AADHAAR=aad if aad.startswith("XXXX") else ("XXXX XXXX " + aad[-4:] if aad else "–"),
+            CARD=card if card.startswith("XXXX") else ("XXXX XXXX XXXX " + card[-4:] if card else "–"),
+            MOBILE=mob if mob.startswith("XXXX") else ("XXXXXX" + mob[-4:] if mob else "–"),
+            PAN=pan if "XXXX" in pan else (pan[:2] + "XXXXXX" + pan[-2:] if len(pan) >= 4 else "–")
+        )
+        return dict(ref=ref, name=c.get("name", ref), masked=masked, keys=self.vault.key_status(ref))
+        return dict(ref=ref, name=c.get("name", ref), masked=masked, keys=self.vault.key_status(ref))
 
     # ------------------------------------------------------------ requests
     def sample(self, kind, who="customer", ref=None):
@@ -178,20 +257,34 @@ class Engine:
             raise KeyError(kind)
         return dict(text=text, sink=SAMPLE_SINK[kind], source=SAMPLE_SOURCE[kind], trace_id=trace)
 
-    def process(self, text, source, sink, trace_id=None, record=True, observe=True):
+    def process(self, text, source, sink, trace_id=None, record=True, observe=True,
+                customer_ref=None, purpose=None):
         if sink not in SINKS and not re.fullmatch(r"[a-z0-9][a-z0-9.\-]{1,60}", sink):
             raise ValueError("sink names are lower-case letters, digits, dots and dashes")
         with self.lock:
+            if customer_ref is not None:
+                if customer_ref not in self.customers:
+                    self.dynamic_customers.add(customer_ref)
+                    self.vault.enroll(customer_ref, {})
+                    self.customers[customer_ref] = dict(ref=customer_ref, name=customer_ref, created=time.time())
             t0 = time.perf_counter()
-            if sink in self.bypass:
-                fs = self.det.scan(text, threshold=0.2, trace_id=trace_id)
-                out, issued = text, []
-                for f in fs:
-                    f.meta["passed_raw"] = True
-            else:
-                self.fw.issued_now = []
-                out, fs = self.fw.process(text, src=source, sink=sink, trace_id=trace_id)
-                issued = self.fw.issued_now
+            self.fw.conflicts = set()
+            self.fw.conflict_notes = []
+            self.fw._current_customer_ref = customer_ref
+            self.fw._current_purpose = purpose
+            try:
+                if sink in self.bypass:
+                    fs = self.det.scan(text, threshold=0.2, trace_id=trace_id)
+                    out, issued = text, []
+                    for f in fs:
+                        f.meta["passed_raw"] = True
+                else:
+                    self.fw.issued_now = []
+                    out, fs = self.fw.process(text, src=source, sink=sink, trace_id=trace_id)
+                    issued = self.fw.issued_now
+            finally:
+                self.fw._current_customer_ref = None
+                self.fw._current_purpose = None
             ms = (time.perf_counter() - t0) * 1000
             thr = SINKS.get(sink, ("", 0.5))[1]
             findings = []
@@ -205,6 +298,18 @@ class Engine:
                     if fd.get("token") is None and fd["type"] == typ and fd["protected"]:
                         fd["token"] = tok
                         break
+            for fd in findings:
+                tok = fd.get("token")
+                is_vault = tok in self.vault.vault if tok else False
+                fd["erasable"] = is_vault
+                if is_vault:
+                    ve = self.vault.vault[tok]
+                    fd["customer_ref"] = ve["customer"]
+                    fd["purpose"] = ve["purpose"]
+                else:
+                    fd["customer_ref"] = None
+                    fd["purpose"] = None
+                fd["owner_conflict"] = fd["start"] in self.fw.conflicts
             raw_left = sum(1 for f in findings if not f["protected"])
             owners = {self.vault.owner_of(f["type"], text[f["start"]:f["end"]]) for f in findings}
             owners.discard(None)
@@ -217,8 +322,30 @@ class Engine:
                 self.counts["values_raw"] += raw_left
                 for f in findings:
                     self.by_type[f["type"]] += 1
+            notes = list(self.fw.conflict_notes)
+            for m in re.finditer(r"(?<!\d)(?<!\d\.)(?:\d[ -]?){9,15}\d(?!\d|\.\d)", text):
+                raw_seq = m.group(0)
+                d = re.sub(r"\D", "", raw_seq)
+                if len(d) not in (10, 12, 16):
+                    continue
+                if any(f["protected"] and not (m.end() <= f["start"] or m.start() >= f["end"]) for f in findings):
+                    continue
+                failed = False
+                if len(d) == 12:
+                    failed = not verhoeff_valid(d)
+                elif len(d) == 16:
+                    failed = not luhn_valid(d)
+                elif len(d) == 10:
+                    failed = not luhn_valid(d)
+                if failed:
+                    digits_pos = [i for i, c in enumerate(raw_seq) if c.isdigit()]
+                    keep = set(digits_pos[-4:])
+                    masked = "".join(c if i in keep or not c.isdigit() else "X" for i, c in enumerate(raw_seq))
+                    note = f"{masked} looks like an ID but fails the Aadhaar/Luhn checksum, so Aran treats it as not a real identifier."
+                    if note not in notes:
+                        notes.append(note)
             ev = dict(id=secrets.token_hex(6), at=time.time(), source=source, sink=sink, before=text, after=out,
-                      latency_ms=round(ms, 2), findings=findings, bypass=sink in self.bypass, trace_id=trace_id)
+                      latency_ms=round(ms, 2), findings=findings, notes=notes, bypass=sink in self.bypass, trace_id=trace_id)
             self.sink_store[sink].append(out)
             if record:
                 self.events.appendleft(ev)
@@ -242,8 +369,13 @@ class Engine:
         with self.lock:
             receipt = self.vault.erase(ref, purpose)
             if purpose == "KYC" or all(not k["alive"] for k in self.vault.key_status(ref)):
-                for t in ("AADHAAR", "CARD", "MOBILE", "PAN"):
-                    self.registry.remove(t, self.customers[ref][t])
+                if ref in self.customers:
+                    for t in ("AADHAAR", "CARD", "MOBILE", "PAN"):
+                        if t in self.customers[ref]:
+                            self.registry.remove(t, self.customers[ref][t])
+                if self.store is not None:
+                    self.store.delete_customer_profile(ref)
+                    self.store.checkpoint_and_truncate()
             return receipt
 
     # ------------------------------------------------------------ leak trace
@@ -307,18 +439,52 @@ class Engine:
                         merkle_size=len(self.vault.log.leaves), uptime_s=round(time.time() - self.started),
                         immune=self.immune.state, replay=self.replay.status(), model_load_seconds=self.load_seconds)
 
+    def close(self):
+        """Clean shutdown of background threads and persistent database connections."""
+        if hasattr(self, "replay") and getattr(self.replay, "running", False):
+            self.replay.stop()
+        if self.store is not None:
+            self.store.close()
+
 
 class _IndexingFirewall(PurposeFirewall):
     """Records every token it issues, so a leaked dump can be traced back."""
 
-    def __init__(self, *a, **kw):
+    def __init__(self, *a, eng=None, **kw):
         super().__init__(*a, **kw)
+        self.eng = eng
         self.index, self.issued_now = {}, []
+        if self.eng and self.eng.store is not None:
+            self.index.update(self.eng.store.load_all_token_sinks())
+        self._current_purpose = None
+        self._current_customer_ref = None
+        self.conflicts = set()
+        self.conflict_notes = []
 
-    def _replace(self, f, value, sink):
-        tok = super()._replace(f, value, sink)
+    def _replace(self, f, value, sink, purpose=None):
+        purpose = purpose or self._current_purpose
+        if self._current_customer_ref and f.type in ("AADHAAR", "CARD", "MOBILE", "PAN", "UPI"):
+            existing_owner = self.vault.owner_of(f.type, value)
+            if existing_owner is None:
+                k = self.vault._owner_key(f.type, value)
+                self.vault.owner[k] = self._current_customer_ref
+                if self.vault.store is not None:
+                    self.vault.store.save_owner(k, self._current_customer_ref)
+                if self.eng and self._current_customer_ref in self.eng.customers:
+                    self.eng.customers[self._current_customer_ref][f.type] = value
+            elif existing_owner != self._current_customer_ref:
+                self.conflicts.add(f.start)
+                note = "owner_conflict: this identifier is already enrolled under another customer; token issued under the original owner."
+                if note not in self.conflict_notes:
+                    self.conflict_notes.append(note)
+        tok = super()._replace(f, value, sink, purpose=purpose)
         if tok not in ("<OTP:destroyed>",) and "withheld" not in tok:
             self.index[tok] = sink
+            if self.eng and self.eng.store is not None:
+                try:
+                    self.eng.store.save_token_sink(tok, sink)
+                except Exception:
+                    pass
         self.issued_now.append((tok, f.type, value))
         return tok
 
@@ -468,6 +634,9 @@ class Replay:
 
     def stop(self):
         self.running = False
+        t = getattr(self, "thread", None)
+        if t and t.is_alive() and threading.current_thread() != t:
+            t.join(timeout=2.0)
 
     def _line(self, systems):
         r = self.eng.rand

@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Demo Bank</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1 id="bank-title">Demo Bank</h1>
+      <div class="subtitle" id="bank-subtitle">Loading instance configuration...</div>
+    </div>
+    <div style="display: flex; gap: 0.75rem; align-items: center;">
+      <span id="bank-badge" class="brand-badge brand-legacy">LEGACY</span>
+      <a href="/compare" class="btn btn-sample btn-sm" target="_blank">Open Split-Screen Compare</a>
+    </div>
+  </header>
+
+  <div class="grid-2">
+    <!-- Card 1: Sign-Up Form -->
+    <div class="card">
+      <h2>
+        <span>1. Customer Sign-Up (Write Path)</span>
+        <button class="btn btn-sample btn-sm" id="btn-insert-sample" type="button">Insert a valid sample</button>
+      </h2>
+      <div class="note-box">
+        <strong>Privacy Notice:</strong> Use sample data only. Never enter real financial or government credentials.
+      </div>
+
+      <form id="form-signup">
+        <div class="form-group">
+          <label for="input-name">Full Name</label>
+          <input type="text" id="input-name" required placeholder="e.g. Sunita Rao">
+        </div>
+        <div class="form-group">
+          <label for="input-mobile">Mobile Number (10 digits)</label>
+          <input type="text" id="input-mobile" required placeholder="e.g. 9876543210">
+        </div>
+        <div class="form-group">
+          <label for="input-aadhaar">Aadhaar Number (12 digits, checksum validated)</label>
+          <input type="text" id="input-aadhaar" required placeholder="e.g. 432988345081">
+        </div>
+        <div class="form-group">
+          <label for="input-card">Card Number (16 digits, Luhn validated)</label>
+          <input type="text" id="input-card" required placeholder="e.g. 4010942796235086">
+        </div>
+        <button class="btn btn-primary" style="width: 100%;" type="submit">Open Bank Account</button>
+      </form>
+      <div id="signup-result" style="margin-top: 1rem;"></div>
+    </div>
+
+    <!-- Card 2: Staff AI Chatbot -->
+    <div class="card">
+      <h2>
+        <span>2. Staff AI Customer Care (AI Path)</span>
+        <span class="btn btn-sm btn-sample" style="pointer-events: none;">Role: customer-care</span>
+      </h2>
+      <div class="disclaimer-box" id="ai-disclaimer">
+        Legacy sends raw prompts to external models. Aran intercepts queries via AI Gateway placeholders.
+      </div>
+      <div class="chat-box" id="chat-messages">
+        <div class="chat-bubble chat-bot">
+          Hello! I am the staff banking assistant. You can ask me to look up customer KYC details or verify account statuses.
+        </div>
+      </div>
+      <form id="form-chat" style="display: flex; gap: 0.5rem;">
+        <input type="text" id="chat-input" placeholder="e.g. Look up balance for customer with Aadhaar 432988345081..." style="flex: 1;" required>
+        <button class="btn btn-primary" type="submit">Ask AI</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Authorised Officer View (Aran mode only) -->
+  <div class="grid-full" id="officer-section" style="display: none;">
+    <div class="card">
+      <h2>
+        <span>3. Authorised Officer View (Detokenise Inspection)</span>
+        <span class="brand-badge brand-aran">Aran Only</span>
+      </h2>
+      <div class="disclaimer-box">
+        <strong>Notice:</strong> Demo role switch, not real authentication. Shows role-based detokenisation and post-erasure behavior.
+      </div>
+
+      <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+        <div style="flex: 1;">
+          <label for="officer-cust-select">Select Customer:</label>
+          <select id="officer-cust-select"></select>
+        </div>
+        <div style="flex: 1;">
+          <label for="officer-role-select">Select Officer Role:</label>
+          <select id="officer-role-select">
+            <option value="teller">Teller (Masked View: XXXXXXXX1234)</option>
+            <option value="compliance">Compliance Officer (Full Plaintext)</option>
+            <option value="developer">Developer (Vault Tokens Only)</option>
+          </select>
+        </div>
+        <button class="btn btn-sample" id="btn-inspect-officer" style="margin-top: 1.4rem;">Inspect Record</button>
+      </div>
+
+      <div id="officer-display" style="background: #0d1527; padding: 1rem; border-radius: 6px; border: 1px solid var(--border-color); font-family: monospace;">
+        Select a customer and role above to inspect authorized detokenisation.
+      </div>
+    </div>
+  </div>
+
+  <!-- Card 3: Database Viewer -->
+  <div class="grid-full">
+    <div class="card">
+      <h2>
+        <span>Live Database Viewer (Actual SQLite Tables)</span>
+        <button class="btn btn-sample btn-sm" id="btn-refresh-db">Refresh Database Tables</button>
+      </h2>
+      <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+        <span class="pill-raw">RED = Raw Plaintext PII (Exposed)</span>
+        <span class="pill-token">GREEN = Cryptographic Vault Token (Protected)</span>
+      </div>
+
+      <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem; color: var(--accent-cyan);">Table: customers</h3>
+      <div class="table-container" style="margin-bottom: 1.5rem;">
+        <table id="table-customers">
+          <thead>
+            <tr>
+              <th>Ref</th>
+              <th>Name</th>
+              <th>Mobile</th>
+              <th>Aadhaar</th>
+              <th>Card Number</th>
+              <th>Created</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="7" style="text-align: center; color: var(--text-dim);">No customer rows found</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem; color: var(--accent-cyan);">Table: logs (Log Path)</h3>
+      <div class="table-container" style="margin-bottom: 1.5rem;">
+        <table id="table-logs">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Timestamp</th>
+              <th>Level</th>
+              <th>Message</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="4" style="text-align: center; color: var(--text-dim);">No log rows found</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem; color: var(--accent-cyan);">Table: chat_history (AI Path)</h3>
+      <div class="table-container">
+        <table id="table-chat">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Timestamp</th>
+              <th>Prompt (Staff)</th>
+              <th>What AI Provider Saw</th>
+              <th>Reply</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="5" style="text-align: center; color: var(--text-dim);">No chat rows found</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card 4: Breach & Erasure -->
+  <div class="grid-2">
+    <div class="card">
+      <h2>4. Simulated Database Breach & Exfiltration</h2>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.75rem;">
+        Dump all tables into exfiltrated text, then trace against Aran's neural and cryptographic firewall.
+      </p>
+      <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+        <button class="btn btn-danger" id="btn-breach">Exfiltrate & Dump Database</button>
+        <button class="btn btn-primary" id="btn-trace" disabled>Trace Leaked Dump</button>
+      </div>
+      <textarea class="dump-area" id="breach-dump" readonly placeholder="Click 'Exfiltrate & Dump Database' to simulate attacker exfiltration..."></textarea>
+      <div id="trace-result" style="margin-top: 0.75rem;"></div>
+    </div>
+
+    <div class="card">
+      <h2>5. Customer Right to Erasure (DPDP Act)</h2>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.75rem;">
+        Trigger customer erasure and observe the difference between row deletion vs. cryptographic shredding.
+      </p>
+      <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+        <select id="erase-cust-select" style="flex: 1;"></select>
+        <button class="btn btn-danger" id="btn-erase">Delete My Data</button>
+      </div>
+      <div id="erase-result" style="font-size: 0.9rem;">
+        Select an enrolled customer to execute deletion.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let CONFIG = {};
+
+    function renderCell(val, isToken) {
+      if (!val) return '<span style="color: var(--text-dim);">-</span>';
+      if (val.startsWith('<') && val.endsWith('>')) {
+        return `<span class="pill-token">${escapeHtml(val)}</span>`;
+      }
+      if (isToken) {
+        return `<span class="pill-token">${escapeHtml(val)}</span>`;
+      }
+      if (/^\d{10,16}$/.test(val)) {
+        return `<span class="pill-raw">${escapeHtml(val)}</span>`;
+      }
+      return escapeHtml(val);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function highlightText(text) {
+      if (!text) return '';
+      let s = escapeHtml(text);
+      // Highlight tokens
+      s = s.replace(/&lt;[A-Za-z0-9_:\-]+&gt;/g, m => `<span class="pill-token">${m}</span>`);
+      // Highlight 10-16 digit raw numbers
+      s = s.replace(/\b\d{10,16}\b/g, m => `<span class="pill-raw">${m}</span>`);
+      return s;
+    }
+
+    async function loadConfig() {
+      const res = await fetch('/api/config');
+      CONFIG = await res.json();
+      
+      const badge = document.getElementById('bank-badge');
+      const title = document.getElementById('bank-title');
+      const subtitle = document.getElementById('bank-subtitle');
+
+      if (CONFIG.bank_mode === 'aran') {
+        badge.className = 'brand-badge brand-aran';
+        badge.innerText = 'ARAN PROTECTED';
+        title.innerText = 'Aran Secure Bank (Firewall & Vault Active)';
+        subtitle.innerText = `Port ${CONFIG.port} | Write, Log & AI Paths Intercepted via ${CONFIG.aran_url}`;
+        document.getElementById('officer-section').style.display = 'block';
+      } else {
+        badge.className = 'brand-badge brand-legacy';
+        badge.innerText = 'LEGACY (UNPROTECTED)';
+        title.innerText = 'Legacy Bank (Unprotected PII)';
+        subtitle.innerText = `Port ${CONFIG.port} | Unencrypted Storage, Plaintext Logs & Unredacted AI Prompts`;
+        document.getElementById('officer-section').style.display = 'none';
+      }
+    }
+
+    async function loadSampleCustomer() {
+      try {
+        const res = await fetch('/api/sample-customer');
+        const data = await res.json();
+        document.getElementById('input-name').value = data.name || 'Sunita Rao';
+        document.getElementById('input-mobile').value = data.mobile || '9876543210';
+        document.getElementById('input-aadhaar').value = data.aadhaar || '432988345081';
+        document.getElementById('input-card').value = data.card || '4010942796235086';
+      } catch (err) {
+        alert('Failed to load sample customer: ' + err.message);
+      }
+    }
+
+    async function refreshDbView() {
+      const res = await fetch('/api/db-view');
+      const data = await res.json();
+
+      // Populate Customers Table
+      const cBody = document.querySelector('#table-customers tbody');
+      const officerSelect = document.getElementById('officer-cust-select');
+      const eraseSelect = document.getElementById('erase-cust-select');
+
+      officerSelect.innerHTML = '';
+      eraseSelect.innerHTML = '';
+
+      if (data.customers.length === 0) {
+        cBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-dim);">No customer rows found</td></tr>';
+      } else {
+        cBody.innerHTML = data.customers.map(c => {
+          const isAran = data.bank_mode === 'aran';
+          return `
+            <tr>
+              <td><strong>${escapeHtml(c.customer_ref)}</strong></td>
+              <td>${renderCell(c.name, isAran && c.name.startsWith('<PER:'))}</td>
+              <td>${renderCell(c.mobile, isAran)}</td>
+              <td>${renderCell(c.aadhaar, isAran)}</td>
+              <td>${renderCell(c.card, isAran)}</td>
+              <td>${escapeHtml(c.created_at)}</td>
+              <td><button class="btn btn-danger btn-sm" onclick="executeErase('${c.customer_ref}')">Delete Data</button></td>
+            </tr>
+          `;
+        }).join('');
+
+        data.customers.forEach(c => {
+          const opt1 = document.createElement('option');
+          opt1.value = c.customer_ref;
+          opt1.innerText = `${c.customer_ref} (${c.name})`;
+          officerSelect.appendChild(opt1);
+
+          const opt2 = document.createElement('option');
+          opt2.value = c.customer_ref;
+          opt2.innerText = `${c.customer_ref} (${c.name})`;
+          eraseSelect.appendChild(opt2);
+        });
+      }
+
+      // Populate Logs Table
+      const lBody = document.querySelector('#table-logs tbody');
+      if (data.logs.length === 0) {
+        lBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-dim);">No log rows found</td></tr>';
+      } else {
+        lBody.innerHTML = data.logs.map(l => `
+          <tr>
+            <td>${l.id}</td>
+            <td>${escapeHtml(l.created_at)}</td>
+            <td><span class="pill-token" style="background:#1e293b; border-color:#475569; color:#94a3b8;">${escapeHtml(l.level)}</span></td>
+            <td>${highlightText(l.message)}</td>
+          </tr>
+        `).join('');
+      }
+
+      // Populate Chat Table
+      const chBody = document.querySelector('#table-chat tbody');
+      if (data.chat_history.length === 0) {
+        chBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-dim);">No chat rows found</td></tr>';
+      } else {
+        chBody.innerHTML = data.chat_history.map(ch => `
+          <tr>
+            <td>${ch.id}</td>
+            <td>${escapeHtml(ch.created_at)}</td>
+            <td>${highlightText(ch.prompt)}</td>
+            <td>${highlightText(ch.provider_saw)}</td>
+            <td>${escapeHtml(ch.reply)}</td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    async function handleSignup(e) {
+      e.preventDefault();
+      const payload = {
+        name: document.getElementById('input-name').value,
+        mobile: document.getElementById('input-mobile').value,
+        aadhaar: document.getElementById('input-aadhaar').value,
+        card: document.getElementById('input-card').value,
+      };
+
+      const res = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      const resultDiv = document.getElementById('signup-result');
+
+      if (res.ok) {
+        resultDiv.innerHTML = `
+          <div class="note-box" style="background: rgba(16, 185, 129, 0.1); border-color: var(--token-border); color: var(--token-text);">
+            <strong>Registered ${escapeHtml(data.customer_ref)}:</strong>
+            ${data.bank_mode === 'aran' ? 'Data tokenised via Aran KYC PurposeVault.' : 'Data stored as RAW plaintext.'}
+          </div>
+        `;
+        refreshDbView();
+      } else {
+        resultDiv.innerHTML = `<div class="note-box" style="background: rgba(220, 38, 38, 0.1); border-color: var(--raw-pii-border); color: var(--raw-pii-text);">Error: ${escapeHtml(data.detail || 'Registration failed')}</div>`;
+      }
+    }
+
+    async function handleChat(e) {
+      e.preventDefault();
+      const promptInput = document.getElementById('chat-input');
+      const prompt = promptInput.value.trim();
+      if (!prompt) return;
+
+      const chatContainer = document.getElementById('chat-messages');
+      chatContainer.innerHTML += `<div class="chat-bubble chat-user">${escapeHtml(prompt)}</div>`;
+      promptInput.value = '';
+
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      });
+      const data = await res.json();
+
+      let peekHtml = '';
+      if (CONFIG.bank_mode === 'aran') {
+        peekHtml = `<div class="provider-peek">🛡️ <strong>AI Provider Saw:</strong> ${highlightText(data.provider_saw)}</div>`;
+      } else {
+        peekHtml = `<div class="provider-peek" style="color: #fca5a5;">⚠️ <strong>Provider Saw (Exposed):</strong> ${highlightText(data.provider_saw)}</div>`;
+      }
+
+      chatContainer.innerHTML += `
+        <div class="chat-bubble chat-bot">
+          ${escapeHtml(data.reply)}
+          ${peekHtml}
+        </div>
+      `;
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+      refreshDbView();
+    }
+
+    async function inspectOfficer() {
+      const cust = document.getElementById('officer-cust-select').value;
+      const role = document.getElementById('officer-role-select').value;
+      if (!cust) return;
+
+      const res = await fetch(`/api/officer-view/${cust}?role=${role}`);
+      const data = await res.json();
+      const disp = document.getElementById('officer-display');
+
+      if (!res.ok) {
+        disp.innerHTML = `<span style="color:#ef4444;">Error: ${escapeHtml(data.detail)}</span>`;
+        return;
+      }
+
+      disp.innerHTML = `
+        <div style="margin-bottom: 0.5rem; color: var(--accent-cyan);">
+          <strong>Customer:</strong> ${data.customer_ref} | <strong>Viewing Role:</strong> ${data.role.toUpperCase()}
+        </div>
+        <div style="display: grid; grid-template-columns: 120px 1fr; gap: 0.5rem;">
+          <div>Name:</div><div>${renderCell(data.fields.name.display, data.fields.name.is_token)}</div>
+          <div>Mobile:</div><div>${renderCell(data.fields.mobile.display, data.fields.mobile.is_token)}</div>
+          <div>Aadhaar:</div><div>${renderCell(data.fields.aadhaar.display, data.fields.aadhaar.is_token)}</div>
+          <div>Card:</div><div>${renderCell(data.fields.card.display, data.fields.card.is_token)}</div>
+        </div>
+      `;
+    }
+
+    async function handleBreach() {
+      const res = await fetch('/api/breach');
+      const data = await res.json();
+      const dumpArea = document.getElementById('breach-dump');
+      dumpArea.value = data.dump;
+      document.getElementById('btn-trace').disabled = false;
+    }
+
+    async function handleTrace() {
+      const dump = document.getElementById('breach-dump').value;
+      const res = await fetch('/api/trace-dump', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dump })
+      });
+      const data = await res.json();
+      const tr = data.trace;
+      const resDiv = document.getElementById('trace-result');
+
+      let summaryHtml = '';
+      if (data.bank_mode === 'legacy') {
+        const rawCount = tr.raw_matches ? tr.raw_matches.length : 0;
+        summaryHtml = `
+          <div class="note-box" style="background: rgba(220, 38, 38, 0.15); border-color: var(--raw-pii-border); color: #fca5a5;">
+            <strong>🚨 CRITICAL LEAK (Legacy Unprotected):</strong><br>
+            Aran detected <strong>${rawCount} RAW IDENTIFIERS</strong> exposed in the exfiltrated database.<br>
+            Matched tokens: ${tr.matched} (None protected by vault).
+          </div>
+        `;
+      } else {
+        const topSink = tr.top ? tr.top.sink : 'kyc-archive';
+        summaryHtml = `
+          <div class="note-box" style="background: rgba(16, 185, 129, 0.15); border-color: var(--token-border); color: #6ee7b7;">
+            <strong>🛡️ VAULT PROTECTED (Aran):</strong><br>
+            Zero raw identifiers detected. <strong>${tr.matched} tokens matched</strong> and traced to sink: <strong>${escapeHtml(topSink)}</strong>.
+          </div>
+        `;
+      }
+      resDiv.innerHTML = summaryHtml;
+    }
+
+    async function executeErase(custRef) {
+      if (!custRef) custRef = document.getElementById('erase-cust-select').value;
+      if (!custRef) return;
+      if (!confirm(`Are you sure you want to execute erasure for ${custRef}?`)) return;
+
+      const res = await fetch(`/api/erase/${custRef}`, { method: 'POST' });
+      const data = await res.json();
+      const resDiv = document.getElementById('erase-result');
+
+      if (data.bank_mode === 'legacy') {
+        resDiv.innerHTML = `
+          <div class="note-box" style="background: rgba(220, 38, 38, 0.15); border-color: var(--raw-pii-border); color: #fca5a5;">
+            <strong>⚠️ Legacy Row Deletion Only:</strong><br>
+            Customer ${escapeHtml(custRef)} was removed from customers table. Residual copies still exist in logs and chat history (see table viewer).
+          </div>
+        `;
+      } else {
+        resDiv.innerHTML = `
+          <div class="receipt-card">
+            <div class="receipt-valid">✅ CRYPTOGRAPHIC ERASURE VERIFIED (Post-Quantum)</div>
+            <div><strong>Algorithm:</strong> ${data.verification.alg || 'Ed25519+ML-DSA-65'}</div>
+            <div><strong>Signature Valid:</strong> ${data.verification.signature_valid}</div>
+            <div><strong>Included in Merkle Log:</strong> ${data.verification.included_in_log}</div>
+            <div><strong>Detokenise Status:</strong> <span style="color:#f87171;">${data.detokenise_checks.aadhaar.status} (${data.detokenise_checks.aadhaar.reason})</span></div>
+            <div><strong>Receipt Leaf Root:</strong> ${data.receipt.root.substring(0, 32)}...</div>
+          </div>
+        `;
+      }
+      refreshDbView();
+      if (CONFIG.bank_mode === 'aran') inspectOfficer();
+    }
+
+    // Event Listeners
+    document.getElementById('btn-insert-sample').addEventListener('click', loadSampleCustomer);
+    document.getElementById('form-signup').addEventListener('submit', handleSignup);
+    document.getElementById('form-chat').addEventListener('submit', handleChat);
+    document.getElementById('btn-refresh-db').addEventListener('click', refreshDbView);
+    document.getElementById('btn-inspect-officer').addEventListener('click', inspectOfficer);
+    document.getElementById('btn-breach').addEventListener('click', handleBreach);
+    document.getElementById('btn-trace').addEventListener('click', handleTrace);
+    document.getElementById('btn-erase').addEventListener('click', () => executeErase());
+
+    // Init
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadConfig();
+      await refreshDbView();
+    });
+  </script>
+</body>
+</html>
+

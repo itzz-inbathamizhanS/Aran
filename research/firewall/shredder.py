@@ -132,18 +132,91 @@ def _unb64(s):
 
 # ---------------------------------------------------------------- vault
 class PurposeVault:
-    def __init__(self, index_key=None, signing_key=None, clock=time.time, pq=True):
-        self.index_key = index_key or secrets.token_bytes(32)
-        self.sk = signing_key or Ed25519PrivateKey.generate()
-        self.signer = HybridSigner(ed_key=self.sk) if pq else None
+    def __init__(self, index_key=None, signing_key=None, clock=time.time, pq=True, store=None):
+        self.store = store
         self.clock = clock
-        self.keys = {}        # (customer_ref, purpose) -> bytearray key, absent once destroyed
-        self.locks = {}       # (customer_ref, purpose) -> retain-until timestamp
-        self.destroyed = {}   # (customer_ref, purpose) -> receipt
-        self.owner = {}       # HMAC(type, value) -> customer_ref
-        self.vault = {}       # token -> dict(customer, purpose, sink, type, nonce, ct)
-        self.log = MerkleLog()
         self.detok_calls = []
+
+        if self.store is not None:
+            # 1. Index Key (A2)
+            if index_key is not None:
+                self.index_key = index_key
+                self.store.save_system_key("index_key", self.index_key)
+            else:
+                loaded_idx = self.store.load_system_key("index_key")
+                if loaded_idx is not None:
+                    self.index_key = loaded_idx
+                else:
+                    self.index_key = secrets.token_bytes(32)
+                    self.store.save_system_key("index_key", self.index_key)
+
+            # 2. Signing Keys
+            if signing_key is not None:
+                self.sk = signing_key
+                self.signer = HybridSigner(ed_key=self.sk) if pq else None
+            else:
+                loaded_signer = self.store.load_hybrid_signer("primary_signer")
+                if loaded_signer is not None:
+                    ed_priv, ml_priv, ed_pub, ml_pub = loaded_signer
+                    self.sk = Ed25519PrivateKey.from_private_bytes(ed_priv)
+                    ml_sk = serialization.load_der_private_key(ml_priv, password=None)
+                    self.signer = HybridSigner(ed_key=self.sk, ml_key=ml_sk) if pq else None
+                else:
+                    self.sk = Ed25519PrivateKey.generate()
+                    self.signer = HybridSigner(ed_key=self.sk) if pq else None
+                    if self.signer is not None:
+                        ed_priv_bytes = self.sk.private_bytes(
+                            serialization.Encoding.Raw,
+                            serialization.PrivateFormat.Raw,
+                            serialization.NoEncryption(),
+                        )
+                        ml_priv_bytes = self.signer.ml.private_bytes(
+                            serialization.Encoding.DER,
+                            serialization.PrivateFormat.PKCS8,
+                            serialization.NoEncryption(),
+                        )
+                        pub = self.signer.public()
+                        self.store.save_hybrid_signer(
+                            "primary_signer",
+                            ed_priv_bytes,
+                            ml_priv_bytes,
+                            pub["ed25519"],
+                            pub["ml_dsa_65"],
+                        )
+
+            # 3. Purpose Keys & Locks
+            self.keys = {}
+            self.locks = {}
+            loaded_pkeys = self.store.load_all_purpose_keys()
+            for (c, p), val in loaded_pkeys.items():
+                self.keys[(c, p)] = val["key"]
+                if val.get("locked_until") is not None:
+                    self.locks[(c, p)] = val["locked_until"]
+
+            # 4. Vault Tokens
+            self.vault = self.store.load_all_vault_tokens()
+
+            # 5. Owner Index
+            self.owner = self.store.load_all_owners()
+
+            # 6. Destroyed Receipts
+            self.destroyed = self.store.load_all_erasure_receipts()
+
+            # 7. Merkle Log
+            self.log = MerkleLog()
+            loaded_leaves = self.store.load_merkle_log()
+            self.log.entries = [x[2] for x in loaded_leaves]
+            self.log.leaves = [x[1] for x in loaded_leaves]
+        else:
+            self.index_key = index_key or secrets.token_bytes(32)
+            self.sk = signing_key or Ed25519PrivateKey.generate()
+            self.signer = HybridSigner(ed_key=self.sk) if pq else None
+            self.keys = {}        # (customer_ref, purpose) -> bytearray key, absent once destroyed
+            self.locks = {}       # (customer_ref, purpose) -> retain-until timestamp
+            self.destroyed = {}   # (customer_ref, purpose) -> receipt
+            self.owner = {}       # HMAC(type, value) -> customer_ref
+            self.vault = {}       # token -> dict(customer, purpose, sink, type, nonce, ct)
+            self.log = MerkleLog()
 
     # ------------------------------------------------------------ customers and keys
     def _owner_key(self, typ, value):
@@ -152,10 +225,21 @@ class PurposeVault:
     def enroll(self, customer_ref, identifiers, retain=None):
         """identifiers: {type: value}. retain: {purpose: retain-until timestamp}."""
         for typ, value in identifiers.items():
-            self.owner[self._owner_key(typ, value)] = customer_ref
+            k = self._owner_key(typ, value)
+            self.owner[k] = customer_ref
+            if self.store is not None:
+                self.store.save_owner(k, customer_ref)
         for p in PURPOSES:
-            self.keys[(customer_ref, p)] = bytearray(secrets.token_bytes(32))
-            self.log.append(dict(event="KEY_CREATED", customer=customer_ref, purpose=p, at=round(self.clock(), 3)))
+            k = (customer_ref, p)
+            if k not in self.keys:
+                key_bytes = secrets.token_bytes(32)
+                self.keys[k] = bytearray(key_bytes)
+                event = dict(event="KEY_CREATED", customer=customer_ref, purpose=p, at=round(self.clock(), 3))
+                idx = self.log.append(event)
+                until = (retain or {}).get(p)
+                if self.store is not None:
+                    self.store.save_purpose_key(customer_ref, p, key_bytes, locked_until=until)
+                    self.store.append_merkle_leaf(idx, self.log.leaves[idx], event)
         for p, until in (retain or {}).items():
             self.locks[(customer_ref, p)] = until
 
@@ -190,8 +274,14 @@ class PurposeVault:
                 break
         nonce = secrets.token_bytes(12)
         ct = AESGCM(bytes(key)).encrypt(nonce, value.encode(), tok.encode())
+        at_ts = round(self.clock(), 3)
         self.vault[tok] = dict(customer=customer_ref, purpose=purpose, sink=sink, type=typ, nonce=nonce, ct=ct,
-                               at=round(self.clock(), 3))
+                               at=at_ts)
+        if self.store is not None:
+            try:
+                self.store.save_vault_token(tok, customer_ref, purpose, sink, typ, nonce, ct, at_ts)
+            except Exception:
+                pass
         return tok
 
     def detokenise(self, token, caller="unknown"):
@@ -235,6 +325,11 @@ class PurposeVault:
             receipt = dict(body, signature=sig["ed25519"], public_key=pub["ed25519"],
                            pq_signature=sig["ml_dsa_65"], pq_public_key=pub["ml_dsa_65"])
         self.destroyed[k] = receipt
+        if self.store is not None:
+            self.store.delete_purpose_key(customer_ref, purpose)
+            self.store.append_merkle_leaf(idx, self.log.leaves[idx], event)
+            self.store.save_erasure_receipt(customer_ref, purpose, receipt)
+            self.store.checkpoint_and_truncate()
         return receipt
 
     def public_key_pem(self):
@@ -284,8 +379,8 @@ class PurposeFirewall(AranFirewall):
         super().__init__(detector, key, **kw)
         self.vault, self.sink_purpose = vault, sink_purpose
 
-    def _replace(self, f, value, sink):
-        purpose = self.sink_purpose.get(sink)
+    def _replace(self, f, value, sink, purpose=None):
+        purpose = purpose or self.sink_purpose.get(sink)
         if purpose and f.type in ("AADHAAR", "CARD", "MOBILE", "PAN", "UPI"):
             cust = self.vault.owner_of(f.type, value)
             if cust is not None:
