@@ -34,6 +34,18 @@ Before: 25 serious accessibility problems over the 46 runs. After: none. No cons
 | 12 | **The landing page was all zeros** on a fresh server, with a blank "Values found by type" card and a red alert card even with no alerts | Overview | First-run card with **Send 6 bank requests**, **Start normal traffic** and **Take the guided tour**; the numbers fill in from the live firewall. Empty cards say what will appear; the alert card turns red only when an alert is open |
 | 13 | **No path through the site:** after a page, the only way on was the menu | Every page in every app | **Previous / Next** links at the foot of each page, in site order, with the page number and section (`A.site.pagerHTML`). Translated into Tamil and Hindi |
 
+## Round 3
+
+| # | Problem | Where | Fix |
+|---|---|---|---|
+| 14 | **The side-by-side result was buried:** after "Send to both", you had to scroll inside two small frames to see what each bank stored | Side by side | A result card under the form: "readable in its database" (Bank A 4 of 4, Bank B 0 of 4) and a field-by-field table of what was typed and what each bank stored, real values in red and tokens in teal |
+| 15 | **Each frame repeated the whole bank page header** | Side by side | Inside the frames the eyebrow, intro text and page links are hidden; the frame header already names the bank |
+| 16 | **Placeholders looked like typed numbers** (grey digits in a mono font) | Bank A, Bank B, side by side | Placeholders now read "e.g. …", "12 digits" or "or press Fill a valid sample" |
+| 17 | **Buttons that act on nothing:** "Inspect record" and "Delete my data" were active with "No customers" | Bank A, Bank B | Disabled until the bank has a customer |
+| 18 | **Crowded phone header** with a sound button that showed only dots | Console on a phone | The sound toggle is hidden on phones (it is for presenting on a big screen) |
+
+The full check was run again after these changes: no errors, no sideways overflow, and zero accessibility problems on all 46 runs.
+
 ## Still open
 
 - **`test_core_lockdown`** expects the core to refuse `/api` calls without the internal secret. It fails when the core is started with `ARAN_CONSOLE_OPEN=1`, which is how `run_demo.sh` and Docker Compose start it so that the console works. That is the intended trade-off for a core that only listens on this computer. The test should skip when console-open is set.
@@ -51,5 +63,6 @@ Before: 25 serious accessibility problems over the 46 runs. After: none. No cons
 | `07-overview-after-send.png` | Overview after one click: a real Aadhaar and its token, live numbers |
 | `08-pager.png` | Previous / Next links at the foot of a page |
 | `09-pager-phone.png` | The same on a phone |
+| `10-side-by-side-stored.png` | Side by side after "Send to both": what each bank stored |
 
 Beginner doc for these ideas: [Learn 25](Aran%20Learn%2025%20-%20Accessibility%2C%20Tenant%20Isolation%20and%20Containers.md).

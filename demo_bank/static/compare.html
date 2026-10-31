@@ -31,13 +31,13 @@
   <section class="card kit-gap-s">
     <div class="between"><h2 class="h3">Sign the same customer up at both banks</h2><button class="btn ghost sm" id="sample"><span>Fill a valid sample</span></button></div>
     <form class="kit-cols-4 kit-gap-s" id="both">
-      <label class="field">Name<input id="s-name" required placeholder="Sunita Rao"></label>
-      <label class="field">Mobile<input id="s-mobile" class="mono" required placeholder="9876543210"></label>
-      <label class="field">Aadhaar<input id="s-aadhaar" class="mono" required placeholder="432988345081"></label>
-      <label class="field">Card<input id="s-card" class="mono" required placeholder="4010942796235086"></label>
+      <label class="field">Name<input id="s-name" required placeholder="e.g. Sunita Rao"></label>
+      <label class="field">Mobile<input id="s-mobile" class="mono" required placeholder="e.g. 98765 43210"></label>
+      <label class="field">Aadhaar<input id="s-aadhaar" class="mono" required placeholder="12 digits"></label>
+      <label class="field">Card<input id="s-card" class="mono" required placeholder="16 digits"></label>
       <button class="btn" type="submit" id="send"><span>Send to both</span><span class="arr">→</span></button>
     </form>
-    <div id="both-out"><p class="small muted" style="margin-top:12px">Sample data only. Watch the customers table in each bank below.</p></div>
+    <div id="both-out"><p class="small muted" style="margin-top:12px">Sample data only. Press <b>Fill a valid sample</b>, then <b>Send to both</b> to see what each bank stores.</p></div>
   </section>
 
   <div class="kit-split kit-gap-s">
@@ -79,7 +79,15 @@
     const body = { name: $('#s-name').value.trim(), mobile: $('#s-mobile').value.trim(), aadhaar: $('#s-aadhaar').value.trim(), card: $('#s-card').value.trim(), customer_ref: ref };
     const [a, b] = await Promise.allSettled([K.api(L.bankA + '/api/customers', { body }), K.api(L.bankB + '/api/customers', { body })]);
     const line = (r, n) => (r.status === 'fulfilled' ? `${n}: <b class="mono">${esc(r.value.customer_ref)}</b> opened` : `${n}: <span class="t-leak">${esc(r.reason.message)}</span>`);
-    $('#both-out').innerHTML = U.note(a.status === 'fulfilled' && b.status === 'fulfilled' ? 'ok' : 'err', `${line(a, 'Bank A')} · ${line(b, 'Bank B')}. Bank A stored the real numbers; Bank B stored Aran tokens.`);
+    if (a.status !== 'fulfilled' || b.status !== 'fulfilled') { $('#both-out').innerHTML = U.note('err', `${line(a, 'Bank A')} · ${line(b, 'Bank B')}`); return; }
+    /* what each bank actually wrote to its database, field by field, next to what was typed */
+    const F = [['name', 'Name'], ['mobile', 'Mobile'], ['aadhaar', 'Aadhaar'], ['card', 'Card']], A_ = a.value, B_ = b.value;
+    const raw = (r) => F.filter(([k]) => String(r[k]) === body[k]).length;
+    const cellv = (v, typed) => (String(v) === typed ? `<mark class="m-raw">${esc(v)}</mark>` : `<mark class="m-token">${esc(v)}</mark>`);
+    $('#both-out').innerHTML = `<div class="kit-gap-s">${U.note('ok', `${line(a, 'Bank A')} · ${line(b, 'Bank B')}`)}</div>
+      <div class="kit-cmp kit-gap-s"><div class="kit-cmp-v"><span class="label">Bank A · readable in its database</span><b class="t-leak">${raw(A_)} of ${F.length}</b></div><div class="kit-cmp-v"><span class="label">Bank B · readable in its database</span><b class="t-token">${raw(B_)} of ${F.length}</b></div></div>
+      <div class="kit-scroll kit-gap-s"><table class="tbl dense"><thead><tr><th>Field</th><th>Typed</th><th>Bank A stored</th><th>Bank B stored</th></tr></thead><tbody>${F.map(([k, n]) => `<tr><td>${n}</td><td class="mono">${esc(body[k])}</td><td>${cellv(A_[k], body[k])}</td><td>${cellv(B_[k], body[k])}</td></tr>`).join('')}</tbody></table></div>
+      <p class="small muted" style="margin-top:8px">Red is the real value, readable by anyone who gets the database. Teal is an Aran token: useless on its own, and unreadable for good once the customer is erased.</p>`;
     ['frame-a', 'frame-b'].forEach((id) => { const f = $('#' + id); f.src = f.src; }); tiles();
   }); };
 })(window.ARAN);

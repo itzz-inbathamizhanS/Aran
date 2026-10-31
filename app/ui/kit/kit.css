@@ -81,6 +81,9 @@ mark.m-token, mark.m-raw { padding: 1px 4px; border-radius: 3px; color: inherit;
 html.embed .topbar, html.embed .kit-sub, html.embed .menu { display: none !important; }
 html.embed .page.kit { padding-top: 24px; }
 html.embed .phead h1 { font-size: var(--text-size-h2); }
+/* inside the side-by-side frames the frame header already says which bank it is */
+html.embed .phead .eyebrow, html.embed .phead .lede, html.embed .pager { display: none; }
+html.embed .phead { margin-bottom: var(--space-3) !important; }
 
 /* empty state */
 .kit-empty { text-align: center; padding: var(--space-7) var(--space-5); }
@@ -110,3 +113,10 @@ html.embed .phead h1 { font-size: var(--text-size-h2); }
 /* section bar: "← Console", the section name, then its pages */
 .kit-apps .back { color: var(--text-color); }
 .kit-apps .kit-sec { align-self: center; padding: 0 6px 0 10px; border-left: 1px solid var(--glass-line-color); font: 400 .6875rem/1 var(--font-mono); text-transform: uppercase; letter-spacing: -.02em; color: var(--accent-color); white-space: nowrap; }
+
+/* side by side: how many identifiers each bank can read */
+.kit-cmp { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.kit-cmp-v { display: flex; flex-direction: column; gap: 6px; padding: var(--space-4); border: 1px solid var(--border-color); border-radius: var(--radius-input); background: var(--surface-2-color); }
+.kit-cmp-v .label { margin: 0; }
+.kit-cmp-v b { font: 400 2rem/1 var(--font-mono); }
+@media (max-width: 760px) { .kit-cmp { grid-template-columns: 1fr; } }

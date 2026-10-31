@@ -27,8 +27,8 @@
       <p class="small muted" id="write-hint">The write path: what this bank stores when a customer opens an account.</p>
       <form class="kit-form kit-gap-s" id="signup">
         <label class="field">Full name<input id="f-name" required placeholder="e.g. Sunita Rao"></label>
-        <div class="grid g2"><label class="field">Mobile · 10 digits<input id="f-mobile" class="mono" required inputmode="numeric" placeholder="9876543210"></label><label class="field">Aadhaar · 12 digits, Verhoeff<input id="f-aadhaar" class="mono" required inputmode="numeric" placeholder="432988345081"></label></div>
-        <label class="field">Card · 16 digits, Luhn<input id="f-card" class="mono" required inputmode="numeric" placeholder="4010942796235086"></label>
+        <div class="grid g2"><label class="field">Mobile · 10 digits<input id="f-mobile" class="mono" required inputmode="numeric" placeholder="e.g. 98765 43210"></label><label class="field">Aadhaar · 12 digits, Verhoeff<input id="f-aadhaar" class="mono" required inputmode="numeric" placeholder="or press Fill a valid sample"></label></div>
+        <label class="field">Card · 16 digits, Luhn<input id="f-card" class="mono" required inputmode="numeric" placeholder="or press Fill a valid sample"></label>
         <button class="btn" type="submit" id="open"><span>Open account</span><span class="arr">→</span></button>
       </form>
       <div id="signup-out"></div>
@@ -114,6 +114,8 @@
     const opts = cs.map((c) => `<option value="${esc(c.customer_ref)}">${esc(c.customer_ref)}${aran ? '' : ' · ' + esc(c.name)}</option>`).join('') || '<option value="">No customers</option>';
     const keep = (sel) => { const v = sel.value; sel.innerHTML = opts; if ([...sel.options].some((o) => o.value === v)) sel.value = v; };
     keep($('#o-cust')); keep($('#e-cust'));
+    /* nothing to inspect or erase until a customer exists */
+    $('#o-go').disabled = !cs.length; $('#erase').disabled = !cs.length;
   }
 
   $('#sample').onclick = async () => { try { const s = await K.api('/api/sample-customer'); $('#f-name').value = s.name; $('#f-mobile').value = s.mobile; $('#f-aadhaar').value = s.aadhaar; $('#f-card').value = s.card; } catch (e) { U.toast('Could not load a sample'); } };
