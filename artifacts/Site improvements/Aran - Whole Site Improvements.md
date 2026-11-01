@@ -89,6 +89,22 @@ The accessibility scanner cannot see these, so every page was driven like a pers
 
 Checked again after the fixes: no wheel traps left on any page, every button reacts (the only silent ones are form buttons that show the browser's "fill in this field" note), and the full check found no errors, no sideways overflow and zero accessibility problems.
 
+## Round 7: speed, steadiness and polish
+
+Every console page was measured in a real browser: bytes downloaded, time to the largest text (LCP), layout shift (CLS: how much the page jumps while loading; under 0.1 is good) and time the main thread was blocked.
+
+| # | Problem | Measured before | Fix | After |
+|---|---|---|---|---|
+| 37 | **Nothing was compressed**: every visit downloaded about 680 KB | 680 KB per page | Gzip on the server (`GZipMiddleware`); Vercel compresses on its own | 280 KB (computer), 230 KB (phone) |
+| 38 | **Every visit re-checked every file** (`no-cache` on all scripts) | 33 checks per page view | Files asked for with `?v=N` are cached for a year (`immutable`); `index.html` bumps N on each change, so a new version is still picked up at once | Repeat visits load scripts from the browser cache |
+| 39 | **Pages jumped as the web fonts arrived**: the big title rewrapped from three lines to two and pushed everything up | CLS 0.26 to 0.41 on 12 pages | Fallback fonts sized to the web fonts (`size-adjust`: Grotesk 92.8% of Arial, Martian Mono 116.6% of Courier New), and the first page waits up to 1.5 s for the fonts | CLS 0 on most pages, at most 0.05 (one tour chapter on a phone: 0.2, from its animation) |
+| 40 | **The first visit after the server slept said "Server unreachable"** | | A **Waking Aran** screen that explains free hosting sleeps after 15 minutes, with a seconds counter, and the top bar says Reconnecting | |
+| 41 | **Shared links had no preview** in WhatsApp, LinkedIn or Slack | | Open Graph and Twitter tags, a 1200×630 preview image (`og.png`), a fuller description and a theme colour | |
+| 42 | **"Page not found" was a dead end** and the tab title read "Aran · Aran" | | A real title, the address that was not found, and buttons to Overview and to all pages | |
+| 43 | **Screen readers stayed at the old spot** after moving to another page | | Focus moves to the new page | |
+| 44 | **Printing** included the top bar, buttons and 3D scenes on black | | A print layout: content on white, links printed with their address | |
+| 45 | **Render's health ping got "405 Method Not Allowed"** (`HEAD /`) | | The pages answer `HEAD` as well as `GET` | |
+
 ## Still open
 
 - **`test_core_lockdown`** expects the core to refuse `/api` calls without the internal secret. It fails when the core is started with `ARAN_CONSOLE_OPEN=1`, which is how `run_demo.sh` and Docker Compose start it so that the console works. That is the intended trade-off for a core that only listens on this computer. The test should skip when console-open is set.
@@ -112,5 +128,7 @@ Checked again after the fixes: no wheel traps left on any page, every button rea
 | `13-reconnecting-bar.png` | LIVE turns to Reconnecting while the server is away |
 | `14-server-restarted-bar.png` | The notice after a server restart |
 | `15-solid-top-bar-on-scroll.png` | The top bar with a solid backing once the page scrolls |
+| `16-waking-screen.png` | The first visit while the server wakes up |
+| `17-link-preview-image.png` | The picture shown when the site is shared |
 
 Beginner doc for these ideas: [Learn 25](Aran%20Learn%2025%20-%20Accessibility%2C%20Tenant%20Isolation%20and%20Containers.md).

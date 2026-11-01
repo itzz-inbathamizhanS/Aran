@@ -4,6 +4,12 @@
    Change a value here and every page, component and scene follows.
    ========================================================================== */
 
+/* Fallback faces sized to match the web fonts, so text keeps its width while the web fonts load
+   and the page does not jump when they arrive (measured: Familjen Grotesk is 92.8% as wide as
+   Arial, Martian Mono 116.6% as wide as Courier New) */
+@font-face { font-family: "Grotesk Fallback"; src: local("Arial"), local("Helvetica Neue"), local("Helvetica"), local("Liberation Sans"); size-adjust: 92.8%; }
+@font-face { font-family: "Mono Fallback"; src: local("Courier New"), local("Liberation Mono"), local("Menlo"); size-adjust: 116.6%; }
+
 :root,
 :root[data-theme="dark"] {
   color-scheme: dark;
@@ -54,9 +60,9 @@
   --hero-ink-color: #0b0c10;        /* line colour drawn on that panel */
 
   /* 1.2 type ------------------------------------------------------------ */
-  --font-display: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
-  --font-body: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "Martian Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --font-display: "Familjen Grotesk", "Grotesk Fallback", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Familjen Grotesk", "Grotesk Fallback", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Martian Mono", "Mono Fallback", ui-monospace, "SFMono-Regular", Menlo, monospace;
   --font-tamil: "Noto Sans Tamil", "Latha", sans-serif;
   --font-serif: "Instrument Serif", Georgia, serif;   /* editorial accent only */
 

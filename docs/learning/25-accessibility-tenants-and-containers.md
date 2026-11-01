@@ -105,12 +105,29 @@ The console asks the server for fresh numbers every few seconds. This is called 
 
 Two more habits: **skip a poll while the last one is still running** (so a slow server never gets a queue of requests), and **stop polling in a hidden tab** (the browser tells you with the `visibilitychange` event).
 
+## 5. Fast and steady pages
+
+Three numbers tell you if a page feels good. Chrome's DevTools (Lighthouse tab) shows all three:
+
+| Number | Means | Good |
+|---|---|---|
+| **LCP** (Largest Contentful Paint) | When the biggest text or picture appears | under 2.5 s |
+| **CLS** (Cumulative Layout Shift) | How much things jump while the page loads | under 0.1 |
+| **Bytes** | How much is downloaded | as little as possible |
+
+What we did, and why it works:
+
+- **Compression (gzip).** Text files shrink to about a third. One line in FastAPI: `app.add_middleware(GZipMiddleware, minimum_size=1024)`.
+- **Cache busting.** Each script is linked as `pages.js?v=27`. The server tells the browser to keep any `?v=` file for a year. When the file changes we bump the number, so the browser sees a new address and fetches it. You get long caching without stale files.
+- **Font fallbacks with `size-adjust`.** While a web font downloads, the browser shows a system font. If that font is wider, lines wrap differently and the page jumps when the real font arrives. Scaling the fallback to the same width (`size-adjust: 92.8%`) keeps lines where they are.
+
 ## Exercises
 
 1. Open the light theme and change `--token-color` back to `#006f66`. Run the axe snippet above on Bank B. Which element fails, and with what ratio?
 2. Press Tab on the Results page on a phone-sized window until a wide table is focused, then use the arrow keys. What does a screen reader announce?
 3. Call the core's `/api/process` twice with the same Aadhaar number, once with `"scope": "bankX"` and once with `"scope": "bankY"`, each with its own `customer_ref`. Do the two answers mention an owner conflict? Now send it twice with no scope and two different refs: what changes?
 4. Run `docker compose up --build`, then `docker compose restart bank-b`. Read Bank B's log: why does it not create a second workspace?
+6. In DevTools, Network tab, reload the Overview with "Disable cache" on and off. How many kilobytes does each load take, and why?
 5. Open the console, then stop the core server. How long until the bar appears? Start the server again: which bar do you see, and why?
 
 ## Words to know
@@ -130,3 +147,6 @@ Two more habits: **skip a poll while the last one is still running** (so a slow 
 | Polling | Asking the server for fresh data every few seconds. |
 | Backoff | Waiting longer after each failed try. |
 | Boot id | A random id a server picks each time it starts, so clients can tell it restarted. |
+| LCP / CLS | When the main content appears / how much the page jumps while loading. |
+| Gzip | A way to compress text files sent over the network. |
+| Cache busting | Changing a file's address (`?v=N`) when it changes, so long caching is safe. |

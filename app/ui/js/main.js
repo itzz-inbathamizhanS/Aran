@@ -43,9 +43,12 @@
 
   /* ---- routing ---- */
   const parse = () => { const [p, n] = location.hash.slice(1).split('/'); return { page: p || FIRST, n: Math.max(0, Math.min(12, parseInt(n, 10) || 0)) }; };
+  const bootAt = Date.now(); let elT = 0, rendered = false;
   function startScreen(kind, err) {
+    if (!qs.get('state')) { document.documentElement.dataset.conn = kind === 'offline' ? 'down' : 'live'; $$('.env .live').forEach((b) => (b.textContent = kind === 'offline' ? t('Reconnecting') : t('LIVE'))); }
+    clearInterval(elT); elT = setInterval(() => { const e = document.getElementById('st-el'); if (e) e.textContent = Math.round((Date.now() - bootAt) / 1000); else clearInterval(elT); }, 1000);
     const failed = kind === 'failed';
-    return `<div class="page"><div class="card plus startcard" role="status"><div class="spinner"></div><h2>Starting Aran</h2><p class="muted" style="max-width:480px;margin:12px auto 0">${failed ? `<span class="t-leak">Load failed: ${U.esc(err || 'unknown error')}</span>` : 'Loading the trained detector, NER and context models, and enrolling customers. This takes a few seconds after a cold start.'}</p>${kind === 'offline' ? '<p class="small muted" style="margin-top:12px">Server unreachable. Retrying every 2 s.</p>' : ''}${qs.get('state') ? `<p class="small" style="margin-top:24px"><a class="btn ghost" href="${location.pathname}">Leave this preview</a></p>` : ''}</div></div>`;
+    return `<div class="page"><div class="card plus startcard" role="status"><div class="spinner"></div><h2>${kind === 'offline' ? t('Waking Aran') : t('Starting Aran')}</h2><p class="muted" style="max-width:480px;margin:12px auto 0" ${kind === 'offline' ? 'hidden' : ''}>${failed ? `<span class="t-leak">Load failed: ${U.esc(err || 'unknown error')}</span>` : 'Loading the trained detector, NER and context models, and enrolling customers. This takes a few seconds after a cold start.'}</p>${kind === 'offline' ? `<p class="muted" style="max-width:480px;margin:12px auto 0">${t('Waking the Aran server. Free hosting puts it to sleep after 15 minutes without visitors; waking takes 30 to 60 seconds. This page carries on by itself.')}</p>` : ''}${failed ? '' : `<p class="small mono muted" style="margin-top:12px"><span id="st-el">${Math.round((Date.now() - bootAt) / 1000)}</span> s</p>`}${qs.get('state') ? `<p class="small" style="margin-top:24px"><a class="btn ghost" href="${location.pathname}">Leave this preview</a></p>` : ''}</div></div>`;
   }
   function destroy() { cleanup.forEach((f) => { try { typeof f === 'function' && f(); } catch (e) {} }); cleanup = []; ScrollTrigger.getAll().forEach((s) => s.kill()); gsap.killTweensOf('*'); }
   function render() {
@@ -67,7 +70,14 @@
     } else if (pg) {
       view.innerHTML = `<div class="page">${U.phead(t(pg.eyebrow), t(pg.title), t(pg.lede))}<div class="pagebody">${pg.view()}</div>${A.site.pagerHTML(page, { t })}</div>`;
       U.revealHeading($('h1[data-split]', view)); const c = pg.mount && pg.mount($('.pagebody', view)); c && cleanup.push(c); U.reveal(view);
-    } else { view.innerHTML = `<div class="page"><div class="card plus startcard"><h2>Page not found</h2><p class="muted" style="margin-top:12px">Pick a page from the menu.</p></div></div>`; }
+    } else {
+      /* unknown address: say so, and offer Overview or the full menu */
+      document.title = t('Page not found') + ' · Aran';
+      view.innerHTML = `<div class="page"><div class="card plus startcard"><h1 class="h3" style="font-size:var(--text-size-h3)">${t('Page not found')}</h1><p class="muted" style="margin-top:12px">${t('There is no page called')} <span class="mono">#${U.esc(page)}</span>.</p><div class="row" style="justify-content:center;margin-top:20px;flex-wrap:wrap"><a class="btn" href="#${FIRST}"><span>${t('Go to Overview')}</span></a><button class="btn secondary" type="button" id="nf-menu"><span>${t('All pages')}</span></button></div></div></div>`;
+      $('#nf-menu', view).onclick = () => setMenu(true);
+    }
+    /* after moving to another page, focus goes to the page so screen readers start at its top */
+    if (rendered) view.focus({ preventScroll: true }); rendered = true;
     ScrollTrigger.refresh(); syncBar();
   }
   /* the top bar switches to dark ink while it sits over the light hero panel */
@@ -90,9 +100,12 @@
     else bar.hidden = true;
   };
   A.on('conn', conn);
+  /* the first page waits (at most 1.5 s) for the two web fonts, so its big title is laid out once
+     and does not jump when the fonts arrive */
+  const fontsIn = document.fonts ? Promise.race([Promise.all(['400 1em "Familjen Grotesk"', '400 1em "Martian Mono"'].map((f) => document.fonts.load(f))).catch(() => {}), U.sleep(1500)]) : Promise.resolve();
   if (qs.get('state')) render();
   else {
     view.innerHTML = startScreen('starting');
-    A.boot((st, err) => { view.innerHTML = startScreen(st, err); }).then(() => { badge(); A.poll(); render(); });
+    A.boot((st, err) => { view.innerHTML = startScreen(st, err); }).then(async () => { await fontsIn; document.documentElement.dataset.conn = 'live'; $$('.env .live').forEach((b) => (b.textContent = t('LIVE'))); badge(); A.poll(); render(); });
   }
 })(window.ARAN);

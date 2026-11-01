@@ -502,3 +502,13 @@ html[data-conn="down"] .env b { color: var(--warning-color); }
 @keyframes blink { 50% { opacity: .25; } }
 @media (prefers-reduced-motion: reduce) { .connbar, .connbar .dot { animation: none; } }
 @media (max-width: 600px) { .connbar { top: 70px; font-size: .8125rem; } }
+#view:focus { outline: none; } /* focused on page change for screen readers; no ring needed */
+
+/* print: the page content on white, without the top bar, menu, buttons or 3D scenes */
+@media print {
+  .topbar, .menu, .connbar, .pager, .skip, canvas, .hero-hint, .ctl, .btn, .toast { display: none !important; }
+  html, body { background: #fff !important; color: #000 !important; }
+  .card { break-inside: avoid; box-shadow: none !important; border-color: #bbb !important; background: #fff !important; }
+  main#view { padding-top: 0 !important; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: .8em; }
+}
