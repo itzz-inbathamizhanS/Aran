@@ -102,3 +102,11 @@ def test_stats_has_a_30_minute_series_that_counts_requests(eng):
     eng.process("Aadhaar 2345 6789 0124 for the KYC file", "core-banking", "kyc-archive")
     after = eng.stats()["per_minute"][-1]
     assert after["requests"] >= before[-1]["requests"] + 1
+
+
+def test_health_and_stats_carry_the_same_boot_id(eng, monkeypatch):
+    # the console compares this id between polls to tell a restart (fresh demo data) from a reconnect
+    import main
+    monkeypatch.setattr(main, "eng", lambda: eng)
+    h, s = main.health(), main.stats()
+    assert h["boot"] == s["boot"] == main.BOOT_ID and len(main.BOOT_ID) == 12

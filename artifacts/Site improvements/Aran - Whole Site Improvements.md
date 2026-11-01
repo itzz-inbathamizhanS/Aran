@@ -55,6 +55,22 @@ The full check was run again after these changes: no errors, no sideways overflo
 
 The full check was run again: no errors, no sideways overflow, zero accessibility problems on all 46 runs.
 
+## Round 5: the live site (Render and Vercel)
+
+The Render logs showed no server errors. The problems were in how the page behaved when the server went away: Render's free plan sleeps when idle and restarts on every deploy, and each restart wipes the demo data held in memory.
+
+| # | Problem | Where | Fix |
+|---|---|---|---|
+| 21 | **The page said LIVE in green while the server was gone**, and the numbers silently stopped changing | Top bar, every console page | After two failed polls in a row, LIVE turns amber and reads **Reconnecting**, and a bar explains that the server may be waking up and that it retries on its own |
+| 22 | **Requests piled up while the server was asleep**: every 3 seconds, even when the last call had not answered | `js/data.js` | A key that is still loading is skipped. While disconnected only `/api/health` is asked, slower each time (3 s up to 15 s) |
+| 23 | **Hidden tabs kept polling** all day | Every console page | Polling stops while the tab is hidden and refreshes at once when you come back |
+| 24 | **After a restart the data was gone with no explanation**: customers, alerts and counts reset to zero | Every console page | The server now sends a `boot` id in `/api/health` and `/api/stats`. When it changes, a bar says the server restarted and the demo data starts fresh. New test `test_health_and_stats_carry_the_same_boot_id` |
+| 25 | **Unclear error text** when the host answered 502, 503 or 504 ("HTTP 504") | Any button that calls the server | "The Aran server is waking up or restarting. Try again in a few seconds." |
+| 26 | **Names in mixed case** in the customer list (SURESH KULKARNI next to Rajesh Verma) | Customers & erasure | Names show in title case in lists. The data is unchanged; ALL CAPS names stay in the records on purpose, because real bank records contain them |
+| 27 | **The sound button looked like a row of dots** when off | Top bar | A still equaliser icon when off; it moves when sound is on |
+
+Tested with the console behind a Vercel-style proxy that can switch the server off: the bar appears within about 6 seconds, only 6 requests go out in 20 seconds while disconnected (before: about 30), the page recovers by itself, and a real server restart shows the restart bar. The full check found no errors, no sideways overflow and zero accessibility problems on all 46 runs.
+
 ## Still open
 
 - **`test_core_lockdown`** expects the core to refuse `/api` calls without the internal secret. It fails when the core is started with `ARAN_CONSOLE_OPEN=1`, which is how `run_demo.sh` and Docker Compose start it so that the console works. That is the intended trade-off for a core that only listens on this computer. The test should skip when console-open is set.
@@ -75,5 +91,7 @@ The full check was run again: no errors, no sideways overflow, zero accessibilit
 | `10-side-by-side-stored.png` | Side by side after "Send to both": what each bank stored |
 | `11-overview-chart-dark.png`, `11-overview-chart-light.png` | The per-minute chart with its tooltip, dark and light |
 | `12-bank-a-tiles.png` | Bank A's live tiles |
+| `13-reconnecting-bar.png` | LIVE turns to Reconnecting while the server is away |
+| `14-server-restarted-bar.png` | The notice after a server restart |
 
 Beginner doc for these ideas: [Learn 25](Aran%20Learn%2025%20-%20Accessibility%2C%20Tenant%20Isolation%20and%20Containers.md).

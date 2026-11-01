@@ -1,6 +1,7 @@
 """Aran console API. Run: uvicorn main:app --port 8000 (from app/server)."""
 import hmac
 import os
+import secrets
 import re
 import sys
 import threading
@@ -36,6 +37,7 @@ async def check_internal_secret(request: Request, call_next):
 
 ENG = None
 READY = threading.Event()
+BOOT_ID = secrets.token_hex(6)
 LOAD_ERROR = None
 
 
@@ -120,7 +122,9 @@ class CustomerIn(BaseModel):
 # ---------------------------------------------------------------- routes
 @app.get("/api/health")
 def health():
-    return dict(ready=READY.is_set(), error=LOAD_ERROR)
+    # boot changes every time the process starts, so an open console can tell that the
+    # server restarted (and its in-memory demo data was reset) rather than just reconnected
+    return dict(ready=READY.is_set(), error=LOAD_ERROR, boot=BOOT_ID)
 
 
 @app.get("/api/config")
@@ -137,7 +141,7 @@ def config():
 
 @app.get("/api/stats")
 def stats():
-    return eng().stats()
+    return {**eng().stats(), "boot": BOOT_ID}
 
 
 @app.post("/api/process")

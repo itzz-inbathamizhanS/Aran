@@ -93,12 +93,25 @@ starts the core (console on `http://localhost:8000`, published to this computer 
 
 **Volumes** keep data when a container is rebuilt. Each service has its own volume, and only the services that need the shared secrets mount the `secrets` volume. That is least privilege again (Learn 22): Bank A, the "legacy" bank, never sees them.
 
+## 4. A live page that tells the truth about its connection
+
+The console asks the server for fresh numbers every few seconds. This is called **polling**. On a free host the server **sleeps** when nobody uses it and **restarts** on every deploy, so the page must handle three cases:
+
+| Case | What the page does |
+|---|---|
+| A request fails once | Nothing visible. One failure is often just the network |
+| Two rounds fail in a row | LIVE turns to **Reconnecting**, normal polling stops, and only `/api/health` is asked, waiting longer each time (3 s, 4.5 s, ... up to 15 s). Waiting longer after each failure is called **backoff**; it stops a crowd of pages from hammering a server that is trying to start |
+| The server answers with a new `boot` id | It restarted, and its demo data (held in memory) is new. The page says so instead of silently showing zeros |
+
+Two more habits: **skip a poll while the last one is still running** (so a slow server never gets a queue of requests), and **stop polling in a hidden tab** (the browser tells you with the `visibilitychange` event).
+
 ## Exercises
 
 1. Open the light theme and change `--token-color` back to `#006f66`. Run the axe snippet above on Bank B. Which element fails, and with what ratio?
 2. Press Tab on the Results page on a phone-sized window until a wide table is focused, then use the arrow keys. What does a screen reader announce?
 3. Call the core's `/api/process` twice with the same Aadhaar number, once with `"scope": "bankX"` and once with `"scope": "bankY"`, each with its own `customer_ref`. Do the two answers mention an owner conflict? Now send it twice with no scope and two different refs: what changes?
 4. Run `docker compose up --build`, then `docker compose restart bank-b`. Read Bank B's log: why does it not create a second workspace?
+5. Open the console, then stop the core server. How long until the bar appears? Start the server again: which bar do you see, and why?
 
 ## Words to know
 
@@ -114,3 +127,6 @@ starts the core (console on `http://localhost:8000`, published to this computer 
 | Container | A program packed with everything it needs to run. |
 | Health check | A command that says whether a service is ready. |
 | Volume | Storage that outlives a container. |
+| Polling | Asking the server for fresh data every few seconds. |
+| Backoff | Waiting longer after each failed try. |
+| Boot id | A random id a server picks each time it starts, so clients can tell it restarted. |

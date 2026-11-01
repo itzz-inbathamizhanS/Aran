@@ -59,7 +59,11 @@ window.ARAN = window.ARAN || {};
     let r;
     try { r = await fetch('/api' + path, opt); } catch (e) { throw new Error('Server unreachable. Is Aran running?'); }
     let d = null; try { d = await r.json(); } catch (e) {}
-    if (!r.ok) { const det = d && d.detail; throw new Error(typeof det === 'string' ? det : Array.isArray(det) ? det.map((x) => x.msg).join('; ') : 'HTTP ' + r.status); }
+    if (!r.ok) {
+      const det = d && d.detail;
+      if (det == null && [502, 503, 504].includes(r.status)) throw new Error('The Aran server is waking up or restarting. Try again in a few seconds.');
+      throw new Error(typeof det === 'string' ? det : Array.isArray(det) ? det.map((x) => x.msg).join('; ') : 'HTTP ' + r.status);
+    }
     return d;
   };
   const SINK_LABEL = { 'log-platform': 'Log platform', 'crm-notes': 'CRM notes', 'loan-vendor': 'Loan vendor', 'llm-gateway': 'AI chatbot (AI gateway)', 'marketing-cloud': 'Marketing', 'kyc-archive': 'KYC archive' };
@@ -79,28 +83,74 @@ window.ARAN = window.ARAN || {};
       A.SAMPLES = {}; Object.keys(c.samples).forEach((k) => (A.SAMPLES[k] = [c.samples[k], c.sample_sources[k], c.sample_sinks[k]]));
       A.DRILLS = c.drills;
     },
-    stats: async () => { A.stats = await A.api('/stats'); },
+    stats: async () => {
+      A.stats = await A.api('/stats');
+      /* a new boot id means the server restarted between two polls: its demo data is new */
+      if (A.stats.boot && A.bootId && A.stats.boot !== A.bootId) { A.bootId = A.stats.boot; setTimeout(restartedNow); }
+      else if (A.stats.boot) A.bootId = A.stats.boot;
+    },
     events: async () => { A.events = await A.api('/events?limit=40'); },
     customers: async () => { A.customers = await A.api('/customers'); },
     immune: async () => { A.immune = await A.api('/immune'); A.alerts = A.immune.alerts; },
     merkle: async () => { A.merkle = await A.api('/merkle'); },
     results: async () => { A.results = mapResults(await A.api('/results')); },
   };
-  A.refresh = async (...keys) => { await Promise.all(keys.map((k) => load[k]().then(() => emit(k)).catch(() => {}))); };
+  /* every poll goes through refresh. A key that is still loading is skipped, so a slow server
+     never piles up requests. Two failed rounds in a row mean the connection is lost. */
+  const busy = {};
+  let fails = 0;
+  A.conn = 'live';
+  const setConn = (c) => { if (A.conn !== c) { A.conn = c; emit('conn'); } };
+  A.refresh = async (...keys) => {
+    keys = keys.filter((k) => !busy[k]); if (!keys.length) return;
+    let ok = 0;
+    await Promise.all(keys.map((k) => { busy[k] = true; return load[k]().then(() => { ok++; emit(k); }).catch(() => {}).finally(() => { busy[k] = false; }); }));
+    if (ok) { fails = 0; } else if (++fails >= 2 && A.conn !== 'reconnecting') reconnect();
+  };
   /* wait until the models are loaded; onWait(state, error) is told while waiting */
   A.boot = async function (onWait) {
     for (;;) {
       let h = null; try { h = await A.api('/health'); } catch (e) { onWait('offline'); }
-      if (h && h.error) { onWait('failed', h.error); } else if (h && h.ready) break; else if (h) onWait('starting');
+      if (h && h.error) { onWait('failed', h.error); } else if (h && h.ready) { A.bootId = h.boot; break; } else if (h) onWait('starting');
       await new Promise((r) => setTimeout(r, 2000));
     }
     await load.config();
     await A.refresh('stats', 'events', 'customers', 'immune', 'merkle', 'results');
   };
   let pollT = [];
+  const stopPoll = () => { pollT.forEach(clearInterval); pollT = []; };
+  const startPoll = () => { stopPoll(); pollT = [setInterval(() => A.refresh('stats', 'events'), 3000), setInterval(() => A.refresh('immune'), 4000), setInterval(() => A.refresh('merkle', 'customers'), 8000)]; };
+  /* connection lost: stop the normal polls and ask /health, slower each time (3 s up to 15 s).
+     When it answers with a different boot id the server restarted and its demo data is new. */
+  let recT = 0;
+  async function reconnect() {
+    stopPoll(); setConn('reconnecting');
+    let wait = 3000;
+    for (;;) {
+      await new Promise((r) => { recT = setTimeout(r, wait); });
+      if (document.hidden) continue;
+      let h = null; try { h = await A.api('/health'); } catch (e) {}
+      if (h && h.ready) {
+        const restarted = A.bootId && h.boot && h.boot !== A.bootId; if (h.boot) A.bootId = h.boot;
+        fails = 0; await A.refresh('stats', 'events', 'customers', 'immune', 'merkle', 'results');
+        if (restarted) restartedNow(); else setConn('live');
+        startPoll(); return;
+      }
+      wait = Math.min(wait * 1.5, 15000);
+    }
+  }
+  function restartedNow() { A.refresh('events', 'customers', 'immune', 'merkle', 'results'); setConn('restarted'); emit('restarted'); }
+  A.connOk = () => setConn('live');
   A.poll = function () {
-    pollT.forEach(clearInterval);
-    pollT = [setInterval(() => A.refresh('stats', 'events'), 3000), setInterval(() => A.refresh('immune'), 4000), setInterval(() => A.refresh('merkle', 'customers'), 8000)];
+    startPoll();
+    /* a hidden tab polls nothing; coming back refreshes at once */
+    if (!A.poll.wired) {
+      A.poll.wired = true;
+      document.addEventListener('visibilitychange', () => {
+        if (A.conn === 'reconnecting') return;
+        if (document.hidden) stopPoll(); else { A.refresh('stats', 'events', 'customers', 'immune', 'merkle'); startPoll(); }
+      });
+    }
   };
 
   /* ---- results files → the shape the pages draw ---- */
