@@ -20,11 +20,11 @@ import secrets
 import sqlite3
 import threading
 import time
-from typing import Any, Dict, List, Literal, Optional
+from typing import Dict, List, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 import numpy as np
 from pydantic import BaseModel, Field, field_validator
@@ -79,14 +79,27 @@ def require_admin_token(x_admin_token: Optional[str] = Header(None)):
     """Operator-only endpoints need ARAN_ADMIN_TOKEN; without one configured they stay off."""
     if not ARAN_ADMIN_TOKEN:
         raise HTTPException(status_code=403, detail="this endpoint is disabled: set ARAN_ADMIN_TOKEN to enable it")
-    if not x_admin_token or not hmac.compare_digest(x_admin_token, ARAN_ADMIN_TOKEN):
+    if not x_admin_token or not hmac.compare_digest(x_admin_token.encode(), ARAN_ADMIN_TOKEN.encode()):
         raise HTTPException(status_code=401, detail="missing or invalid X-Admin-Token")
+
+
+_SWEEP_AT = 5000  # tracked keys or IPs before stale entries are dropped
+
+
+def _sweep_stale(buckets: dict, now: float, window: float) -> None:
+    """Drop callers with no request inside the window, so random or one-off keys and IPs do not pile up in memory.
+    Called with _rate_limit_lock held."""
+    if len(buckets) < _SWEEP_AT:
+        return
+    for k in [k for k, q in buckets.items() if not q or q[-1] <= now - window]:
+        del buckets[k]
 
 
 def check_key_rate_limit(key_hash: str):
     now = time.time()
     window = 60.0  # 1 minute
     with _rate_limit_lock:
+        _sweep_stale(_key_request_timestamps, now, window)
         ts_queue = _key_request_timestamps[key_hash]
         while ts_queue and ts_queue[0] <= now - window:
             ts_queue.popleft()
@@ -108,6 +121,7 @@ def check_signup_rate_limit(request: Request):
     now = time.time()
     window = 3600.0  # 1 hour
     with _rate_limit_lock:
+        _sweep_stale(_signup_ip_timestamps, now, window)
         ts_queue = _signup_ip_timestamps[ip]
         while ts_queue and ts_queue[0] <= now - window:
             ts_queue.popleft()
@@ -129,7 +143,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,  # keys travel in the X-API-Key header, never in cookies
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -138,6 +152,8 @@ app.add_middleware(
 @app.middleware("http")
 async def add_no_cache_headers(request: Request, call_next):
     response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     if request.url.path.startswith("/static") or request.url.path in ("/", "/connect", "/dashboard"):
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["Pragma"] = "no-cache"
@@ -393,7 +409,12 @@ def log_detokenise_audit(
     purpose: Optional[str],
     result: str,
 ):
-    """Inserts a cryptographic hash-chained audit log row for detokenise operations."""
+    """Inserts a cryptographic hash-chained audit log row for detokenise operations.
+    The previous hash is read while this connection holds the database's write lock (taken here with BEGIN IMMEDIATE,
+    or already held from an earlier write in the caller's transaction), so two concurrent calls can never chain
+    onto the same previous row and fork the chain. The caller commits."""
+    if not conn.in_transaction:
+        conn.execute("BEGIN IMMEDIATE")
     last_row = conn.execute(
         "SELECT entry_hash FROM detokenise_audit WHERE tenant_id = ? ORDER BY id DESC LIMIT 1",
         (tenant_id,),
@@ -487,12 +508,12 @@ def require_scope(required_scope: str):
 
 # ---------------------------------------------------------------- models
 class WorkspaceIn(BaseModel):
-    name: str
-    email: str
+    name: str = Field(min_length=1, max_length=120)
+    email: str = Field(min_length=3, max_length=254, pattern=r"^[^@\s]+@[^@\s]+$")
 
 
 class ProtectIn(BaseModel):
-    text: str
+    text: str = Field(max_length=20000)
     customer_ref: Optional[str] = None
     purpose: Optional[str] = "KYC"
     sink: Optional[str] = "kyc-archive"
@@ -505,7 +526,7 @@ class GatewayIn(BaseModel):
 
 
 class DetokeniseIn(BaseModel):
-    token: str
+    token: str = Field(max_length=200)
     caller: Optional[str] = "console"
 
 
@@ -519,8 +540,8 @@ class TraceIn(BaseModel):
 
 
 class KeyCreateIn(BaseModel):
-    label: str
-    scopes: List[str]
+    label: str = Field(min_length=1, max_length=80)
+    scopes: List[str] = Field(max_length=len(VALID_SCOPES))
 
 
 # ---------------------------------------------------------------- helpers
@@ -548,7 +569,11 @@ def call_core(method: str, endpoint: str, json_data: dict = None, admin: bool = 
                 err_msg = err.response.json().get("detail", err.response.text)
             except Exception:
                 err_msg = err.response.text
-        raise HTTPException(status_code=502, detail=f"Aran core call {endpoint} failed: {err_msg}")
+        status = getattr(getattr(err, "response", None), "status_code", None)
+        # The core's own answer to a bad request (unknown customer, invalid input, erasure on hold) is the caller's
+        # error and keeps its status; only a core that is down or failing is a bad gateway.
+        code = status if status in (400, 404, 409, 422, 423) else 502
+        raise HTTPException(status_code=code, detail=f"Aran core call {endpoint} failed: {err_msg}")
 
 
 # ---------------------------------------------------------------- v1 API
@@ -2166,7 +2191,8 @@ def seed_demo_transactions(tenant: dict, n: int = 200) -> int:
         items.append(TxnIn(txn_id=f"DEMO-{run}-{i + 1:04d}", rail=rail, sink=rnd.choice(DEMO_SINKS), purpose="Service",
                            customer_ref=f"CUST-D{rnd.randint(1, 60):04d}", amount_paise=rnd.randint(5_000, 5_000_000), fields=fields))
     # more traffic in the later minutes, none in the last few seconds
-    ats = sorted(now - 3540 + 3500 * (rnd.random() ** 0.7) for _ in range(n))
+    # the 1 h chart starts at the first full 5-minute bucket, up to 60 minutes ago: stay inside the last 54 minutes
+    ats = sorted(now - 3240 + 3200 * (rnd.random() ** 0.7) for _ in range(n))
     for i in range(0, n, 100):
         run_transactions(tenant, items[i:i + 100], at_list=ats[i:i + 100], demo=True)
     return n

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """End-to-end smoke test for Aran against http://127.0.0.1:8000."""
-import json
 import secrets
 import sys
 import time

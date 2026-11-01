@@ -55,6 +55,12 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Explainer video | Aran Learn 21 - How the Explainer Video Is Made (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/21-making-the-explainer-video.md |
 | Cybersecurity concepts | Aran Learn 22 - Cybersecurity Concepts in Aran (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/22-cybersecurity-concepts-in-aran.md |
 | Branch audits | Aran - BanksAndCloud Branch Audit (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Branch%20audits/Aran%20-%20BanksAndCloud%20Branch%20Audit.md |
+| Code audit | Audit report: issue register, totals, production readiness | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Code%20audit/AUDIT_REPORT.md |
+| Code audit | Bug fixes: reproduced, fixed and re-tested | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Code%20audit/BUG_FIXES.md |
+| Code audit | Security audit (OWASP Top 10) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Code%20audit/SECURITY_AUDIT.md |
+| Code audit | Test report: every suite, build and browser check | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Code%20audit/TEST_REPORT.md |
+| Code audit | Architecture overview | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Code%20audit/ARCHITECTURE.md |
+| Code audit | Aran Learn 29 - Code Audits and Testing (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/29-code-audits-and-testing.md |
 | Aran UI integration | Aran Learn 23 - One UI for the Console, Aran Cloud and the Demo Banks (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/aran-ui-banks-cloud/docs/learning/23-one-ui-for-cloud-and-banks.md |
 | Aran UI integration | Screenshots: Aran Cloud landing, Quick connect, dashboard (overview, keys, audit), Bank A, Bank B, side by side, phone and light | https://github.com/itzz-inbathamizhans/aran/tree/aran-ui-banks-cloud/artifacts/Aran%20UI%20integration |
 | Aran UI integration | Shared design kit for the other Aran apps (kit.js, kit.css) | https://github.com/itzz-inbathamizhans/aran/tree/aran-ui-banks-cloud/app/ui/kit |

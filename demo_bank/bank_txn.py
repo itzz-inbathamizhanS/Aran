@@ -19,7 +19,6 @@ import os
 import random
 import re
 import secrets
-import sqlite3
 import threading
 import time
 import uuid
@@ -901,7 +900,8 @@ class Bank:
             if val:
                 where.append(f"{col}=?"); args.append(val)
         if q:
-            where.append("txn_id LIKE ?"); args.append(f"%{q.strip()}%")
+            esc = q.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")  # search text is literal, not a pattern
+            where.append("txn_id LIKE ? ESCAPE '\\'"); args.append(f"%{esc}%")
         w = (" WHERE " + " AND ".join(where)) if where else ""
         conn = self.get_db()
         total = conn.execute(f"SELECT COUNT(*) FROM transactions{w}", args).fetchone()[0]

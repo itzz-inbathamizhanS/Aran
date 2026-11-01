@@ -93,9 +93,11 @@ fi
 DEMO_DASHBOARD_KEY=$(echo "$WS_JSON" | grep -o '"dashboard_key":"[^"]*"' | cut -d':' -f2 | tr -d '"')
 
 if [ -z "$DEMO_ADMIN_KEY" ]; then
-    echo "Notice: Workspace already created or key exists in cloud.db"
-    DEMO_ADMIN_KEY="aran_live_c245f4a39a4ad27b2cfe1d0fd4a57f20"
-    DEMO_DASHBOARD_KEY="$DEMO_ADMIN_KEY"
+    # No key was returned (signup limit reached or the cloud refused). Keys are shown once and stored
+    # only as hashes, so reuse one from the environment (ARAN_API_KEY) instead of a key written into this script.
+    echo "Notice: no new workspace key was returned. Set ARAN_API_KEY to an existing admin key to connect Bank B."
+    DEMO_ADMIN_KEY="${ARAN_API_KEY:-}"
+    DEMO_DASHBOARD_KEY="${ARAN_DASHBOARD_KEY:-$DEMO_ADMIN_KEY}"
 else
     echo "✔ Created workspace with Admin Key: $DEMO_ADMIN_KEY"
     echo "✔ Created Dashboard Key: $DEMO_DASHBOARD_KEY"

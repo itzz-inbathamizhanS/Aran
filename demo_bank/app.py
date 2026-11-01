@@ -13,7 +13,7 @@ import sqlite3
 import sys
 import time
 from typing import Optional
-from fastapi import FastAPI, HTTPException, Header, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -26,7 +26,7 @@ SDK_DIR = os.path.join(HERE_DIR, "..", "aran_sdk")
 if SDK_DIR not in sys.path:
     sys.path.insert(0, SDK_DIR)
 
-from aran import Aran, AranError, AranAuthError, AranScopeError, AranRateLimit
+from aran import Aran
 
 if HERE_DIR not in sys.path:
     sys.path.insert(0, HERE_DIR)
@@ -140,10 +140,18 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,  # the demo bank uses no cookies
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def basic_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    return response
 
 
 # ---------------------------------------------------------------- database
@@ -197,12 +205,20 @@ txn_bank.ensure_accounts()  # customers from before accounts existed get one
 
 
 # ---------------------------------------------------------------- Aran HTTP client
-def aran_headers(admin: bool = False) -> dict:
+def _is_cloud(url: str) -> bool:
+    """True when the URL is Aran Cloud (the SaaS API), False when it is the Aran core itself."""
+    return "8100" in url or "/v1" in url
+
+
+def aran_headers(admin: bool = False, to_cloud: Optional[bool] = None) -> dict:
+    """Headers for a call to Aran. The core's internal secret goes only to the core, never to Aran Cloud
+    (the cloud adds its own), and the workspace API key goes only to the cloud."""
+    to_cloud = _is_cloud(ARAN_URL) if to_cloud is None else to_cloud
     h = {"Content-Type": "application/json"}
     internal_secret = os.environ.get("ARAN_INTERNAL_SECRET")
-    if internal_secret:
+    if internal_secret and not to_cloud:
         h["X-Aran-Internal"] = internal_secret
-    if ARAN_API_KEY:
+    if ARAN_API_KEY and to_cloud:
         h["X-API-Key"] = ARAN_API_KEY
     if admin and ARAN_ADMIN_TOKEN:
         h["X-Admin-Token"] = ARAN_ADMIN_TOKEN
@@ -212,7 +228,7 @@ def aran_headers(admin: bool = False) -> dict:
 def call_aran(method: str, endpoint: str, json_data: dict = None, admin: bool = False, timeout: float = 10.0):
     # Compatibility switch: map core endpoints to Aran Cloud (/v1) when pointing to port 8100
     actual_endpoint = endpoint
-    if "8100" in ARAN_URL or "/v1" in ARAN_URL:
+    if _is_cloud(ARAN_URL):
         cloud_map = {
             "/api/process": "/v1/protect",
             "/api/tour/gateway": "/v1/gateway",
@@ -239,7 +255,9 @@ def call_aran(method: str, endpoint: str, json_data: dict = None, admin: bool = 
                 err_msg = err.response.json().get("detail", err.response.text)
             except Exception:
                 err_msg = err.response.text
-        raise HTTPException(status_code=502, detail=f"Aran call {actual_endpoint} failed: {err_msg}")
+        status = getattr(getattr(err, "response", None), "status_code", None)
+        code = status if status in (400, 404, 409, 422, 423) else 502  # Aran's answer to a bad request keeps its status
+        raise HTTPException(status_code=code, detail=f"Aran call {actual_endpoint} failed: {err_msg}")
 
 
 # ---------------------------------------------------------------- models
@@ -300,7 +318,7 @@ def get_sample_customer():
 
     if not sample:
         try:
-            r = requests.get("http://127.0.0.1:8000/api/tour/generate", headers=aran_headers(), timeout=3)
+            r = requests.get("http://127.0.0.1:8000/api/tour/generate", headers=aran_headers(to_cloud=False), timeout=3)
             r.raise_for_status()
             res_json = r.json()
             if isinstance(res_json, dict) and "mobile" in res_json:
@@ -767,7 +785,7 @@ def aran_summary():
     The browser never sees the bank's API key; the bank asks Aran Cloud and passes the metrics on."""
     if BANK_MODE != "aran" or not ARAN_API_KEY:
         return {"available": False, "reason": "only Bank B (Aran mode with an API key) has a workspace"}
-    if not ("8100" in ARAN_URL or "/v1" in ARAN_URL):
+    if not _is_cloud(ARAN_URL):
         return {"available": False, "reason": "Bank B is wired straight to the core, not to Aran Cloud"}
     try:
         r = requests.get(f"{ARAN_URL}/v1/dashboard", headers=aran_headers(), timeout=5)

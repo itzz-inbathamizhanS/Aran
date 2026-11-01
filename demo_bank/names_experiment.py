@@ -10,11 +10,8 @@ Prints an honest tokenisation rate table and reports the best performing format.
 import argparse
 import json
 import os
-import re
-import sqlite3
-import sys
 import time
-from typing import Dict, List, Tuple
+from typing import Dict
 import requests
 
 CLOUD_URL = os.environ.get("ARAN_CLOUD_URL", "http://127.0.0.1:8100")
@@ -98,7 +95,7 @@ def get_api_key(passed_key: str = None) -> str:
     except Exception:
         pass
 
-    return "aran_live_feba8af0c584b553aacec186201c34fc"
+    raise SystemExit("No Aran Cloud admin key: the cloud refused a new workspace and ARAN_API_KEY is not set.")
 
 
 def format_payload(format_idx: int, name: str) -> str:
@@ -208,7 +205,7 @@ def run_experiment(api_key: str) -> Dict[str, any]:
     best_rate, best_count, best_desc = rates[best_idx]
 
     print("\n================================================================================")
-    print(f" EXPERIMENT CONCLUSION:")
+    print(" EXPERIMENT CONCLUSION:")
     print(f" Best Format: Format {best_idx} -> '{best_desc}'")
     print(f" Tokenisation Success Rate: {best_count}/{total_names} ({best_rate:.1f}%)")
     print("================================================================================\n")

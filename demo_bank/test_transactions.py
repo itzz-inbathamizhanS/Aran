@@ -12,7 +12,6 @@ import os
 import re
 import socket
 import sys
-import threading
 import time
 import uuid
 from datetime import datetime

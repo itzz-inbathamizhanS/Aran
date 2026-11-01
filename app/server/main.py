@@ -55,7 +55,7 @@ async def check_internal_secret(request: Request, call_next):
         console_open = os.environ.get("ARAN_CONSOLE_OPEN", "0") in ("1", "true", "True")
         if path != "/api/health" and path.startswith("/api") and not console_open:
             provided = request.headers.get("X-Aran-Internal") or ""
-            if not hmac.compare_digest(provided, internal_secret):
+            if not hmac.compare_digest(provided.encode(), internal_secret.encode()):
                 return JSONResponse(
                     status_code=401,
                     content={"detail": "Unauthorized: missing or invalid X-Aran-Internal header."},
@@ -95,7 +95,7 @@ def eng():
 
 def _check_admin(token_header: str | None):
     admin_token = os.environ.get("ARAN_ADMIN_TOKEN")
-    if admin_token and token_header != admin_token:
+    if admin_token and not hmac.compare_digest((token_header or "").encode(), admin_token.encode()):
         raise HTTPException(401, "unauthorized")
 
 
@@ -144,7 +144,10 @@ class ReplayIn(BaseModel):
 
 
 class CustomerIn(BaseModel):
-    name: str | None = None
+    name: str | None = Field(default=None, max_length=80)
+
+
+MAX_CONSOLE_CUSTOMERS = 10000
 
 
 # ---------------------------------------------------------------- routes
@@ -215,7 +218,10 @@ def customers():
 @app.post("/api/customers")
 def add_customer(body: CustomerIn):
     e = eng()
-    c = e.add_customer(body.name)
+    if len(e.customers) >= MAX_CONSOLE_CUSTOMERS:
+        raise HTTPException(429, f"Customer limit reached ({MAX_CONSOLE_CUSTOMERS:,} customers)")
+    name = " ".join((body.name or "").split()) or None  # a blank or all-space name gets a generated one
+    c = e.add_customer(name)
     return e.customer_view(c["ref"])
 
 
