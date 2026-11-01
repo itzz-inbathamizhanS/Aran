@@ -21,11 +21,16 @@ from pydantic import BaseModel
 import requests
 
 # Add aran_sdk to path for standard-library Python SDK
-SDK_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "aran_sdk")
+HERE_DIR = os.path.dirname(os.path.abspath(__file__))
+SDK_DIR = os.path.join(HERE_DIR, "..", "aran_sdk")
 if SDK_DIR not in sys.path:
     sys.path.insert(0, SDK_DIR)
 
 from aran import Aran, AranError, AranAuthError, AranScopeError, AranRateLimit
+
+if HERE_DIR not in sys.path:
+    sys.path.insert(0, HERE_DIR)
+import bank_txn  # accounts, payments, ledger, fraud score, copies of each payment
 
 # ---------------------------------------------------------------- configuration
 BANK_MODE = os.environ.get("BANK_MODE", "legacy").strip().lower()
@@ -102,7 +107,7 @@ def get_sdk_clients():
                     headers={"Content-Type": "application/json", "X-API-Key": admin_key},
                     method="POST",
                 )
-                with urllib.request.urlopen(req) as resp:
+                with urllib.request.urlopen(req, timeout=3) as resp:
                     app_key = json.loads(resp.read().decode())["api_key"]
             except Exception:
                 app_key = admin_key
@@ -116,7 +121,7 @@ def get_sdk_clients():
                     headers={"Content-Type": "application/json", "X-API-Key": admin_key},
                     method="POST",
                 )
-                with urllib.request.urlopen(req) as resp:
+                with urllib.request.urlopen(req, timeout=3) as resp:
                     compliance_key = json.loads(resp.read().decode())["api_key"]
             except Exception:
                 compliance_key = admin_key
@@ -187,6 +192,8 @@ def init_db():
 
 
 init_db()
+txn_bank = bank_txn.Bank(BANK_MODE, get_db, DB_DIR, get_clients=lambda: get_sdk_clients())
+txn_bank.ensure_accounts()  # customers from before accounts existed get one
 
 
 # ---------------------------------------------------------------- Aran HTTP client
@@ -331,7 +338,7 @@ def register_customer(body: CustomerIn):
     and writes redacted log.
     """
     conn = get_db()
-    count = conn.execute("SELECT count(*) FROM customers").fetchone()[0]
+    count = conn.execute("SELECT COALESCE(MAX(id), 0) FROM customers").fetchone()[0]
     cust_ref = body.customer_ref or f"CUST-{'B' if BANK_MODE == 'aran' else 'A'}{count + 1:04d}"
 
     name = body.name.strip()
@@ -388,6 +395,7 @@ def register_customer(body: CustomerIn):
                 """,
                 (cust_ref, stored_name, stored_mobile, stored_aadhaar, stored_card, now_str),
             )
+            account = txn_bank.open_account(conn, cust_ref)   # every customer gets a savings account
     except sqlite3.IntegrityError:
         conn.close()
         raise HTTPException(status_code=409, detail=f"Customer ref {cust_ref} already exists")
@@ -427,6 +435,7 @@ def register_customer(body: CustomerIn):
         "bank_mode": BANK_MODE,
         "erasable": BANK_MODE == "aran",
         "findings": aran_findings,
+        "account": {"number": account["number"], "ifsc": account["ifsc"], "balance_paise": account["balance_paise"]},
     }
 
 
@@ -626,6 +635,8 @@ def get_breach_dump():
     for ch in chat:
         lines.append(f"[{ch['created_at']}] PROMPT: {ch['prompt']} | REPLY: {ch['reply']} | PROVIDER_SAW: {ch['provider_saw']}")
 
+    more, counts = txn_bank.dump_lines()   # accounts, transactions, ledger, every sink copy, the outbox
+    lines += more
     dump_text = "\n".join(lines)
     return {
         "bank_mode": BANK_MODE,
@@ -633,6 +644,7 @@ def get_breach_dump():
         "customer_count": len(customers),
         "log_count": len(logs),
         "chat_count": len(chat),
+        **counts,
     }
 
 
@@ -687,6 +699,9 @@ def erase_customer(customer_ref: str):
             "bank_mode": "legacy",
             "message": "Customer record removed from customers table. Residual copies still exist in logs and chat history.",
             "customer_ref": customer_ref,
+            "ledger_note": "Bank A cannot erase the rest without breaking its books: the account, the transactions and the "
+                           "ledger lines carry the real account numbers and payees, and so does every copy (log, fraud desk, "
+                           "analytics, SMS). Deleting them would leave the ledger unbalanced and the audit trail empty.",
         }
 
     # Aran mode: crypto-shredding via key destruction using admin SDK client
@@ -708,6 +723,21 @@ def erase_customer(customer_ref: str):
             "value": detok.get("value"),
         }
 
+    # Payment copies were sent with purpose "Service": shred that purpose key too, then wipe the identifiers the core
+    # keeps for this customer (the ledger keeps the amounts)
+    try:
+        service_receipt = admin_client.erase(customer_ref=customer_ref, purpose="Service")
+    except Exception as err:
+        service_receipt = {"error": str(err)[:160]}
+    payments = txn_bank.after_erase(customer_ref)
+    copy_checks = {}
+    for tok in payments.get("copy_tokens", [])[:4]:
+        try:
+            d = compliance_client.detokenise(token=tok)
+            copy_checks[tok] = {"status": d.get("status"), "value": d.get("value")}
+        except Exception:
+            copy_checks[tok] = {"status": "error", "value": None}
+
     # Log the erasure event
     with conn:
         conn.execute(
@@ -723,7 +753,11 @@ def erase_customer(customer_ref: str):
         "receipt": receipt,
         "verification": verify_res,
         "detokenise_checks": detok_checks,
-        "message": "Purpose keys permanently destroyed. Receipts cryptographically verified.",
+        "service_receipt": service_receipt,
+        "payments": payments,
+        "copy_checks": copy_checks,
+        "message": "Purpose keys permanently destroyed. Receipts cryptographically verified. The ledger keeps the amounts; "
+                   "every payment copy is now unreadable.",
     }
 
 
@@ -743,6 +777,15 @@ def aran_summary():
         return {"available": False, "reason": f"Aran Cloud unreachable: {err.__class__.__name__}"}
     t = d.get("tenant", {})
     return {"available": True, "tenant": {"id": t.get("id"), "name": t.get("name")}, "metrics": d.get("metrics", {})}
+
+
+def _register_dict(d: dict):
+    """Used by the seeder: the same sign-up as a customer would do."""
+    return register_customer(CustomerIn(**d))
+
+
+bank_txn.install(app, txn_bank, register=_register_dict)   # /api/accounts, /api/transactions, /api/fraud, /api/sinks ...
+bank_txn.start_background(app, txn_bank, _register_dict)    # seed customers, optional traffic, outbox retry
 
 
 # Serve static files and templates

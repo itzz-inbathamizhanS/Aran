@@ -50,7 +50,7 @@ window.ARAN = window.ARAN || {};
         rec = new SR(); rec.lang = $('#ar-lang', root).value; rec.interimResults = true; rec.continuous = false;
         const base = t.value ? t.value + ' ' : ''; mic.setAttribute('aria-pressed', 'true'); mic.firstElementChild.textContent = '■ Stop'; note.textContent = 'Listening…';
         rec.onresult = (e) => { t.value = base + [...e.results].map((x) => x[0].transcript).join(' '); via = 'voice'; t.oninput(); via = 'voice'; };
-        rec.onerror = (e) => { note.textContent = 'Microphone: ' + e.error; };
+        rec.onerror = (e) => { note.textContent = ({ 'not-allowed': 'The microphone is blocked. Allow it for this site in the browser (the lock icon by the address), then press Speak again.', 'service-not-allowed': 'This browser does not allow speech recognition here. Use the microphone key on your keyboard instead.', 'no-speech': 'No speech heard. Press Speak and talk a little louder or closer.', 'audio-capture': 'No microphone found. Plug one in, or use the microphone key on your keyboard.', network: 'Speech recognition needs the internet (the browser sends the audio to its speech service). Check the connection, or type instead.', 'language-not-supported': 'This language is not supported for speech here. Pick English (India) or type instead.' })[e.error] || ('Microphone: ' + e.error); };
         rec.onend = () => { rec = null; mic.setAttribute('aria-pressed', 'false'); mic.firstElementChild.textContent = '🎤 Speak'; if (note.textContent === 'Listening…') note.textContent = ''; };
         rec.start();
       };
@@ -66,7 +66,10 @@ window.ARAN = window.ARAN || {};
       <section class="stack" data-api="GET /api/arena/board (poll 1.5 s)"><div class="grid g4" id="al-stats"></div><div class="card plus"><div class="between"><h2 class="h3">Latest tries</h2><span class="small muted" id="al-ch"></span></div><div id="al-feed" class="arena-feed"></div></div></section></div>`,
     mount(root) {
       let seen = new Set(), first = true, alive = true;
-      (async () => { try { const j = await A.api('/arena/join'); $('#al-qr', root).innerHTML = `<img src="/api/qr?text=${encodeURIComponent(j.url)}" alt="QR code that opens ${esc(j.url)}">`; $('#al-url', root).textContent = j.url; if (j.local_only) $('#al-hint', root).innerHTML = U.note('info', esc(j.hint)); } catch (e) { err($('#al-qr', root), e); } })();
+      (async () => { try { const j = await A.api('/arena/join');
+          /* on a hosted site the server only sees its own internal address, so the browser's own address is the right one */
+          if (!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) { j.url = location.origin + location.pathname + '#arena'; j.local_only = false; }
+          $('#al-qr', root).innerHTML = `<img src="/api/qr?text=${encodeURIComponent(j.url)}" alt="QR code that opens ${esc(j.url)}">`; $('#al-url', root).textContent = j.url; if (j.local_only) $('#al-hint', root).innerHTML = U.note('info', esc(j.hint)); } catch (e) { err($('#al-qr', root), e); } })();
       const draw = (b) => {
         const total = b.caught + b.slipped;
         $('#al-stats', root).innerHTML = U.stat('Caught', '', 'stored as a token', { count: b.caught, tone: 'ok' }) + U.stat('Slipped', '', 'reached the log', { count: b.slipped, tone: b.slipped ? 'danger' : '' }) + U.stat('Catch rate', total ? Math.round((b.caught / total) * 100) + '%' : '–', `${total} counted tries`) + U.stat('Players', '', `${b.unverified} tries without the number`, { count: b.players });

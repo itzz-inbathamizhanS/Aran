@@ -14,3 +14,4 @@ design_skills/
 data/
 .venv/
 __pycache__/
+.claude/worktrees/

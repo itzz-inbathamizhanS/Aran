@@ -6,18 +6,21 @@
      1 Start          what Aran is: live overview, guided tour, how it works
      2 Firewall       the tools: send traffic, erase, trace, immune layer, evidence
      3 Live demos     the stand-out demos
-     4 Demo banks     the same bank with and without Aran (local demo only)
-     5 Aran Cloud     Aran as a product for banks (local demo only)
+     4 Demo banks     the same bank with and without Aran
+     5 Aran Cloud     Aran as a product for banks
 
    Groups marked local are only shown where those services run: on localhost, or when a
-   server sets window.ARAN_LINKS (the hosted console runs the core only). */
+   server sets window.ARAN_LINKS, and on the hosted copies (HOSTED below). */
 window.ARAN = window.ARAN || {};
 (function (A) {
   const host = location.hostname || '127.0.0.1', proto = location.protocol === 'file:' ? 'http:' : location.protocol;
   const at = (port) => `${proto}//${host}:${port}`;
   const local = /^(localhost|127\.0\.0\.1|\[?::1\]?|0\.0\.0\.0)$/.test(host) || /^(10|192\.168)\./.test(host);
-  const links = Object.assign({ console: at(8000), cloud: at(8100), bankA: at(9001), bankB: at(9002) }, window.ARAN_LINKS || {});
-  const hasApps = !!window.ARAN_LINKS || local;
+  /* the hosted copies: the console on aran-console, and Aran Cloud and the banks on their own front doors (deploy/vercel) */
+  const HOSTED = { console: 'https://aran-console.vercel.app', cloud: 'https://aran-cloud.vercel.app', bankA: 'https://aran-bank-a.vercel.app', bankB: 'https://aran-bank-b.vercel.app' };
+  const hosted = Object.values(HOSTED).some((u) => u.slice(8) === host);
+  const links = Object.assign({ console: at(8000), cloud: at(8100), bankA: at(9001), bankB: at(9002) }, hosted ? HOSTED : {}, window.ARAN_LINKS || {});
+  const hasApps = !!window.ARAN_LINKS || local || hosted;
 
   /* [id, label, app, path]  app = which server; path is a hash route for the console */
   const GROUPS = [
