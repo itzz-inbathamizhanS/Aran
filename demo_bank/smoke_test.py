@@ -11,10 +11,8 @@ Validates:
 """
 
 import os
-import re
 import secrets
 import sys
-import time
 import requests
 
 BANK_A_URL = os.environ.get("BANK_A_URL", "http://127.0.0.1:9001")

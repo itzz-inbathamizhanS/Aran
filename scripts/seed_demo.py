@@ -2,11 +2,8 @@
 # scripts/seed_demo.py: Seed realistic demo traffic through real APIs only.
 # No direct inserts into databases. Safe to run multiple times.
 import argparse
-import json
 import os
 import sqlite3
-import sys
-import time
 import requests
 
 CORE_URL = os.environ.get("ARAN_CORE_URL", "http://127.0.0.1:8000").rstrip("/")
@@ -69,17 +66,11 @@ def get_or_create_api_key(passed_key=None):
     except Exception:
         pass
 
-    # Read from cloud.db if available
-    db_path = os.path.join(os.path.dirname(__file__), "..", "aran_cloud", "cloud.db")
-    if os.path.exists(db_path):
-        conn = sqlite3.connect(db_path)
-        cur = conn.cursor()
-        row = cur.execute(
-            "SELECT prefix FROM api_keys ORDER BY created_at DESC LIMIT 1"
-        ).fetchone()
-        conn.close()
-    
-    return "aran_live_c245f4a39a4ad27b2cfe1d0fd4a57f20"
+    # Keys are stored only as hashes, so an existing workspace's key cannot be read back: take it from the environment.
+    key = os.environ.get("ARAN_API_KEY")
+    if not key:
+        raise SystemExit("No Aran Cloud admin key: the cloud refused a new workspace and ARAN_API_KEY is not set.")
+    return key
 
 
 def fetch_checksum_sample():
@@ -379,7 +370,7 @@ def main():
     print("==========================================================")
     print(" SEEDING COMPLETE & VERIFIED")
     print(f" Customers Enrolled: {len(customers)}")
-    print(f" Events Created:     ~40 across 6 real sinks")
+    print(" Events Created:     ~40 across 6 real sinks")
     print(f" Receipts Created:   {receipts_count} (Ed25519 + ML-DSA-65 PQ verified)")
     print("==========================================================")
 
