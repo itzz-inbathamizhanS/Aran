@@ -1313,13 +1313,15 @@ def start_background(app: FastAPI, bank: Bank, register):
     """Seed 8 customers on first start, optional steady traffic (BANK_AUTO_TRAFFIC = payments per minute),
     and a retry of the outbox for Bank B. All in daemon threads so start-up is never blocked."""
     def seeder():
-        for _ in range(120):
+        wait = 5
+        for _ in range(60):
             try:
                 if bank.seed_customers(register) >= 8:
                     return
             except Exception:
                 pass
-            time.sleep(5)
+            time.sleep(wait)
+            wait = min(wait * 2, 60)  # Aran may be asleep on free hosting: back off instead of calling every 5 s
 
     def traffic(per_min: float):
         time.sleep(8)

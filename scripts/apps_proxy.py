@@ -19,6 +19,17 @@ HOP = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization", 
 FRONT = {"cloud": os.environ.get("ARAN_CLOUD_PUBLIC", ""), "bank-a": os.environ.get("ARAN_BANK_A_PUBLIC", ""),
          "bank-b": os.environ.get("ARAN_BANK_B_PUBLIC", "")}
 session = requests.Session()
+NAMES = {"cloud": "Aran Cloud", "bank-a": "Bank A", "bank-b": "Bank B"}
+# shown while an app is still starting; it reloads itself every 5 seconds (no script, so it passes any CSP)
+WAKING = ("""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="refresh" content="5"><title>Waking {app} · Aran</title><style>
+:root{color-scheme:dark light}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#040508;color:#e8e8e3;
+font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}@media (prefers-color-scheme:light){body{background:#f7f7f2;color:#111}}
+main{max-width:460px;padding:24px;text-align:center}.s{width:28px;height:28px;margin:0 auto 20px;border:3px solid currentColor;
+border-right-color:transparent;border-radius:50%;animation:r 1s linear infinite}@keyframes r{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.s{animation:none}}h1{font-size:22px;font-weight:600;margin:0 0 8px}p{opacity:.75;margin:0}</style></head>
+<body><main><div class="s" role="status" aria-label="Loading"></div><h1>Waking {app}</h1><p>Free hosting puts the demo to sleep after
+15 minutes without visitors. Starting takes 30 to 90 seconds; this page reloads by itself.</p></main></body></html>""")
 
 
 def home(request: Request):
@@ -51,7 +62,10 @@ async def proxy(request: Request):
         r = session.request(request.method, url, headers=headers, data=body or None, stream=True,
                             allow_redirects=False, timeout=(5, 300))
     except requests.RequestException:
-        return JSONResponse({"detail": f"{app} is starting, try again in a few seconds."}, status_code=503)
+        if request.method == "GET" and "text/html" in request.headers.get("accept", ""):
+            return HTMLResponse(WAKING.replace("{app}", NAMES[app]), status_code=503, headers={"Retry-After": "5", "Cache-Control": "no-store"})
+        return JSONResponse({"detail": f"{app} is starting, try again in a few seconds."}, status_code=503,
+                            headers={"Retry-After": "5"})
     out = {k: v for k, v in r.headers.items() if k.lower() not in HOP}
     if r.headers.get("location", "").startswith("/"):
         out["location"] = r.headers["location"]  # the front door serves the app at its root
