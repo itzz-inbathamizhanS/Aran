@@ -9,7 +9,7 @@
 
   /* ---- smooth scroll ---- */
   if (!U.reduced() && window.Lenis) {
-    lenis = new Lenis({ lerp: 0.1, smoothWheel: true }); window.lenis = lenis;
+    lenis = new Lenis({ lerp: 0.1, smoothWheel: true, allowNestedScroll: true, prevent: (n) => n.matches('.menu, .dialog-back, .dialog') }); window.lenis = lenis;
     lenis.on('scroll', ScrollTrigger.update); gsap.ticker.add((t) => lenis.raf(t * 1000)); gsap.ticker.lagSmoothing(0);
   }
 
