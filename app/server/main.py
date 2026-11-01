@@ -10,11 +10,14 @@ import time
 from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, Field
 
 import engine as E
 
 app = FastAPI(title="Aran console API", version="1.0")
+# compress pages, scripts and API answers (about 70% smaller over the network)
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 
 @app.middleware("http")
@@ -490,12 +493,16 @@ def classic():
     return FileResponse(os.path.join(DIST, "index.html"))
 
 
-@app.get("/{path:path}")
-def ui(path: str):
+@app.api_route("/{path:path}", methods=["GET", "HEAD"])
+def ui(path: str, request: Request):
     if path.startswith("api/"):
         raise HTTPException(404, "no such endpoint")
     root = os.path.realpath(UI)
     f = os.path.realpath(os.path.join(root, path))
     if path and f.startswith(root + os.sep) and os.path.isfile(f):
-        return FileResponse(f, headers={"Cache-Control": "no-cache"})
+        # index.html asks for every script and stylesheet with ?v=N and bumps N on each change, so
+        # a versioned file never changes and the browser may keep it; anything else is re-checked
+        versioned = "v" in request.query_params or "/vendor/" in "/" + path
+        cache = "public, max-age=31536000, immutable" if versioned else "no-cache"
+        return FileResponse(f, headers={"Cache-Control": cache})
     return FileResponse(os.path.join(root, "index.html"), headers={"Cache-Control": "no-cache"})
