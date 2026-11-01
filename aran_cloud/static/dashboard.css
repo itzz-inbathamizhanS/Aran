@@ -1,0 +1,87 @@
+/* Aran Cloud dashboard: the few pieces the shared kit does not have. Tokens only, so dark and light both work. */
+
+.dx-status { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); }
+.dx-bad { color: var(--leak-color); font-weight: var(--weight-medium); }
+.dx-empty { padding: var(--space-3) 0; }
+
+/* the 4 tiles can also be amber */
+.stat.warn .v { color: var(--warning-color); }
+
+/* charts: protected is teal, raw is red-orange, and the legend names both; a bar still being counted is dashed */
+.mchart .pr.part, .mchart .rw.part { fill-opacity: .55; stroke: var(--text-2-color); stroke-width: 1; stroke-dasharray: 3 2; vector-effect: non-scaling-stroke; }
+.mchart .dx-key-part { margin-left: auto; text-transform: none; }
+.dx-budget { stroke: var(--warning-color); stroke-width: 1.5; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; }
+.dx-budget-t { fill: var(--warning-color) !important; }
+.dx-p50 { fill: none; stroke: var(--info-color); stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+.dx-p95 { fill: none; stroke: var(--chart-protected-color); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.dx-d50 { fill: var(--info-color); }
+.dx-d95 { fill: var(--chart-protected-color); }
+.dx-over { fill: var(--leak-color); }
+.dx-over-key { color: var(--leak-color); text-transform: none; }
+.mchart-legend i.dx-sw-p50 { background: var(--info-color); height: 3px; width: 16px; border-radius: 2px; }
+.mchart-legend i.dx-sw-p95 { background: var(--chart-protected-color); height: 4px; width: 16px; border-radius: 2px; }
+.mchart-legend i.dx-sw-bud { background: repeating-linear-gradient(90deg, var(--warning-color) 0 6px, transparent 6px 10px); height: 3px; width: 16px; }
+.mchart-legend { flex-wrap: wrap; }
+
+/* tables: links that open a row, token previews, systems list */
+.dx-lnk { background: none; border: 0; padding: 0; color: var(--text-color); font-size: .8125rem; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; text-align: left; word-break: break-all; }
+.dx-lnk:hover { color: var(--token-color); }
+.dx-prev { max-width: 420px; }
+.dx-fld { display: inline-block; margin: 0 10px 2px 0; font-size: .8125rem; }
+.dx-sys { display: flex; justify-content: space-between; gap: var(--space-3); align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--border-color); }
+.dx-sys:last-child { border-bottom: 0; }
+.dx-sys-r { text-align: right; flex: none; }
+
+/* filters */
+.dx-filters { display: grid; grid-template-columns: 2fr 1fr 1.4fr auto; gap: var(--space-3); align-items: end; }
+.dx-filters .field input, .dx-filters .field select { width: 100%; }
+.dx-filter-btns { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+
+/* data map: systems -> Aran -> destinations */
+.dx-map { display: grid; grid-template-columns: minmax(0, 1fr) 40px minmax(0, 1.2fr) 40px minmax(0, 1.6fr); gap: var(--space-3); align-items: start; }
+.dx-arrow { align-self: center; text-align: center; font: 400 1.6rem/1 var(--font-mono); color: var(--text-2-color); }
+.dx-node { padding: 10px 12px; margin-bottom: var(--space-3); border: 1px solid var(--border-color); border-radius: var(--radius-input); background: var(--surface-2-color); }
+.dx-aran { border-color: var(--token-color); }
+
+/* forms */
+.dx-erase { display: grid; grid-template-columns: 2fr 1fr auto; gap: var(--space-3); align-items: end; margin-top: var(--space-4); }
+.dx-team-add { display: grid; grid-template-columns: 2fr 1fr auto auto; gap: var(--space-3); align-items: end; margin-top: var(--space-4); }
+.dx-set-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); max-width: 640px; }
+.dx-chk { cursor: pointer; }
+.dx-chk input { width: 18px; height: 18px; margin: 0; }
+.dx-fs { margin: 0; min-width: 0; }
+.dx-fs legend { padding: 0 6px; }
+.dx-radio { display: flex; gap: var(--space-3); align-items: flex-start; padding: 12px 0; min-height: 44px; cursor: pointer; }
+.dx-radio input { width: 20px; height: 20px; margin: 2px 0 0; flex: none; }
+.dx-radio span { display: flex; flex-direction: column; gap: 2px; }
+.dx-plan { border: 1px solid var(--border-color); }
+.dx-plan.cur { border-color: var(--token-color); box-shadow: inset 3px 0 0 var(--token-color); }
+
+@media (max-width: 960px) {
+  .dx-filters { grid-template-columns: 1fr 1fr; }
+  .dx-filter-btns { grid-column: 1 / -1; }
+  .dx-team-add { grid-template-columns: 1fr 1fr; }
+  .dx-team-add .btn { grid-column: 1 / -1; }
+}
+@media (max-width: 760px) {
+  .dx-map { grid-template-columns: minmax(0, 1fr); }
+  .dx-arrow { transform: rotate(90deg); }
+  .dx-erase, .dx-set-row, .dx-team-add { grid-template-columns: minmax(0, 1fr); }
+  .dx-filters { grid-template-columns: minmax(0, 1fr); }
+  .dx-prev { max-width: none; }
+  .dx-sys { flex-direction: column; }
+  .dx-sys-r { text-align: left; }
+  .rank { grid-template-columns: 96px 1fr 84px; }
+}
+
+/* touch: every control is at least 44px */
+@media (pointer: coarse) {
+  .dx-lnk, .chip, .dx-chk, .dx-radio, button.chip { min-height: 44px; display: inline-flex; align-items: center; }
+  .dx-lnk { padding: 0 4px; }
+  .tbl .btn.sm, .btn.sm { min-height: 44px; }
+  input[type=checkbox], input[type=radio] { min-width: 24px; min-height: 24px; }
+}
+
+/* a wide table scrolls inside its card instead of widening the page */
+.grid > *, #body .card { min-width: 0; }
+@media (max-width: 760px) { .g2, .g3, .g4 { grid-template-columns: minmax(0, 1fr); } }

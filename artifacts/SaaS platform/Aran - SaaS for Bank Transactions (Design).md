@@ -1,6 +1,6 @@
 # Aran as a SaaS for Bank Transactions: Design and Build Plan
 
-**Status:** proposal, waiting for the team's OK. **Read first:** [Learn 26 SaaS and multi-tenancy](../../docs/learning/26-saas-and-multi-tenancy.md), [Learn 27 Bank transactions](../../docs/learning/27-bank-transactions-basics.md), [Learn 28 Dashboards and metrics](../../docs/learning/28-dashboards-and-metrics.md).
+**Status:** built (phases 1 to 3 and the hosting code); see section 10 for what shipped and what is left. **Read first:** [Learn 26 SaaS and multi-tenancy](../../docs/learning/26-saas-and-multi-tenancy.md), [Learn 27 Bank transactions](../../docs/learning/27-bank-transactions-basics.md), [Learn 28 Dashboards and metrics](../../docs/learning/28-dashboards-and-metrics.md).
 
 ## 1. The goal in one paragraph
 
@@ -128,3 +128,30 @@ Usage numbers are estimates.
 - Every identifier is generated and belongs to no one.
 - Free hosting sleeps and restarts, which resets demo data; a paying product would use a managed database (Postgres) and keep data in an India region.
 - SSO, real billing and a dedicated database per bank are designed for but not built in this round.
+
+## 10. What was built
+
+| Part | Shipped |
+|---|---|
+| Banks (`demo_bank/bank_txn.py`) | Accounts on registration, payments on UPI, IMPS, NEFT, RTGS and card with format and limit checks, idempotency keys, a double-entry ledger with a zero-sum check, reversals, a fraud score (new payee 30, 23:00 to 05:00 20, over ₹50,000 30, six or more payments in 10 minutes 25; hold at 50) with approve and decline, five copies per payment (transaction log, fraud desk, analytics, SMS, support chat), an outbox with retries and a 10 s breaker so a payment never waits on Aran, "Run the day" and background traffic (`BANK_AUTO_TRAFFIC`), 8 seeded customers. Bank B seals its own core tables at rest and never writes a raw identifier to a copy; if Aran leaves a value raw, a bank-side guard masks it and marks the copy "guarded". 41 tests |
+| Bank pages | Home, Send money (with a step-by-step timeline), Transactions, Fraud desk, Back office (copies, outbox, breach dump), Customers & KYC; Side by side pays from both banks in one click and compares every copy field by field |
+| Aran Cloud (`aran_cloud/main.py`) | `POST /v1/transactions/protect` (batch of up to 500, one core call per payment, idempotent per transaction and sink, only protected text stored), `/v1/metrics`, `/v1/counters`, `/v1/transactions`, `/v1/stream` with a 120-second signed stream token, `/v1/usage`, `/v1/plan` (soft limits), `/v1/team` with roles, `/v1/slo`, `/v1/settings`, 200 demo transactions in demo mode. 20 new tests |
+| Dashboard | Eight tabs: Overview, Transactions (live feed), Data map, Performance, Compliance, Keys and team, Usage and plan, Settings; inline SVG charts, every number with its window, "Updated N s ago" and a Live / Polling / Reconnecting pill |
+| SDK | `protect_transactions()` and `metrics()` |
+| AI chat | Calls Claude through the Anthropic SDK when `ANTHROPIC_API_KEY` is set on the server; Claude sees only placeholders |
+| Hosting | `scripts/apps_entry.sh` and `scripts/apps_proxy.py` run Cloud and both banks in one Render service; `deploy/vercel/*` are the three front doors |
+
+Measured locally: one payment's five copies protected in one batch call (2 to 5 ms in the firewall); Bank B stored 0 raw identifiers across all copies, Bank A 11 for the same payment.
+
+**Left open:** the core does not detect a bare 14-digit account number on its own, so Bank B masks it with the guard; metrics are computed on request (no per-minute table yet); webhooks, retention locks, SSO and real billing are not built; team members are records with optional keys, not logins.
+
+### Screenshots
+
+| File | Shows |
+|---|---|
+| `screenshots/18-bank-b-home.png` | Bank B home: balance, quick send, ledger check |
+| `screenshots/19-bank-b-transactions.png` | Bank B transactions with filters |
+| `screenshots/20-bank-b-fraud-desk.png` | Held payments, payees as tokens |
+| `screenshots/21-bank-a-back-office.png` | Bank A copies with raw identifiers |
+| `screenshots/22-compare-payment.png` | One payment in both banks, field by field |
+| `screenshots/23-cloud-overview.png` | Aran Cloud dashboard overview |

@@ -183,7 +183,7 @@ def main():
     trace_b = r_trace_b.json()["trace"]
     assert_true(trace_b["matched"] > 0, "Bank B trace matched vault tokens")
     top_sink = (trace_b.get("top") or {}).get("sink")
-    assert_true(top_sink in ("kyc-archive", "log-platform"), f"Bank B trace sink attribution: {top_sink}")
+    assert_true(top_sink in ("kyc-archive", "log-platform", "txn-log", "fraud-desk", "analytics", "sms", "support-chat"), f"Bank B trace sink attribution: {top_sink}")
 
     # 8. Erasure Execution & Verification
     print_step(8, "Execute DPDP Erasure on Bank A vs Bank B")

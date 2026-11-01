@@ -143,11 +143,12 @@ def main():
         "purpose": "KYC"
     }, timeout=10).json()
 
+    # Ownership is looked up inside each tenant (audit item 5): Beta enrols the number under its own ref,
+    # gets no "already enrolled elsewhere" signal, and never sees Alpha's ref.
     f_aad2 = next(f for f in r_prot2["findings"] if f["type"] == "AADHAAR")
-    assert_eq(f_aad2["customer_ref"], None, "Tenant Beta customer_ref is None (NEVER reveals Tenant 1 ref)")
-    assert_true(f_aad2["owner_conflict"], "Owner conflict flag is True")
-    assert_true(any("identifier already enrolled elsewhere" in n for n in r_prot2.get("notes", [])),
-                "Clean isolation note present")
+    assert_eq(f_aad2["customer_ref"], "CUST-BETA-CONFIDENTIAL", "Tenant Beta sees only its own customer_ref")
+    assert_true(not f_aad2.get("owner_conflict"), "No owner-conflict signal leaks that another bank holds this number")
+    assert_true(cust_ref not in str(r_prot2), "Tenant 1 customer_ref absent from Tenant 2's answer")
 
     # Confirm Tenant 2 dashboard contains ZERO events from Tenant 1
     dash_t2 = requests.get(f"{CLOUD_URL}/v1/dashboard", headers={"X-API-Key": key_t2}, timeout=5).json()

@@ -941,13 +941,18 @@ _GW = {}
 
 def gateway(eng):
     """The AI gateway (research/gateway/ai_gateway.py) on the live detector. With
+    ANTHROPIC_API_KEY set it calls Claude (research/gateway/claude_upstream.py). With
     ARAN_LLM_URL, ARAN_LLM_KEY and ARAN_LLM_MODEL set it calls that OpenAI-compatible
     model; otherwise the provider is the echo stand-in from the gateway's own tests,
     which repeats the prompt back, the hardest case for placeholders."""
     if "gw" not in _GW:
         from gateway.ai_gateway import AIGateway, openai_upstream, recorder_upstream
         url = os.environ.get("ARAN_LLM_URL")
-        if url:
+        if os.environ.get("ANTHROPIC_API_KEY"):
+            from gateway.claude_upstream import claude_upstream
+            model = os.environ.get("ARAN_CLAUDE_MODEL", "claude-opus-5-5")
+            up, name = claude_upstream(model), f"Claude ({model}) via the Anthropic API"
+        elif url:
             up, name = openai_upstream(url, os.environ.get("ARAN_LLM_KEY", ""), os.environ.get("ARAN_LLM_MODEL", "")), "model at ARAN_LLM_URL"
         else:
             up, name = recorder_upstream([]), "echo stand-in (no external AI call)"

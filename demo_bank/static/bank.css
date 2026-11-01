@@ -1,0 +1,98 @@
+/* Bank pages (payments, fraud desk, back office). Uses only the Aran tokens from /aran/css/tokens.css,
+   so dark and light both work. Bank-only styles live here; the shared kit in app/ui/kit is not edited. */
+
+.bk-bar { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-4); }
+.bk-nav { display: flex; gap: 6px; padding: 4px; border: 1px solid var(--glass-line-color); border-radius: var(--radius-pill); overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+.bk-link { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: var(--radius-pill); white-space: nowrap; color: var(--text-2-color); font: 400 .6875rem/1 var(--font-mono); text-transform: uppercase; letter-spacing: -.02em; text-decoration: none; }
+.bk-link:hover { color: var(--text-color); }
+.bk-link[aria-current="page"] { background: var(--primary-color); color: var(--on-primary-color); }
+.bk-count { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--leak-color); color: var(--on-danger-color); font: 400 .6875rem/1 var(--font-mono); }
+.bk-who { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: flex-end; }
+.bk-who select { min-width: 220px; min-height: 44px; }
+.bk-view { margin-top: var(--space-5); }
+.bk-view[hidden] { display: none; }
+
+/* home */
+.bk-acct .bk-money { font: 400 clamp(2rem, 6vw, 3.25rem)/1 var(--font-mono); letter-spacing: -.05em; margin: var(--space-3) 0; word-break: break-word; }
+.bk-acct dl { margin: var(--space-3) 0 0; }
+.bk-mini { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); margin-top: var(--space-3); }
+.bk-mini div { padding: var(--space-3); border: 1px solid var(--border-color); border-radius: var(--radius-input); }
+.bk-mini b { display: block; font: 400 1.25rem/1.1 var(--font-mono); }
+.bk-mini span { font-size: var(--text-size-small); color: var(--text-2-color); }
+
+/* send money */
+.bk-fs { border: 0; padding: 0; margin: 0; min-width: 0; }
+.bk-rails { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: var(--space-3); }
+.bk-rails label { position: relative; cursor: pointer; }
+.bk-rails input { position: absolute; opacity: 0; width: 100%; height: 100%; inset: 0; margin: 0; cursor: pointer; }
+.bk-rails span { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 56px; padding: 6px 8px; border: 1px solid var(--glass-line-color); border-radius: var(--radius-input); text-align: center; font: 400 .8125rem/1.2 var(--font-mono); color: var(--text-2-color); }
+.bk-rails small { font-size: .6875rem; opacity: .85; }
+.bk-rails input:checked + span { background: var(--primary-color); color: var(--on-primary-color); border-color: var(--primary-color); }
+.bk-rails input:focus-visible + span { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+.bk-check { display: flex; align-items: center; gap: 12px; min-height: 44px; cursor: pointer; font-size: var(--text-size-small); }
+.bk-check input { width: 22px; height: 22px; flex: none; margin: 0; accent-color: var(--primary-color); }
+
+.bk-steps { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: grid; gap: 0; }
+.bk-steps li { position: relative; padding: 4px 0 var(--space-4) 34px; min-height: 36px; font-size: .9375rem; }
+.bk-steps li::before { content: ""; position: absolute; left: 7px; top: 8px; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--text-2-color); background: var(--background-color); }
+.bk-steps li::after { content: ""; position: absolute; left: 13px; top: 24px; bottom: -4px; width: 2px; background: var(--border-color); }
+.bk-steps li:last-child::after { display: none; }
+.bk-steps li.idle::before, .bk-steps li.idle::after { display: none; }
+.bk-steps li.idle { padding-left: 0; color: var(--text-2-color); }
+.bk-steps li.ok::before { border-color: var(--success-color); background: var(--success-color); }
+.bk-steps li.warn::before { border-color: var(--real-data-color); background: var(--real-data-color); }
+.bk-steps li.bad::before { border-color: var(--leak-color); background: var(--leak-color); }
+.bk-steps li.tok::before { border-color: var(--token-color); background: var(--token-color); }
+.bk-steps li.in { animation: bk-in .35s both; }
+.bk-steps .t { display: block; font: 400 .6875rem/1.4 var(--font-mono); color: var(--text-2-color); }
+@keyframes bk-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .bk-steps li.in { animation: none; } }
+
+/* transactions */
+.bk-filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); }
+.bk-filters select, .bk-filters input { width: 100%; min-height: 44px; }
+.bk-linkbtn { background: none; border: 0; padding: 0 4px; min-height: 44px; display: inline-flex; align-items: center; color: var(--text-color); font: 400 .8125rem/1.2 var(--font-mono); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.bk-linkbtn:hover { color: var(--token-color); }
+td.num, th.num { text-align: right; white-space: nowrap; }
+.bk-kv { display: grid; grid-template-columns: 150px 1fr; gap: 8px 16px; font-size: .9375rem; margin: 0; }
+.bk-kv dt { font: 400 .6875rem/1.8 var(--font-mono); text-transform: uppercase; color: var(--text-2-color); }
+.bk-kv dd { margin: 0; word-break: break-all; }
+.bk-cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); align-items: start; }
+
+/* fraud desk */
+.bk-fraud { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); }
+.bk-fraud .card h3 { margin-bottom: var(--space-2); }
+.bk-score { display: flex; align-items: center; gap: var(--space-3); margin: var(--space-3) 0; }
+.bk-score .bar { flex: 1; }
+.bk-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-4); }
+.bk-actions .btn { flex: 1 1 140px; }
+
+/* sinks */
+.bk-fieldlist { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: .875rem; }
+.bk-fieldlist li { display: grid; grid-template-columns: 110px 1fr; gap: 8px; word-break: break-all; }
+.bk-fieldlist .k { font: 400 .6875rem/1.7 var(--font-mono); text-transform: uppercase; color: var(--text-2-color); }
+.bk-mask { font-family: var(--font-mono); font-size: .8125rem; color: var(--real-data-color); }
+.bk-pre { margin: 0; white-space: pre-wrap; word-break: break-all; font: 400 .8125rem/1.5 var(--font-mono); }
+
+/* side-by-side compare */
+.bk-cmp td { vertical-align: top; }
+.bk-cmp .k { font: 400 .6875rem/1.7 var(--font-mono); text-transform: uppercase; color: var(--text-2-color); }
+.bk-cmp tr.sinkrow td { background: var(--surface-2-color); font-weight: var(--weight-medium); }
+.bk-cmp td { word-break: break-all; font-size: .875rem; }
+
+@media (max-width: 760px) {
+  .bk-filters { grid-template-columns: 1fr 1fr; }
+  .bk-cols { grid-template-columns: 1fr; }
+  .bk-kv { grid-template-columns: 1fr; gap: 0; }
+  .bk-kv dd { margin-bottom: 10px; }
+  .bk-mini { grid-template-columns: 1fr; }
+  .bk-who, .bk-who .field, .bk-who select { width: 100%; }
+  .bk-who .btn { width: 100%; }
+  .bk-fieldlist li { grid-template-columns: 1fr; gap: 0; }
+}
+@media (max-width: 420px) { .bk-filters { grid-template-columns: 1fr; } }
+@media (pointer: coarse) {
+  .bk-view .btn.sm, .bk-linkbtn, .bk-link { min-height: 44px; }
+  input, select { min-height: 44px; }
+}
+@media (max-width: 760px) { .bk-view .btn.sm { min-height: 44px; } }

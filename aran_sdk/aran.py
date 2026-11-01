@@ -161,3 +161,31 @@ class Aran:
         """Cryptographically verifies a Merkle inclusion & signature on an erasure receipt."""
         return self._request("POST", "/v1/receipts/verify", payload=receipt, idempotent=True)
 
+    def protect_transactions(self, transactions: list) -> Dict[str, Any]:
+        """Protects 1 to 500 bank transactions in one call (POST /v1/transactions/protect).
+
+        Each item is a dict like::
+
+            {"txn_id": "TXN-B-000001", "rail": "UPI", "sink": "txn-log", "purpose": "Service",
+             "customer_ref": "CUST-B0001", "amount_paise": 245000,
+             "fields": {"payer_account": "...", "payee": "...", "card": "...", "mobile": "...", "remarks": "..."}}
+
+        Returns ``{"results": [{"txn_id", "sink", "fields", "found", "protected", "raw", "by_type", "latency_ms",
+        "replayed"}], "latency_ms": x}``. Sending the same (txn_id, sink) again returns the stored result with
+        ``replayed: True`` and is not metered twice, so this call is safe to retry; the SDK retries it on
+        network errors and HTTP 5xx.
+        """
+        if not isinstance(transactions, (list, tuple)) or not 1 <= len(transactions) <= 500:
+            raise ValueError("transactions must be a list of 1 to 500 items")
+        return self._request("POST", "/v1/transactions/protect", payload={"transactions": list(transactions)}, idempotent=True)
+
+    def metrics(self, window: str = "1h", step: str = "1m") -> Dict[str, Any]:
+        """Time-bucketed metrics for this workspace (GET /v1/metrics, needs the 'dashboard' scope).
+
+        ``window`` is 1h, 24h or 7d; ``step`` is 1m, 5m or 1h. Buckets with no traffic are present with zeros and the
+        current bucket is flagged ``partial: True``. The answer also has totals and breakdowns by rail, identifier
+        type and destination.
+        """
+        query = urllib.parse.urlencode({"window": window, "step": step})
+        return self._request("GET", f"/v1/metrics?{query}", idempotent=True)
+

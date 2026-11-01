@@ -17,7 +17,7 @@ import requests
 
 CLOUD_URL = os.environ.get("ARAN_CLOUD_URL", "http://127.0.0.1:8100")
 CORE_URL = os.environ.get("ARAN_CORE_URL", "http://127.0.0.1:8000")
-CLOUD_DB = os.path.join(os.path.dirname(__file__), "cloud.db")
+CLOUD_DB = os.environ.get("ARAN_CLOUD_DB") or os.path.join(os.path.dirname(__file__), "cloud.db")
 
 
 def get_internal_secret():

@@ -11,6 +11,8 @@ pytest==9.1.1
 qrcode==8.2
 # Aran Cloud and the demo bank call other services over HTTP
 requests==2.34.2
+# optional: a real AI provider for the AI gateway when ANTHROPIC_API_KEY is set
+anthropic==2.3.0
 # optional, for the card photo scan (also needs the Tesseract program, see Learn 10)
 pytesseract==0.3.13
 pillow==12.3.0

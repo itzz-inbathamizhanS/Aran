@@ -161,3 +161,106 @@ def test_sdk_typed_error_403(admin_key):
         protect_client.detokenise(tok)
     assert exc_info.value.status_code == 403
     assert "detokenise" in str(exc_info.value)
+
+
+# ---------------------------------------------------------------- transactions and metrics
+def _txn(txn_id, **fields):
+    return {"txn_id": txn_id, "rail": "UPI", "sink": "txn-log", "purpose": "Service", "customer_ref": "SDK-CUST-T",
+            "amount_paise": 245000, "fields": fields}
+
+
+def test_sdk_protect_transactions_and_replay(admin_key):
+    client = Aran(api_key=admin_key, base_url=CLOUD_URL)
+    sample = get_sample_pii()
+    tid = f"SDK-TXN-{time.time_ns()}"
+    items = [_txn(tid, mobile=sample["mobile"], card=sample["card"], remarks=f"aadhaar {sample['aadhaar']}")]
+    res = client.protect_transactions(items)
+    assert set(res) == {"results", "latency_ms"}
+    r0 = res["results"][0]
+    assert r0["txn_id"] == tid and r0["replayed"] is False
+    assert r0["protected"] >= 3 and r0["found"] == r0["protected"] + r0["raw"]
+    assert sample["card"] not in r0["fields"]["card"] and sample["aadhaar"] not in r0["fields"]["remarks"]
+    again = client.protect_transactions(items)["results"][0]
+    assert again["replayed"] is True and again["fields"] == r0["fields"]
+
+
+def test_sdk_protect_transactions_checks_the_batch_size(admin_key):
+    client = Aran(api_key=admin_key, base_url=CLOUD_URL)
+    with pytest.raises(ValueError):
+        client.protect_transactions([])
+    with pytest.raises(ValueError):
+        client.protect_transactions([_txn(f"SDK-BIG-{i}", remarks="x") for i in range(501)])
+    with pytest.raises(AranError) as exc_info:   # the server's own validation comes back as a typed error
+        client.protect_transactions([dict(_txn("SDK-BAD", remarks="x"), rail="BITCOIN")])
+    assert exc_info.value.status_code == 422
+
+
+def test_sdk_metrics(admin_key):
+    client = Aran(api_key=admin_key, base_url=CLOUD_URL)
+    client.protect_transactions([_txn(f"SDK-M-{time.time_ns()}", mobile=get_sample_pii()["mobile"])])
+    m = client.metrics("1h", "5m")
+    assert len(m["buckets"]) == 12 and m["buckets"][-1]["partial"] is True
+    assert m["totals"]["transactions"] >= 1 and "UPI" in m["by_rail"]
+    assert len(client.metrics()["buckets"]) == 60
+    with pytest.raises(AranError) as exc_info:
+        client.metrics("7d", "1m")
+    assert exc_info.value.status_code == 422
+
+
+def test_sdk_metrics_needs_the_dashboard_scope(admin_key):
+    req = urllib.request.Request(
+        f"{CLOUD_URL}/v1/keys",
+        data=json.dumps({"label": "Protect Only 2", "scopes": ["protect"]}).encode("utf-8"),
+        headers={"Content-Type": "application/json", "X-API-Key": admin_key},
+        method="POST",
+    )
+    with urllib.request.urlopen(req) as resp:
+        scoped_key = json.loads(resp.read().decode("utf-8"))["api_key"]
+    with pytest.raises(AranScopeError):
+        Aran(api_key=scoped_key, base_url=CLOUD_URL).metrics()
+
+
+def test_sdk_transaction_requests_without_a_server():
+    """The request shape and the retry rule, checked against a tiny local server (no Aran Cloud needed)."""
+    import http.server
+    import threading
+
+    seen = []
+    fails = {"left": 1}
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def _reply(self, code, body):
+            data = json.dumps(body).encode()
+            self.send_response(code)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        def do_POST(self):
+            payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            seen.append(("POST", self.path, self.headers.get("X-API-Key"), payload))
+            if fails["left"]:
+                fails["left"] -= 1
+                return self._reply(503, {"detail": "try again"})
+            self._reply(200, {"results": [], "latency_ms": 0.1})
+
+        def do_GET(self):
+            seen.append(("GET", self.path, self.headers.get("X-API-Key"), None))
+            self._reply(200, {"buckets": []})
+
+    srv = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        client = Aran(api_key="aran_live_stub", base_url=f"http://127.0.0.1:{srv.server_port}", backoff_factor=0.01)
+        client.protect_transactions([_txn("STUB-1", remarks="x")])
+        assert len(seen) == 2                       # the 503 was retried because the call is idempotent per txn_id
+        assert seen[1][1] == "/v1/transactions/protect" and seen[1][2] == "aran_live_stub"
+        assert seen[1][3]["transactions"][0]["txn_id"] == "STUB-1"
+        client.metrics("24h", "5m")
+        assert seen[-1][:3] == ("GET", "/v1/metrics?window=24h&step=5m", "aran_live_stub")
+    finally:
+        srv.shutdown()
