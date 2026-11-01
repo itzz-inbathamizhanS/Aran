@@ -98,5 +98,13 @@ window.ARAN = window.ARAN || {};
     return `<nav class="pager" aria-label="${esc(t('Previous and next page'))}">${link(all[i - 1], 'prev')}${link(all[i + 1], 'next')}</nav>`;
   };
 
-  A.site = { menuHTML, wireMenu, pagerHTML, links, local, hasApps, groups: numbered, find, consolePages: () => GROUPS.filter((g) => g.pages.every((p) => p[2] === 'console')).flatMap((g) => g.pages.map(([id, label]) => [id, label])), first: 'overview' };
+  /* while the menu is open, everything behind it is inert (no Tab, no clicks), so focus stays in
+     the top bar and the menu; closing it gives focus back to the Menu button */
+  const menuFocus = (menu, open) => {
+    [...document.body.children].forEach((el) => { if (el !== menu && el.id !== 'topbar' && el.tagName !== 'SCRIPT') el.inert = open; });
+    const btn = document.getElementById('menubtn');
+    const a = document.activeElement;
+    if (!open && btn && (!a || a === document.body || menu.contains(a))) btn.focus({ preventScroll: true });
+  };
+  A.site = { menuHTML, wireMenu, menuFocus, pagerHTML, links, local, hasApps, groups: numbered, find, consolePages: () => GROUPS.filter((g) => g.pages.every((p) => p[2] === 'console')).flatMap((g) => g.pages.map(([id, label]) => [id, label])), first: 'overview' };
 })(window.ARAN);

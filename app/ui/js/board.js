@@ -35,7 +35,10 @@ window.ARAN = window.ARAN || {};
         sec('C32 Member card', `<div class="team">${U.member('IS', 'Inbathamizhan S', 'Team lead · Cybersecurity')}${U.member('SA', 'SN Arun Vijay', 'AI/ML')}</div>`),
       ].join('');
     },
-    mount(root) { U.runCounts(root); $('#cb-dlg', root).onclick = () => U.confirm({ title: 'Destroy C0007’s Loans key?', body: 'Every Loans token for this customer becomes permanently unreadable.', confirmLabel: 'Destroy key' }); $('#cb-toast', root).onclick = () => U.toast('Copied'); return () => {}; },
+    mount(root) { U.runCounts(root);
+      /* C23: the step controls specimen really steps, counting the number up */
+      const ctl = $('.ctl', root); if (ctl) { const host = ctl.parentElement, v = $('[data-count]', host); U.stepper(host, 6, 450, (i) => { if (v) v.textContent = Math.round((1284 * (i + 1)) / 6).toLocaleString('en-IN'); }, { label: 'Run the check', auto: false, start: 5 }); }
+      $('#cb-dlg', root).onclick = () => U.confirm({ title: 'Destroy C0007’s Loans key?', body: 'Every Loans token for this customer becomes permanently unreadable.', confirmLabel: 'Destroy key' }); $('#cb-toast', root).onclick = () => U.toast('Copied'); return () => {}; },
   };
 
   A.pages.states = {

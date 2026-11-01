@@ -389,7 +389,10 @@ def tour_tokens():
 
 @app.post("/api/tour/false-alarms")
 def tour_false_alarms():
-    return E.tour_false_alarms(eng())
+    try:
+        return E.tour_false_alarms(eng())
+    except RuntimeError as err:  # the Loghub sample is not on this server
+        raise HTTPException(503, str(err))
 
 
 class RefIn(BaseModel):

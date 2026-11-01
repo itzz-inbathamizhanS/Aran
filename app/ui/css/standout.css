@@ -93,7 +93,7 @@ html[lang="hi"] body { font-family: "Noto Sans Devanagari", var(--font-body); }
 @media (max-width: 480px) { .topbar .env { display: none; } .topbar .logo { margin-right: auto; } }
 @media (max-width: 370px) { .tools #sound { display: none; } }
 /* wide tables scroll inside their card on phones instead of pushing the page sideways */
-@media (max-width: 760px) { .cb-board .card { overflow-x: auto; } .tbl th, .tbl td { padding-left: 8px; padding-right: 8px; } }
+@media (max-width: 760px) { .cb-board .card { overflow-x: auto; overflow-y: hidden; } .tbl th, .tbl td { padding-left: 8px; padding-right: 8px; } }
 .rank { grid-template-columns: minmax(70px, 150px) minmax(40px, 1fr) auto; } .rank > * { min-width: 0; }
 /* decorative corner marks and glows never widen the page on phones */
 .page { overflow-x: clip; }

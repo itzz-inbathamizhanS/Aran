@@ -126,8 +126,19 @@ window.ARAN = window.ARAN || {};
     view: () => `<div class="grid g-side"><section class="card plus" data-api="GET /api/customers"><div class="between"><h2 class="h3">Customers</h2><button class="btn ghost sm" id="cu-add">+ Add</button></div><p class="small muted">Generated identities. Identifiers are checksum-valid but belong to no one.</p><input id="cu-q" placeholder="Search customers" aria-label="Search customers" style="width:100%;margin-top:12px"><div class="list" id="cu-list"></div></section><section id="cu-detail" class="stack"></section></div><section class="card plus" style="margin-top:16px" data-api="GET /api/merkle"><h2 class="h3">Transparency log</h2><div class="small muted mono" id="cu-mroot"></div><div class="scroll"><table class="tbl dense"><thead><tr><th>Event</th><th>Customer</th><th>Purpose</th><th>When</th></tr></thead><tbody id="cu-log"></tbody></table></div></section>`,
     mount(root) {
       let sel = null, cur = null, receipt = null, check = null, detok = null; const rcs = {};
-      const list = () => { const q = $('#cu-q', root).value.toLowerCase(); $('#cu-list', root).innerHTML = A.customers.filter((c) => (c.ref + c.name).toLowerCase().includes(q)).map((c) => { const gone = c.keys.filter((k) => !k.alive).length; return `<button class="li ${sel === c.ref ? 'on' : ''}" data-ref="${c.ref}"><span><b class="mono">${c.ref}</b> ${U.esc(U.person(c.name))}</span><span class="small muted">${gone ? gone + ' erased' : c.keys.reduce((a, k) => a + k.tokens, 0) + ' tokens'}</span></button>`; }).join('') || '<p class="muted small" style="padding:12px 0">No match.</p>'; };
-      const log = (fresh) => { const M = A.merkle; $('#cu-mroot', root).textContent = `${M.size} entries · root ${String(M.root).slice(0, 32)}…`; $('#cu-log', root).innerHTML = M.recent.slice(0, 10).map((e, i) => `<tr style="${fresh && i === 0 ? 'animation:rise .5s both' : ''}"><td class="${e.event === 'KEY_DESTROYED' ? 't-leak' : ''}">${e.event}</td><td class="mono">${e.customer}</td><td>${e.purpose || '–'}</td><td class="muted">${U.ago(e.at)}</td></tr>`).join(''); };
+      /* the list polls: when the same customers are shown, only their counts and the selection are
+         updated in place, so a button never disappears under the mouse; a new set redraws the list */
+      const list = () => {
+        const q = $('#cu-q', root).value.toLowerCase(), box = $('#cu-list', root);
+        const rows = A.customers.filter((c) => (c.ref + c.name).toLowerCase().includes(q)).map((c) => { const gone = c.keys.filter((k) => !k.alive).length; return { c, n: gone ? gone + ' erased' : c.keys.reduce((a, k) => a + k.tokens, 0) + ' tokens' }; });
+        const btns = [...box.querySelectorAll('button.li')];
+        if (rows.length && btns.length === rows.length && btns.every((b, k) => b.dataset.ref === rows[k].c.ref)) {
+          btns.forEach((b, k) => { b.classList.toggle('on', sel === rows[k].c.ref); const m = b.lastElementChild; if (m.textContent !== rows[k].n) m.textContent = rows[k].n; });
+          return;
+        }
+        box.innerHTML = rows.map(({ c, n }) => `<button class="li ${sel === c.ref ? 'on' : ''}" data-ref="${c.ref}"><span><b class="mono">${c.ref}</b> ${U.esc(U.person(c.name))}</span><span class="small muted">${n}</span></button>`).join('') || '<p class="muted small" style="padding:12px 0">No match.</p>';
+      };
+      const log = (fresh) => { const M = A.merkle; $('#cu-mroot', root).textContent = `${M.size} entries · root ${String(M.root).slice(0, 32)}…`; U.patch($('#cu-log', root), M.recent.slice(0, 10).map((e, i) => `<tr style="${fresh && i === 0 ? 'animation:rise .5s both' : ''}"><td class="${e.event === 'KEY_DESTROYED' ? 't-leak' : ''}">${e.event}</td><td class="mono">${e.customer}</td><td>${e.purpose || '–'}</td><td class="muted">${U.ago(e.at)}</td></tr>`).join('')); };
       const load = async () => { if (!sel) { cur = null; return; } try { cur = await A.customer(sel); } catch (e) { cur = null; U.toast(e.message); } };
       const detail = () => {
         const d = $('#cu-detail', root), c = cur;

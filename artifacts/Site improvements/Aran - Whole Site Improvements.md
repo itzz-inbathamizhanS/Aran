@@ -72,6 +72,23 @@ The Render logs showed no server errors. The problems were in how the page behav
 
 Tested with the console behind a Vercel-style proxy that can switch the server off: the bar appears within about 6 seconds, only 6 requests go out in 20 seconds while disconnected (before: about 30), the page recovers by itself, and a real server restart shows the restart bar. The full check found no errors, no sideways overflow and zero accessibility problems on all 46 runs.
 
+## Round 6: interaction check (wheel, clicks, keyboard)
+
+The accessibility scanner cannot see these, so every page was driven like a person: the mouse wheel over every scrolling box and over the page (computer and phone), a click on every button on a freshly loaded page, and the keyboard through the menu.
+
+| # | Problem | Where | Fix |
+|---|---|---|---|
+| 29 | **The page would not scroll with the mouse wheel** when the pointer was over the tab row: the tabs sat 1px over the row's border, which gave the row 1px of its own vertical scroll that caught the wheel | Aran Cloud dashboard, Bank A, Bank B, Quick connect | The row scrolls sideways only, and its line is drawn so nothing spills over |
+| 30 | **Cards on the design boards caught the wheel on a phone** for the same reason (9px of hidden vertical scroll) | Components and States boards, phone | Those cards scroll sideways only |
+| 31 | **Page text showed through behind the logo** while scrolling (the top bar faded to transparent) | Every page in every app | Once you scroll, the top bar gets a solid, blurred backing and a hairline |
+| 32 | **Customer buttons were replaced every few seconds** while traffic ran, so a click could land on a button that had just been swapped out | Customers & erasure | When the same customers are listed, only their counts update in place |
+| 33 | **Tab could leave the open menu** and wander through the page behind it, and Escape left focus nowhere | Menu, every app | The page behind the open menu is inert, and closing it puts focus back on the Menu button |
+| 34 | **Card scan failed on the live site**: the Tesseract OCR program was not in the server image | Scan a card | `tesseract-ocr` added to the Dockerfile |
+| 35 | **"3. Simple filters fail" crashed (500)** on a server without the Loghub log sample | Guided tour, chapter 3 | Answers 503 with the fix to run instead of crashing |
+| 36 | **The step-controls specimen did nothing** when pressed | Components board | It now steps and counts up, like the real one in the tour |
+
+Checked again after the fixes: no wheel traps left on any page, every button reacts (the only silent ones are form buttons that show the browser's "fill in this field" note), and the full check found no errors, no sideways overflow and zero accessibility problems.
+
 ## Still open
 
 - **`test_core_lockdown`** expects the core to refuse `/api` calls without the internal secret. It fails when the core is started with `ARAN_CONSOLE_OPEN=1`, which is how `run_demo.sh` and Docker Compose start it so that the console works. That is the intended trade-off for a core that only listens on this computer. The test should skip when console-open is set.
@@ -94,5 +111,6 @@ Tested with the console behind a Vercel-style proxy that can switch the server o
 | `12-bank-a-tiles.png` | Bank A's live tiles |
 | `13-reconnecting-bar.png` | LIVE turns to Reconnecting while the server is away |
 | `14-server-restarted-bar.png` | The notice after a server restart |
+| `15-solid-top-bar-on-scroll.png` | The top bar with a solid backing once the page scrolls |
 
 Beginner doc for these ideas: [Learn 25](Aran%20Learn%2025%20-%20Accessibility%2C%20Tenant%20Isolation%20and%20Containers.md).
