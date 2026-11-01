@@ -19,6 +19,31 @@ app = FastAPI(title="Aran console API", version="1.0")
 # compress pages, scripts and API answers (about 70% smaller over the network)
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 
+# Security headers on every answer. The console loads scripts only from this server, styles and
+# fonts from Google Fonts, talks only to this server, and may not be framed by other sites.
+# Camera and microphone stay allowed for this site only (card scan, the arena's voice input).
+CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+       "font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; "
+       "connect-src 'self'; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'")
+SECURITY_HEADERS = {
+    "Content-Security-Policy": CSP,
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(self), microphone=(self), geolocation=(), payment=(), usb=()",
+    "Cross-Origin-Opener-Policy": "same-origin",
+    "Strict-Transport-Security": "max-age=15552000",
+}
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    for k, v in SECURITY_HEADERS.items():
+        if k == "Content-Security-Policy" and request.url.path in ("/docs", "/redoc"):
+            continue  # FastAPI's API docs load their scripts from a CDN
+        response.headers.setdefault(k, v)
+    return response
+
 
 @app.middleware("http")
 async def check_internal_secret(request: Request, call_next):

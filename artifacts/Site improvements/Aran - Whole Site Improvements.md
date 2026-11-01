@@ -105,8 +105,21 @@ Every console page was measured in a real browser: bytes downloaded, time to the
 | 44 | **Printing** included the top bar, buttons and 3D scenes on black | | A print layout: content on white, links printed with their address | |
 | 45 | **Render's health ping got "405 Method Not Allowed"** (`HEAD /`) | | The pages answer `HEAD` as well as `GET` | |
 
+## Round 8: security headers, phones and the design boards
+
+| # | Problem | Fix |
+|---|---|---|
+| 46 | **No browser security headers**: any site could frame the console, and the browser would run scripts from anywhere | The server now sends a Content Security Policy (scripts only from this site), `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy` (camera and microphone only for this site), `Cross-Origin-Opener-Policy` and HSTS. Every page, tour chapter, the webcam scan and present mode were checked with zero policy violations |
+| 47 | **Small tap targets on phones**: buttons, tabs and menu links under 44 px | On touch screens they are now at least 44 px high (40 px for menu sub-links) |
+| 48 | **A word ("learning") overflowed its stat tile** on the Immune page | Words in a number tile use a smaller size |
+| 49 | **Components board: most specimens did nothing** when clicked | Every specimen now works: buttons answer, "Run a scan" shows the busy state, chips toggle, tabs switch (also with the arrow keys), the radio reports its value, the sink field is checked as you type, the card field groups digits, rows select by click or Enter, the alert can be confirmed, marked normal and reset, the Merkle proof lights up hash by hash, the key breaks and comes back, and the confirm dialog says what was chosen |
+| 50 | **States board: the full-screen previews were only named in the text** | Each preview has an **Open full screen** button (a new "waking from sleep" preview was added), **Check the real server now** calls `/api/health` and says which state the server is in, the job card cycles through never run, running, passed and failed, and the immune preview switches between idle, learning and watching and starts on the real mode |
+
+Checked with 23 automated clicks (all pass), the accessibility scanner on both boards in dark at 1440 px and light at 390 px (zero problems) and no page errors.
+
 ## Still open
 
+- **`test_versus_tokenises_everything_and_traces_the_leak` fails about one run in five** (also before round 8): with randomly generated customers, the "With Aran" side sometimes leaves one identifier raw. It needs a fixed random seed in the test and a look at which generated value slips through.
 - **`test_core_lockdown`** expects the core to refuse `/api` calls without the internal secret. It fails when the core is started with `ARAN_CONSOLE_OPEN=1`, which is how `run_demo.sh` and Docker Compose start it so that the console works. That is the intended trade-off for a core that only listens on this computer. The test should skip when console-open is set.
 
 ## Screenshots

@@ -512,3 +512,12 @@ html[data-conn="down"] .env b { color: var(--warning-color); }
   main#view { padding-top: 0 !important; }
   a[href^="http"]::after { content: " (" attr(href) ")"; font-size: .8em; }
 }
+
+/* touch screens: every control at least 44 px tall (WCAG 2.5.5 target size) */
+@media (pointer: coarse) {
+  .btn, .btn.sm, .tab, .chip[data-tok], .linkbtn { min-height: 44px; }
+  .tab { min-width: 44px; justify-content: center; }
+  .hood > summary { min-height: 44px; display: flex; align-items: center; }
+  .kit-sub a, .kit-apps a { min-height: 40px; display: inline-flex; align-items: center; }
+}
+.stat .v .word { font-size: .62em; letter-spacing: -.03em; } /* a word (learning, watching) in a number tile */
