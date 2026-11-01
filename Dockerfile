@@ -9,7 +9,7 @@ COPY app/web/ ./
 RUN npm run build
 
 FROM python:3.13-slim
-RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates tesseract-ocr && rm -rf /var/lib/apt/lists/*
 WORKDIR /srv
 COPY app/server/requirements.txt app/server/requirements.txt
 RUN pip install --no-cache-dir -r app/server/requirements.txt

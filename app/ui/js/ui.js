@@ -13,6 +13,8 @@ window.ARAN = window.ARAN || {};
   U.$$ = (s, r) => [...(r || document).querySelectorAll(s)];
   U.reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   U.sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  /* set innerHTML only when it changed, so a live list that polls does not replace buttons under the mouse */
+  U.patch = (el, html) => { if (el && el.__h !== html) { el.__h = html; el.innerHTML = html; } };
   /* generated names are sometimes ALL CAPS (as they appear in real bank records); show them in title case in lists */
   U.person = (n) => (n && n === n.toUpperCase() && /[A-Z]/.test(n) ? n.toLowerCase().replace(/(^|[\s.'-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase()) : n || '');
   U.html = (s) => { const t = document.createElement('template'); t.innerHTML = s.trim(); return t.content.firstElementChild; };

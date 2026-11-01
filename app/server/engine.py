@@ -848,6 +848,8 @@ def tour_false_alarms(eng, n=300):
     false alarm. Count what plain patterns flag versus what Aran's detector flags."""
     r = random.Random()
     systems = sorted(eng.replay.logs)
+    if not systems:
+        raise RuntimeError("no Loghub logs found; run research/fetch_data.sh")
     lines = [r.choice(eng.replay.logs[r.choice(systems)]) for _ in range(n)]
     naive = {k: 0 for k in NAIVE}
     aran, examples, cells = defaultdict(int), [], []

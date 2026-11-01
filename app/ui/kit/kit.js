@@ -36,6 +36,8 @@ window.ARAN = window.ARAN || {};
     o = o || {};
     const cur = o.page || o.app;
     let top = $('#topbar'); if (!top) { top = document.createElement('header'); top.className = 'topbar'; top.id = 'topbar'; document.body.prepend(top); }
+    /* once the page scrolls, the top bar gets a solid backing so content never shows through behind the logo */
+    const solid = () => top.classList.toggle('scrolled', window.scrollY > 8); solid(); window.addEventListener('scroll', solid, { passive: true });
     let menu = $('#menu'); if (!menu) { menu = document.createElement('nav'); menu.className = 'menu'; menu.id = 'menu'; menu.setAttribute('aria-label', 'Menu'); top.after(menu); }
     const here = S.find(cur), grp = here && here.group;
     top.innerHTML = `<a class="logo" href="${here ? here.page.href : S.links.console + '/'}" aria-label="${esc(o.brand || 'Aran')}, home">${mark}<span>${esc(o.brand || 'Aran')}</span><span class="tamil">அரண்</span></a><div class="env"><span class="long"><b>LIVE</b> · ${esc(o.env || 'every value comes from the Aran API · identifiers are generated, never real people')}</span><span class="short"><b>LIVE</b> · ${esc(o.envShort || 'generated IDs only')}</span></div><div class="tools">${o.tools || ''}<button class="pillbtn" id="theme" aria-label="Toggle theme"><span id="theme-i" aria-hidden="true"></span><span class="txt" id="theme-t"></span></button><button class="pillbtn solid menubtn rollhost" id="menubtn" aria-expanded="false" aria-controls="menu"><span class="ln" aria-hidden="true"></span>${U.roll('Menu')}</button></div>`;
@@ -52,7 +54,7 @@ window.ARAN = window.ARAN || {};
       if (c && bar.scrollWidth > bar.clientWidth) bar.scrollLeft = c.offsetLeft - (bar.clientWidth - c.offsetWidth) / 2;
     }
     const main = $('main#view'); if (main && !$('.pager', main) && !document.documentElement.classList.contains('embed')) main.insertAdjacentHTML('beforeend', S.pagerHTML(cur));
-    const setMenu = (open) => { menu.classList.toggle('open', open); $('#menubtn').setAttribute('aria-expanded', open); document.body.style.overflow = open ? 'hidden' : ''; };
+    const setMenu = (open) => { menu.classList.toggle('open', open); $('#menubtn').setAttribute('aria-expanded', open); document.body.style.overflow = open ? 'hidden' : ''; S.menuFocus(menu, open); };
     $('#menubtn').onclick = () => setMenu(!menu.classList.contains('open'));
     menu.addEventListener('click', (e) => { if (e.target.closest('a')) setMenu(false); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && menu.classList.contains('open')) setMenu(false); });

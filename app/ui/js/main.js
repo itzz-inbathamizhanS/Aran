@@ -20,7 +20,7 @@
   A.site.wireMenu($('#menu'));
 
   function parse0() { return location.hash.slice(1).split('/')[0] || FIRST; }
-  const setMenu = (open) => { menu.classList.toggle('open', open); $('#menubtn').setAttribute('aria-expanded', open); lenis && (open ? lenis.stop() : lenis.start()); document.body.style.overflow = open ? 'hidden' : ''; };
+  const setMenu = (open) => { menu.classList.toggle('open', open); $('#menubtn').setAttribute('aria-expanded', open); lenis && (open ? lenis.stop() : lenis.start()); document.body.style.overflow = open ? 'hidden' : ''; A.site.menuFocus(menu, open); };
   $('#menubtn').onclick = () => { setMenu(!menu.classList.contains('open')); A.sound.click(); };
   menu.addEventListener('click', (e) => { if (e.target.closest('a')) setMenu(false); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && menu.classList.contains('open')) setMenu(false); });
@@ -71,7 +71,7 @@
     ScrollTrigger.refresh(); syncBar();
   }
   /* the top bar switches to dark ink while it sits over the light hero panel */
-  const syncBar = () => { const h = $('#hero'); $('#topbar').classList.toggle('on-light', !!h && window.scrollY < h.offsetHeight - 70); };
+  const syncBar = () => { const h = $('#hero'), tb = $('#topbar'); tb.classList.toggle('on-light', !!h && window.scrollY < h.offsetHeight - 70); tb.classList.toggle('scrolled', window.scrollY > 8); };
   window.addEventListener('scroll', syncBar, { passive: true }); window.addEventListener('resize', syncBar);
   window.addEventListener('hashchange', render);
   document.addEventListener('keydown', (e) => { if (current && current.page === 'tour' && !e.target.closest('input, textarea, select') && !menu.classList.contains('open') && !$('.dialog-back.open')) { if (e.key === 'ArrowRight' && current.n < 12) location.hash = 'tour/' + (current.n + 1); if (e.key === 'ArrowLeft' && current.n > 0) location.hash = 'tour/' + (current.n - 1); } });

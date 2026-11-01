@@ -52,6 +52,9 @@ code { font-size: .86em; }
 .topbar::before { content: ""; position: absolute; inset: 0; z-index: -1; backdrop-filter: blur(10px); -webkit-mask: linear-gradient(#000 40%, transparent); mask: linear-gradient(#000 40%, transparent); }
 .topbar.on-light { background: none; --text-color: #0b0c10; --text-2-color: #3d4047; --brand-color: #0b0c10; --glass-line-color: rgba(0, 0, 0, .22); --primary-color: #0b0c10; --on-primary-color: #c3c3c3; --background-color: #c3c3c3; --success-color: #0d6b2a; }
 .topbar.on-light::before { display: none; }
+/* scrolled: a solid, blurred backing with a hairline, so page text never shows through behind the logo and buttons */
+.topbar.scrolled:not(.on-light) { background: color-mix(in srgb, var(--background-color) 86%, transparent); box-shadow: 0 1px 0 var(--glass-line-color); transition: background .2s, box-shadow .2s; }
+.topbar.scrolled:not(.on-light)::before { -webkit-mask: none; mask: none; }
 .topbar .logo, .topbar .pillbtn { transition: color var(--motion-medium), border-color var(--motion-medium), background var(--motion-medium); }
 .logo { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 1.5rem; letter-spacing: -.05em; color: var(--brand-color); }
 .logo .tamil { font-size: .8rem; color: var(--text-2-color); letter-spacing: 0; align-self: flex-end; padding-bottom: 3px; }
