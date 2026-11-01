@@ -4,6 +4,8 @@
 
 **Live site:** [aran-console.onrender.com](https://aran-console.onrender.com) (the full console and the real Aran server, redeployed from `main` on every push; the first visit after a quiet spell can take about a minute to wake up).
 
+**Vercel link:** [aran-console.vercel.app](https://aran-console.vercel.app) (the same console pages served fast from Vercel, from `app/ui` with `app/ui/vercel.json`; every `/api` call is passed to the Render server above).
+
 **New to Aran? Start here:** [The full project story, from zero to now](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.md) ([PDF](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.pdf)): every technical word explained, the research and papers used, how the solution was derived, what was built, every result, and what comes next.
 
 **Prefer to watch?** [The full explainer course (76 min, 6 parts)](artifacts/Explainer%20video%20v2/README.md): Aran from zero in plain words, with an everyday example before every technical term, real leaks from India and the world, animated characters, and a recap after every chapter. Start with [Part 1: The problem](artifacts/Explainer%20video%20v2/Aran%20-%20Explainer%20Video%20v2%20-%20Part%201%20-%20The%20problem.mp4). Short on time? The [24-minute quick tour](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.mp4) ([subtitles](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.srt)). How they are made: [Learn 21](docs/learning/21-making-the-explainer-video.md).
