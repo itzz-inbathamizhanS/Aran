@@ -1,0 +1,59 @@
+# Keeps the free Render services awake so the hosted demo never shows
+# a cold start. Render free services sleep after 15 minutes without traffic.
+#
+# GitHub runs scheduled jobs at most every 5 minutes (and sometimes a few
+# minutes late), which is still well inside Render's 15 minute window.
+#
+# Hours: 01:00-17:59 UTC = 06:30-23:29 IST. Render's free plan gives 750
+# instance hours a month per workspace; two services awake 24 hours a day
+# would use them up around 17 November and Render would then suspend both
+# until 1 December. Change the hour range below to change the window.
+name: Keep hosted demo awake
+
+on:
+  schedule:
+    - cron: "*/5 1-17 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+env:
+  STOP_AFTER: "2026-11-19"   # last day (IST) to keep pinging
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Stop after the end date
+        id: gate
+        run: |
+          today=$(TZ=Asia/Kolkata date +%F)
+          if [[ "$today" > "$STOP_AFTER" ]]; then
+            echo "Past $STOP_AFTER, nothing to do."; echo "run=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=yes" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Ping back ends and front ends
+        if: steps.gate.outputs.run == 'yes'
+        run: |
+          urls=(
+            https://aran-console.onrender.com/api/health
+            https://aran-apps.onrender.com/healthz
+            https://aran-apps.onrender.com/cloud/v1/health
+            https://aran-apps.onrender.com/bank-a/api/config
+            https://aran-apps.onrender.com/bank-b/api/config
+            https://aran-console.vercel.app/
+            https://aran-cloud.vercel.app/
+            https://aran-bank-a.vercel.app/
+            https://aran-bank-b.vercel.app/
+          )
+          fail=0
+          for u in "${urls[@]}"; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 --retry 2 --retry-delay 5 "$u" || echo 000)
+            echo "$code  $u"
+            [[ "$code" =~ ^(2|3) ]] || fail=$((fail+1))
+          done
+          # A waking service answers 502/503 on the first ping; only flag it, never fail the run.
+          echo "Not ready yet: $fail"
