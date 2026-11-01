@@ -29,9 +29,11 @@
   const countRaw = (copies, raws) => copies.reduce((n, c) => n + Object.values(c.fields).filter((v) => typeof v === 'string' && raws.some((r) => r && v.includes(r))).length, 0);
 
   async function payAt(base, body, key) {
-    const accts = await K.api(base + '/api/accounts');
-    const a = accts.find((x) => x.name !== null) || accts[0];
-    if (!a) throw new Error('no customers yet (still being created)');
+    /* the customer just signed up at both banks above; otherwise this bank's newest open account */
+    let ref = A.sbsRef; try { ref = ref || sessionStorage.getItem('aran-sbs-ref'); } catch (e) { /* storage blocked */ }
+    const accts = (await K.api(base + '/api/accounts')).filter((x) => !String(x.number).startsWith('ERASED'));
+    const a = accts.find((x) => x.customer_ref === ref) || accts[accts.length - 1];
+    if (!a) throw new Error('no account yet. Sign a customer up at both banks first (the form above)');
     const d = await K.api(base + '/api/transactions', { body: Object.assign({ customer_ref: a.customer_ref, idem_key: key }, body) });
     return { d, acct: a };
   }

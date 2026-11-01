@@ -159,7 +159,7 @@ def main():
     # Compliance Officer
     r_comp = requests.get(f"{BANK_B_URL}/api/officer-view/{cust_ref}?role=compliance", timeout=5)
     assert_eq(r_comp.json()["fields"]["aadhaar"]["display"], raw_aadhaar, "Compliance sees full plaintext")
-    assert_true("Demo role switch" in r_comp.json()["disclaimer"], "Role switch disclaimer present")
+    assert_true("role switch" in r_comp.json()["disclaimer"].lower(), "Role switch disclaimer present")
 
     # 7. Breach Dump & Trace
     print_step(7, "Simulate Database Exfiltration Breach & Firewall Trace")

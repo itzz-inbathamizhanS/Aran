@@ -20,9 +20,9 @@
   };
   tiles(); setInterval(() => !document.hidden && tiles(), 3000);
 
-  $('#sample').onclick = async () => { try { const s = await K.api(L.bankB + '/api/sample-customer'); $('#s-name').value = s.name; $('#s-mobile').value = s.mobile; $('#s-aadhaar').value = s.aadhaar; $('#s-card').value = s.card; } catch (e) { U.toast('Could not load a sample'); } };
+  $('#sample').onclick = async () => { try { const s = await K.api(L.bankB + '/api/sample-customer'); $('#s-name').value = s.name; $('#s-mobile').value = s.mobile; $('#s-aadhaar').value = s.aadhaar; $('#s-card').value = s.card; } catch (e) { U.toast('Could not make a test identity'); } };
   $('#both').onsubmit = (e) => { e.preventDefault(); K.busy($('#send'), async () => {
-    const ref = 'CUST-DEMO-' + Math.random().toString(36).slice(2, 7).toUpperCase();
+    const ref = 'CUST-SBS-' + Math.random().toString(36).slice(2, 7).toUpperCase();
     const body = { name: $('#s-name').value.trim(), mobile: $('#s-mobile').value.trim(), aadhaar: $('#s-aadhaar').value.trim(), card: $('#s-card').value.trim(), customer_ref: ref };
     const [a, b] = await Promise.allSettled([K.api(L.bankA + '/api/customers', { body }), K.api(L.bankB + '/api/customers', { body })]);
     const line = (r, n) => (r.status === 'fulfilled' ? `${n}: <b class="mono">${esc(r.value.customer_ref)}</b> opened` : `${n}: <span class="t-leak">${esc(r.reason.message)}</span>`);
@@ -35,6 +35,7 @@
       <div class="kit-cmp kit-gap-s"><div class="kit-cmp-v"><span class="label">Bank A · readable in its database</span><b class="t-leak">${raw(A_)} of ${F.length}</b></div><div class="kit-cmp-v"><span class="label">Bank B · readable in its database</span><b class="t-token">${raw(B_)} of ${F.length}</b></div></div>
       <div class="kit-scroll kit-gap-s"><table class="tbl dense"><thead><tr><th>Field</th><th>Typed</th><th>Bank A stored</th><th>Bank B stored</th></tr></thead><tbody>${F.map(([k, n]) => `<tr><td>${n}</td><td class="mono">${esc(body[k])}</td><td>${cellv(A_[k], body[k])}</td><td>${cellv(B_[k], body[k])}</td></tr>`).join('')}</tbody></table></div>
       <p class="small muted" style="margin-top:8px">Red is the real value, readable by anyone who gets the database. Teal is an Aran token: useless on its own, and unreadable for good once the customer is erased.</p>`;
+    A.sbsRef = ref; try { sessionStorage.setItem('aran-sbs-ref', ref); } catch (e2) { /* storage blocked */ }
     ['frame-a', 'frame-b'].forEach((id) => { const f = $('#' + id); f.src = f.src; }); tiles();
   }); };
 })(window.ARAN);

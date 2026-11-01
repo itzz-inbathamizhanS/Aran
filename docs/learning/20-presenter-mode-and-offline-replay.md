@@ -2,6 +2,8 @@
 
 **For:** whoever presents Aran to judges or reviewers, and whoever maintains `app/ui/js/present.js`. **Time:** about 1 hour, plus one full rehearsal. **Before this:** Learn 17 (wiring a design to a live API).
 
+> **Update (November 2026):** the offline replay described in sections 2 and 3 has been removed. Presenter mode now only shows live answers; when the server is asleep or down the page says so (the waking and Reconnecting screens) instead of showing saved answers. The old service worker removes itself from browsers that installed it. Read [Learn 29](29-real-data-paths-not-demo-data.md) for why. Open the site a minute before you present so the free server is awake.
+
 Live demos fail in boring ways: the server crashes, a model takes too long to load, the hall Wi-Fi drops. Presenter mode gives you a fixed path through the best screens and keeps the demo running when the server does not.
 
 ## 1. Using it

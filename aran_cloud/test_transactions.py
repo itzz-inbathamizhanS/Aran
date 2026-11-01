@@ -3,7 +3,7 @@ Tests for the transaction API of Aran Cloud: /v1/transactions/protect, /v1/trans
 /v1/usage, /v1/plan, /v1/team, /v1/slo and /v1/settings.
 
 They run against a live Aran Cloud (ARAN_CLOUD_URL, default http://127.0.0.1:8100) in front of a live core, started with
-ARAN_DEMO_MODE=1 so that signups from this machine are not rate limited. The database file is read to prove that no raw
+ARAN_LOCAL_SIGNUPS=1 so that signups from this machine are not rate limited. The database file is read to prove that no raw
 value is ever stored: set ARAN_CLOUD_DB to the same path the server uses.
 """
 
@@ -534,17 +534,8 @@ def test_slo_counts_a_slow_minute_as_bad():
         assert s["bad_minutes"] == 1 and s["good_minutes"] == 0 and s["status"] in ("ok", "at_risk")
 
 
-def test_demo_seed_fills_the_dashboard_and_is_labelled(alpha):
-    ws = new_workspace("Txn Demo")
-    r = requests.post(f"{CLOUD_URL}/v1/demo/seed", headers=H(ws["admin_key"]), json={}, timeout=120)
-    if r.status_code == 404:
-        pytest.skip("demo seed unavailable")
-    assert r.status_code == 200, r.text[:300]
-    body = r.json()
-    if not body.get("demo_transactions"):
-        pytest.skip("server is not in ARAN_DEMO_MODE")
-    m = requests.get(f"{CLOUD_URL}/v1/metrics?window=1h&step=5m", headers=H(ws["dashboard_key"]), timeout=10).json()
-    assert m["totals"]["demo_transactions"] == body["demo_transactions"] == 200
-    assert sum(1 for b in m["buckets"] if b["transactions"]) >= 6
-    rows = requests.get(f"{CLOUD_URL}/v1/transactions?limit=5", headers=H(ws["dashboard_key"]), timeout=10).json()["transactions"]
-    assert all(x["demo"] for x in rows)
+def test_demo_seed_is_gone(alpha):
+    """No endpoint fills a workspace with made-up transactions any more."""
+    ws = new_workspace("Txn No Seed")
+    r = requests.post(f"{CLOUD_URL}/v1/demo/seed", headers=H(ws["admin_key"]), json={}, timeout=10)
+    assert r.status_code in (404, 405)
