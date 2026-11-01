@@ -637,8 +637,7 @@ class Immune:
 # ---------------------------------------------------------------- replay of real logs
 class Replay:
     """Streams real production log lines (Loghub, 16 systems) through the firewall as the
-    bank's normal traffic. About one line in ten carries a bank event for an enrolled
-    customer, as in experiment E9."""
+    bank's normal traffic, exactly as logged: no made-up customer events are mixed in."""
 
     def __init__(self, eng):
         self.eng = eng
@@ -673,12 +672,6 @@ class Replay:
         r = self.eng.rand
         sysname = r.choice([s for s in systems if s in self.logs] or sorted(self.logs))
         ln = r.choice(self.logs[sysname])
-        if r.random() < 0.1:
-            text = synth.make_line(r, *r.choice(synth.TEMPLATES["test"]), "test")[0]
-            if r.random() < 0.7 and self.eng.customers:
-                c = self.eng.customers[r.choice(sorted(self.eng.customers))]
-                text += f" aadhaar={c['AADHAAR']} mobile={c['MOBILE']}"
-            ln = ln + " | " + text
         return ln
 
     def _run(self):
@@ -687,8 +680,11 @@ class Replay:
             for src, sink, systems in REPLAY_PAIRS:
                 k = np.random.poisson(self.rate)
                 for _ in range(k):
-                    self.eng.process(self._line(systems), src, sink, record=True)
-                    self.sent += 1
+                    try:
+                        self.eng.process(self._line(systems), src, sink, record=True)
+                        self.sent += 1
+                    except Exception as err:  # one bad line must not stop the replay for good
+                        print(f"replay: skipped a line ({err.__class__.__name__}: {err})", flush=True)
             nxt += 1.0
             time.sleep(max(0.0, nxt - time.time()))
 

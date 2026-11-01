@@ -41,7 +41,7 @@ services:
     environment:
       - ARAN_CORE_URL=http://core:8000
       - ARAN_CLOUD_DB=/srv/data/cloud.db
-      - ARAN_DEMO_MODE=1
+      - ARAN_LOCAL_SIGNUPS=1
       - PORT=8100
     ports:
       - "8100:8100"

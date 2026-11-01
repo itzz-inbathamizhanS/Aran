@@ -45,7 +45,9 @@ DEFAULT_ADMIN_SCOPES = "admin,protect,gateway,trace,detokenise,erase,verify,dash
 # Rate limiting settings (Item 5 & Hardening 1a)
 RATE_LIMIT_PER_KEY = int(os.environ.get("ARAN_RATE_LIMIT_PER_KEY", "300"))
 ARAN_SIGNUP_LIMIT = int(os.environ.get("ARAN_SIGNUP_LIMIT", os.environ.get("ARAN_SIGNUP_LIMIT_PER_IP", "5")))
-ARAN_DEMO_MODE = os.environ.get("ARAN_DEMO_MODE", "0") in ("1", "true", "True")
+# Signups from this machine itself (tests, docker compose, the hosted apps' own Bank B) skip the
+# per-address signup limit. ARAN_DEMO_MODE is the older name of the same switch.
+ARAN_LOCAL_SIGNUPS = os.environ.get("ARAN_LOCAL_SIGNUPS", os.environ.get("ARAN_DEMO_MODE", "0")) in ("1", "true", "True")
 
 _key_request_timestamps = defaultdict(deque)  # key_hash -> deque of timestamps
 _signup_ip_timestamps = defaultdict(deque)    # ip -> deque of timestamps
@@ -67,9 +69,9 @@ def client_ip(request: Request) -> str:
     return peer
 
 
-def is_demo_exempt(request: Request) -> bool:
-    """Demo mode skips the signup limit only for a real local caller, never for a forwarded header."""
-    if not ARAN_DEMO_MODE:
+def is_local_signup(request: Request) -> bool:
+    """ARAN_LOCAL_SIGNUPS skips the signup limit only for a real local caller, never for a forwarded header."""
+    if not ARAN_LOCAL_SIGNUPS:
         return False
     peer = request.client.host if request.client else ""
     return peer in LOOPBACK and not request.headers.get("X-Forwarded-For")
@@ -101,7 +103,7 @@ def check_key_rate_limit(key_hash: str):
 
 
 def check_signup_rate_limit(request: Request):
-    if is_demo_exempt(request):
+    if is_local_signup(request):
         return
     ip = client_ip(request)
 
@@ -1254,26 +1256,6 @@ def get_v1_health():
         return {"status": "degraded", "core": False, "error": str(e)}
 
 
-@app.post("/v1/demo/seed")
-def trigger_demo_seed(request: Request, tenant: dict = Depends(require_scope("admin"))):
-    """Triggers realistic demo traffic seeding for the calling workspace."""
-    import subprocess
-    import sys
-    demo_txns = seed_demo_transactions(tenant, 200) if ARAN_DEMO_MODE else 0
-    api_key = request.headers.get("X-API-Key")
-    script_path = os.path.join(HERE, "..", "scripts", "seed_demo.py")
-    res = subprocess.run(
-        [sys.executable, script_path, "--api-key", api_key],
-        capture_output=True,
-        text=True,
-        timeout=60,
-    )
-    if res.returncode != 0:
-        raise HTTPException(status_code=500, detail=f"Seed failed: {res.stderr}")
-    return {"status": "ok", "output": res.stdout, "demo_transactions": demo_txns,
-            "note": "Demo data: generated identifiers, labelled demo." if demo_txns else None}
-
-
 # ---------------------------------------------------------------- transactions: time, plans, roles
 IST = dt.timezone(dt.timedelta(hours=5, minutes=30))  # the workspace region is India: "today" and "this month" are IST
 PLANS = {
@@ -1519,12 +1501,11 @@ def txn_view(row: sqlite3.Row, replayed: bool = False) -> dict:
         "raw": row["raw"],
         "by_type": loads(row["by_type"], {}),
         "latency_ms": row["latency_ms"],
-        "demo": bool(row["demo"]),
         "replayed": replayed,
     }
 
 
-def run_transactions(tenant: dict, items: List[TxnIn], at_list: Optional[List[float]] = None, demo: bool = False) -> List[dict]:
+def run_transactions(tenant: dict, items: List[TxnIn], at_list: Optional[List[float]] = None) -> List[dict]:
     """Protects a batch for one tenant, stores one txn_events row and one usage_events row per NEW transaction,
     and returns the results in request order. A (txn_id, sink) already stored for this tenant is a replay:
     the stored result comes back with replayed=true and nothing is metered again."""
@@ -1598,7 +1579,7 @@ def run_transactions(tenant: dict, items: List[TxnIn], at_list: Optional[List[fl
                     """,
                     (tenant_id, t.txn_id, t.rail, t.sink, t.purpose, t.customer_ref, t.amount_paise, source, out["found"],
                      out["protected"], out["raw"], out["ignored"], json.dumps(out["by_type"]), out["latency_ms"], at,
-                     json.dumps({"fields": out["fields"], "detail": out["detail"]}), 1 if demo else 0),
+                     json.dumps({"fields": out["fields"], "detail": out["detail"]}), 0),
                 )
                 if cur.rowcount == 0:
                     continue  # another request stored the same transaction first: this one is a replay
@@ -1702,7 +1683,7 @@ def build_metrics(tenant_id: str, window: str, step: str, now: Optional[float] =
     start = cur - (n - 1) * s
     conn = get_db()
     rows = conn.execute(
-        "SELECT at, latency_ms, found, protected, raw, rail, sink, by_type, source, demo FROM txn_events WHERE tenant_id = ? AND at >= ? AND at <= ?",
+        "SELECT at, latency_ms, found, protected, raw, rail, sink, by_type, source FROM txn_events WHERE tenant_id = ? AND at >= ? AND at <= ?",
         (tenant_id, start, now + 1),
     ).fetchall()
     errs = conn.execute(
@@ -1718,7 +1699,6 @@ def build_metrics(tenant_id: str, window: str, step: str, now: Optional[float] =
     by_type: Dict[str, int] = {}
     by_sink: Dict[str, dict] = {}
     by_source: Dict[str, dict] = {}
-    demo_n = 0
     for r in rows:
         i = int((int(r["at"] // s) * s - start) // s)
         if i < 0 or i >= n:
@@ -1726,7 +1706,6 @@ def build_metrics(tenant_id: str, window: str, step: str, now: Optional[float] =
         x = b[i]
         x["transactions"] += 1; x["found"] += r["found"]; x["protected"] += r["protected"]; x["raw"] += r["raw"]
         lat[i].append(r["latency_ms"]); all_lat.append(r["latency_ms"])
-        demo_n += r["demo"]
         bt = loads(r["by_type"], {})
         for key, bucket in ((r["rail"], by_rail), (r["sink"], by_sink), (r["source"] or "unknown", by_source)):
             e = bucket.setdefault(key, {"transactions": 0, "protected": 0, "raw": 0, "by_type": {}})
@@ -1753,7 +1732,7 @@ def build_metrics(tenant_id: str, window: str, step: str, now: Optional[float] =
         "totals": {
             "transactions": tx, "found": found, "protected": prot, "raw": raw, "coverage": ratio(prot, found),
             "p50_ms": pctl(all_lat, 50), "p95_ms": pctl(all_lat, 95), "p99_ms": pctl(all_lat, 99),
-            "errors": n_err, "error_rate": ratio(n_err, tx + n_err), "demo_transactions": demo_n,
+            "errors": n_err, "error_rate": ratio(n_err, tx + n_err),
         },
         "by_rail": by_rail, "by_type": by_type, "by_sink": by_sink, "by_source": by_source,
     }
@@ -1828,7 +1807,6 @@ def counters_now(tenant_id: str) -> dict:
         "SELECT COUNT(*) n, COALESCE(SUM(found),0) f, COALESCE(SUM(protected),0) p, COALESCE(SUM(raw),0) w FROM txn_events WHERE tenant_id = ? AND at >= ?",
         (tenant_id, day),
     ).fetchone()
-    demo_today = conn.execute("SELECT COUNT(*) FROM txn_events WHERE tenant_id = ? AND at >= ? AND demo = 1", (tenant_id, day)).fetchone()[0]
     stored = conn.execute("SELECT COUNT(*) FROM txn_events WHERE tenant_id = ?", (tenant_id,)).fetchone()[0]
     last_min = conn.execute("SELECT COUNT(*) FROM txn_events WHERE tenant_id = ? AND at >= ?", (tenant_id, now - 60)).fetchone()[0]
     lats = [x[0] for x in conn.execute("SELECT latency_ms FROM txn_events WHERE tenant_id = ? AND at >= ?", (tenant_id, now - 3600))]
@@ -1840,7 +1818,7 @@ def counters_now(tenant_id: str) -> dict:
         "at": now, "today": "today (India time)",
         "transactions_today": r["n"], "found_today": r["f"], "protected_today": r["p"], "raw_today": r["w"],
         "coverage_today": ratio(r["p"], r["f"]), "transactions_last_minute": last_min,
-        "demo_today": demo_today, "transactions_stored": stored,
+        "transactions_stored": stored,
         "p95_ms_last_hour": pctl(lats, 95), "budget_ms": (st["budget_ms"] if st else 10.0),
         "month_used": used, "month_limit": limit, "over_limit": used > limit,
     }
@@ -2131,45 +2109,6 @@ def put_settings(body: SettingsIn, tenant: dict = Depends(require_scope("admin")
         raise HTTPException(status_code=422, detail=f"fail_safe must be one of {', '.join(FAIL_SAFE_MODES)}")
     save_settings(tenant["id"], fail_safe=body.fail_safe)
     return get_settings(tenant)
-
-
-# ---------------------------------------------------------------- demo transactions
-DEMO_SINKS = ["txn-log", "txn-log", "txn-log", "fraud-desk", "fraud-desk", "analytics", "sms-gateway", "support-chat"]
-DEMO_RAILS = ["UPI"] * 5 + ["IMPS"] * 2 + ["NEFT"] * 2 + ["CARD"] * 2 + ["RTGS"]
-DEMO_NAMES = ["aarav", "priya", "vikram", "ananya", "rajesh", "meera", "amit", "sunita", "kavita", "rohan", "siddharth", "deepa"]
-DEMO_REMARKS = ["rent for November", "dinner split", "loan EMI", "refund for order", "school fees", "gift", "electricity bill", "grocery"]
-
-
-def seed_demo_transactions(tenant: dict, n: int = 200) -> int:
-    """About n demo transactions spread over the last hour (generated identifiers, labelled demo) so a fresh dashboard is not empty."""
-    import random
-    rnd = random.Random()
-    now = time.time()
-    ids = [call_core("GET", "/api/tour/generate")[0] for _ in range(min(40, n))]
-    run = int(now)
-    items: List[TxnIn] = []
-    for i in range(n):
-        g = rnd.choice(ids)
-        rail = rnd.choice(DEMO_RAILS)
-        name = rnd.choice(DEMO_NAMES)
-        pan = "".join(rnd.choice("ABCDEFGHJKLMNPRSTUVWXYZ") for _ in range(3)) + "P" + rnd.choice("ABCDEFGHJKLMNPRSTUVWXYZ") + f"{rnd.randint(1000, 9999)}" + rnd.choice("ABCDEFGHJKLMNPRSTUVWXYZ")
-        fields = {"payer_account": "".join(rnd.choice("0123456789") for _ in range(14)), "remarks": rnd.choice(DEMO_REMARKS)}
-        if rail == "UPI":
-            fields["payee"] = f"{name}{rnd.randint(1, 99)}@okhdfcbank"
-            fields["mobile"] = g["mobile"]
-        elif rail == "CARD":
-            fields["card"] = g["card"]
-            fields["mobile"] = g["mobile"]
-        else:
-            fields["payee_account"] = "".join(rnd.choice("0123456789") for _ in range(14))
-            fields["remarks"] += f" aadhaar {g['aadhaar']}" if rnd.random() < 0.4 else f" pan {pan}"
-        items.append(TxnIn(txn_id=f"DEMO-{run}-{i + 1:04d}", rail=rail, sink=rnd.choice(DEMO_SINKS), purpose="Service",
-                           customer_ref=f"CUST-D{rnd.randint(1, 60):04d}", amount_paise=rnd.randint(5_000, 5_000_000), fields=fields))
-    # more traffic in the later minutes, none in the last few seconds
-    ats = sorted(now - 3540 + 3500 * (rnd.random() ** 0.7) for _ in range(n))
-    for i in range(0, n, 100):
-        run_transactions(tenant, items[i:i + 100], at_list=ats[i:i + 100], demo=True)
-    return n
 
 
 # ---------------------------------------------------------------- static & frontend

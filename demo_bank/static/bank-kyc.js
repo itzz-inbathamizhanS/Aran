@@ -48,12 +48,16 @@
     $('#o-go').disabled = !cs.length; $('#erase').disabled = !cs.length;
   }
 
-  $('#sample').onclick = async () => { try { const s = await K.api('/api/sample-customer'); $('#f-name').value = s.name; $('#f-mobile').value = s.mobile; $('#f-aadhaar').value = s.aadhaar; $('#f-card').value = s.card; } catch (e) { U.toast('Could not load a sample'); } };
+  $('#sample').onclick = async () => { try { const s = await K.api('/api/sample-customer'); $('#f-name').value = s.name; $('#f-mobile').value = s.mobile; $('#f-aadhaar').value = s.aadhaar; $('#f-card').value = s.card; } catch (e) { U.toast('Could not make a test identity'); } };
   $('#signup').onsubmit = (e) => { e.preventDefault(); K.busy($('#open'), async () => {
     const out = $('#signup-out');
-    try { const d = await K.api('/api/customers', { body: { name: $('#f-name').value.trim(), mobile: $('#f-mobile').value.trim(), aadhaar: $('#f-aadhaar').value.trim(), card: $('#f-card').value.trim() } });
-      out.innerHTML = U.note(aran ? 'ok' : 'err', `Account <b class="mono">${esc(d.customer_ref)}</b> opened. ${aran ? 'Identifiers were tokenised by Aran before they were stored.' : 'Identifiers were stored exactly as typed.'}`);
-      $('#signup').reset(); db();
+    const dep = String($('#f-deposit').value).trim().replace(/,/g, '');
+    if (!/^\d{1,7}(\.\d{1,2})?$/.test(dep)) { out.innerHTML = U.note('err', 'Type the opening deposit in rupees, from 0 up to 1 crore, for example 25000.'); return; }
+    const [r, f = ''] = dep.split('.'), paise = Number(r) * 100 + Number((f + '00').slice(0, 2));
+    try { const d = await K.api('/api/customers', { body: { name: $('#f-name').value.trim(), mobile: $('#f-mobile').value.trim(), aadhaar: $('#f-aadhaar').value.trim(), card: $('#f-card').value.trim(), opening_deposit_paise: paise } });
+      out.innerHTML = U.note(aran ? 'ok' : 'err', `Account <b class="mono">${esc(d.customer_ref)}</b> opened with ₹${U.fmt(Math.floor(paise / 100))}. ${aran ? 'Identifiers were tokenised by Aran before they were stored.' : 'Identifiers were stored exactly as typed.'} <a href="#home" style="text-decoration:underline">Go to its account</a>`);
+      try { localStorage.setItem('bank-cust-' + (aran ? 'b' : 'a'), d.customer_ref); } catch (e2) { /* storage blocked */ }
+      $('#signup').reset(); db(); if (A.bank && A.bank.reload) A.bank.reload(d.customer_ref);
     } catch (err) { out.innerHTML = U.note('err', esc(err.message)); }
   }); };
   U.tabs($('.card .tabs').parentElement);
@@ -96,6 +100,6 @@
   });
   $('#refresh').onclick = db;
 
-  config().then(db).catch((err) => { if (!document.querySelector('.logo')) K.shell({ app: 'bankA', brand: 'Demo bank' }); $('#lede').textContent = 'Could not reach this bank’s server: ' + err.message; });
+  config().then(db).catch((err) => { if (!document.querySelector('.logo')) K.shell({ app: 'bankA', brand: 'Bank' }); $('#lede').textContent = 'Could not reach this bank’s server: ' + err.message; });
   setInterval(() => { if (!document.hidden) db().catch(() => {}); }, 5000);
 })(window.ARAN);

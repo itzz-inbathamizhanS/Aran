@@ -116,10 +116,8 @@ class World:
     def __init__(self, mode, tmp_path, monkeypatch):
         monkeypatch.setenv("BANK_MODE", mode)
         monkeypatch.setenv("BANK_DATA_DIR", str(tmp_path))
-        monkeypatch.setenv("BANK_SEED", "0")
         monkeypatch.setenv("ARAN_API_KEY", "test-key")
         monkeypatch.setenv("ARAN_URL", "http://127.0.0.1:1")
-        monkeypatch.delenv("BANK_AUTO_TRAFFIC", raising=False)
         name = "bank_app_" + uuid.uuid4().hex[:8]
         spec = importlib.util.spec_from_file_location(name, os.path.join(HERE, "app.py"))
         self.mod = importlib.util.module_from_spec(spec)
@@ -529,20 +527,33 @@ def test_erase_keeps_ledger_amounts(world):
         assert acct in world.c.get("/api/breach").json()["dump"]               # Bank A still holds every copy
 
 
-def test_simulate_creates_a_realistic_mix_and_keeps_the_books_balanced(world):
-    for _ in range(3):
-        world.customer()
-    r = world.c.post("/api/simulate", json={"n": 20})
-    assert r.status_code == 200
-    d = r.json()
-    assert d["created"] == 20 and d["success"] + d["held"] + d["failed"] == 20 and d["success"] >= 8
-    st = world.c.get("/api/txn-stats").json()
-    assert st["transactions"] == 20 and st["ledger"]["sum"] == 0
-    assert len({t["rail"] for t in world.c.get("/api/transactions", params={"limit": 50}).json()["items"]}) >= 2
-    assert world.c.post("/api/simulate", json={"n": 0}).status_code == 422
-    if world.bank.aran:
-        assert not re.search(r"\b" + re.escape(world.account(world.c.get("/api/accounts").json()[0]["customer_ref"])["number"]) + r"\b", stored_text(world))
+def test_the_bank_creates_nothing_on_its_own(world):
+    """No seeded customers, no generated payments, no simulator."""
+    assert world.c.get("/api/customers").json() == []
+    assert world.c.get("/api/txn-stats").json()["transactions"] == 0
+    assert world.c.post("/api/simulate", json={"n": 20}).status_code in (404, 405)
+    assert world.c.post("/api/seed").status_code in (404, 405)
 
+
+def test_opening_deposit_and_branch_deposit(world):
+    r = world.c.post("/api/customers", json={"name": "Selvi Murugan", "mobile": "9876500001", "aadhaar": "234123412346",
+                                             "card": luhn_complete("411111000000001"), "opening_deposit_paise": rs(2500)})
+    assert r.status_code == 200, r.text
+    ref = r.json()["customer_ref"]
+    assert r.json()["account"]["balance_paise"] == rs(2500)
+    d = world.c.post(f"/api/accounts/{ref}/deposit", json={"amount_paise": rs(500)})
+    assert d.status_code == 200 and d.json()["balance_paise"] == rs(3000)
+    assert world.c.post(f"/api/accounts/{ref}/deposit", json={"amount_paise": 0}).status_code == 422
+    assert world.c.post("/api/accounts/NOPE/deposit", json={"amount_paise": 100}).status_code == 404
+    assert world.c.get("/api/txn-stats").json()["ledger"]["sum"] == 0
+
+
+def test_test_identity_is_checksum_valid_and_fresh(world):
+    a, b = world.c.get("/api/sample-customer").json(), world.c.get("/api/sample-customer").json()
+    assert bank_txn.verhoeff_ok(a["aadhaar"]) and len(a["aadhaar"]) == 12 and a["aadhaar"][0] in "23456789"
+    assert luhn_complete(a["card"][:-1]) == a["card"] and len(a["card"]) == 16
+    assert len(a["mobile"]) == 10 and a["mobile"][0] in "6789"
+    assert a["aadhaar"] != b["aadhaar"]
 
 def test_transactions_filters_and_detail(world):
     ref = world.customer(funds_rupees=50_000)
@@ -563,3 +574,19 @@ def test_money_helpers():
     assert bank_txn.luhn_ok(CARD_PAYEE) and not bank_txn.luhn_ok("4111111111111112")
     a = "2" + "34567890123"
     assert bank_txn.verhoeff_ok(a + str(verhoeff_digit(a)))
+
+
+def test_transfer_to_a_customer_of_the_same_bank_lands_in_their_account(world):
+    payer, payee = world.customer(funds_rupees=10000), world.customer(funds_rupees=100)
+    to = world.account(payee)
+    r = world.pay(payer, rail="IMPS", payee=to["number"], ifsc=to["ifsc"], rupees=2500)
+    assert r.status_code == 200, r.text
+    tx = r.json()
+    assert tx["status"] == "success", tx
+    assert world.account(payee)["balance_paise"] == rs(2600) and world.account(payer)["balance_paise"] == rs(7500)
+    st = world.c.get("/api/txn-stats").json()
+    assert st["ledger"]["sum"] == 0
+    rv = world.c.post(f"/api/transactions/{tx['txn_id']}/reverse", json={"reason": "wrong amount"})
+    assert rv.status_code == 200 and world.account(payee)["balance_paise"] == rs(100)
+    bad = world.pay(payer, rail="NEFT", payee="999999999999", ifsc=to["ifsc"], rupees=10)
+    assert bad.json()["status"] == "failed" and "No open account" in bad.json()["fail_reason"]

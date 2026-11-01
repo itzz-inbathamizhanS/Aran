@@ -16,7 +16,6 @@ import hashlib
 import hmac
 import json
 import os
-import random
 import re
 import secrets
 import sqlite3
@@ -28,7 +27,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Union
 
 from fastapi import FastAPI, Header, HTTPException, Query
-from pydantic import BaseModel, StrictInt
+from pydantic import BaseModel, Field, StrictInt
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -318,7 +317,6 @@ class Bank:
         if self.aran:
             from cryptography.fernet import Fernet
             self._fernet = Fernet(base64.urlsafe_b64encode(self._key))
-        self.pools: Dict[str, list] = {}
         self.init_schema()
 
     # -- core encryption: Bank B keeps the account master and payees sealed at rest; the copies are Aran's job
@@ -459,7 +457,7 @@ class Bank:
         prefix = "6020" if self.aran else "5010"
         number = prefix + "".join(str(secrets.randbelow(10)) for _ in range(10))
         if opening_paise is None:
-            opening_paise = (100_000 + secrets.randbelow(900_000)) * 100   # Rs 1,00,000 to Rs 10,00,000
+            opening_paise = DEFAULT_OPENING_PAISE
         cur = conn.execute(
             "INSERT INTO accounts (customer_ref, number, ifsc, balance_paise, kind, created_at) VALUES (?,?,?,0,'savings',?)",
             (customer_ref, self.seal(number), f"ARN{self.letter}0001234", self._stamp()))
@@ -638,11 +636,37 @@ class Bank:
             return
         self._settle(conn, txn_id, acct["id"], rail, amt)
 
+    def own_ifsc(self) -> str:
+        return f"ARN{self.letter}0001234"
+
+    def _onus(self, conn, txn_id: str):
+        """A bank transfer (IMPS, NEFT, RTGS) to this bank's own IFSC goes to one of its own customers.
+        Returns (handled, account row or None): handled is False for a payment to another bank."""
+        r = conn.execute("SELECT rail, payee, payee_ifsc, account_id FROM transactions WHERE txn_id=?", (txn_id,)).fetchone()
+        if not r or r["rail"] not in ("IMPS", "NEFT", "RTGS") or (r["payee_ifsc"] or "").upper() != self.own_ifsc():
+            return False, None
+        number = re.sub(r"\D", "", self.unseal(r["payee"]) or "")
+        for a in conn.execute("SELECT * FROM accounts WHERE kind='savings' AND id<>?", (r["account_id"],)).fetchall():
+            if self.unseal(a["number"]) == number:
+                return True, a
+        return True, None
+
     def _settle(self, conn, txn_id: str, acct_id: int, rail: str, amt: int):
         bal = conn.execute("SELECT balance_paise FROM accounts WHERE id=?", (acct_id,)).fetchone()["balance_paise"]
         if amt > bal:
             self._set(conn, txn_id, "failed", f"Insufficient balance ({fmt_inr(bal)} available)")
             self._event(conn, txn_id, "failed", "balance changed while the payment was held")
+            return
+        onus, to = self._onus(conn, txn_id)
+        if onus and to is None:
+            why = "No open account with that number at this bank"
+            self._set(conn, txn_id, "failed", why)
+            self._event(conn, txn_id, "failed", why)
+            return
+        if onus:   # same bank: the money lands in the payee's own account
+            self._move(conn, txn_id, acct_id, to["id"], amt, "payment")
+            self._set(conn, txn_id, "success")
+            self._event(conn, txn_id, "success", f"debit customer, credit {to['customer_ref']} (same bank): {fmt_inr(amt)}")
             return
         settle = self._internal(conn, f"SETTLE-{rail}", "settlement")
         self._move(conn, txn_id, acct_id, settle, amt, "payment")
@@ -699,8 +723,11 @@ class Bank:
                     raise HTTPException(404, "No such transaction")
                 if r["status"] != "success":
                     raise HTTPException(409, f"Only a successful payment can be reversed (this one is {r['status']})")
-                settle = self._internal(conn, f"SETTLE-{r['rail']}", "settlement")
-                self._move(conn, txn_id, settle, r["account_id"], r["amount_paise"], "reversal")
+                onus, to = self._onus(conn, txn_id)
+                src = to["id"] if onus and to is not None else self._internal(conn, f"SETTLE-{r['rail']}", "settlement")
+                if onus and to is not None and to["balance_paise"] < r["amount_paise"]:
+                    raise HTTPException(409, "The payee has already spent this money; the payment cannot be reversed")
+                self._move(conn, txn_id, src, r["account_id"], r["amount_paise"], "reversal")
                 self._set(conn, txn_id, "reversed", reason.strip()[:120] or None)
                 self._event(conn, txn_id, "reversed", f"credit back {fmt_inr(r['amount_paise'])}" + (f": {reason.strip()[:120]}" if reason.strip() else ""))
                 self._mark_fraud_row(conn, txn_id, "reversed")
@@ -1061,117 +1088,8 @@ class Bank:
         return {"accounts_wiped": n_acct, "transactions_wiped": n_tx, "ledger_payments_kept": sums["n"], "ledger_amount_kept_paise": sums["s"],
                 "copy_tokens": sorted(toks)[:12]}
 
-    # -- traffic generator
-    NAMES = ["rekha", "suresh", "anita", "farhan", "divya", "karthik", "pooja", "imran", "lakshmi", "arjun", "meena", "naveen"]
-    VPA_BANKS = ["okaxis", "oksbi", "ybl", "paytm", "unionbank", "icici"]
-    IFSCS = ["HDFC0001234", "SBIN0004321", "ICIC0000987", "UTIB0001122", "PUNB0123456", "KKBK0000761"]
-    PLAIN_REMARKS = ["Rent", "Dinner split", "Books", "Gift", "Loan EMI", "Electricity bill", "School fees", "Groceries", ""]
 
-    def _payee_pool(self, cust: str, r: random.Random) -> list:
-        pool = self.pools.get(cust)
-        if pool is None:
-            pool = []
-            for _ in range(10):
-                kind = r.choice(["UPI", "UPI", "ACC", "CARD"])
-                if kind == "UPI":
-                    pool.append(("UPI", f"{r.choice(self.NAMES)}{r.randint(10, 999)}@{r.choice(self.VPA_BANKS)}", None))
-                elif kind == "ACC":
-                    pool.append(("ACC", "".join(str(r.randint(0, 9)) for _ in range(r.choice([11, 12, 14, 16]))), r.choice(self.IFSCS)))
-                else:
-                    pool.append(("CARD", luhn_complete("4" + "".join(str(r.randint(0, 9)) for _ in range(14))), None))
-            self.pools[cust] = pool
-        return pool
-
-    def _remark(self, r: random.Random) -> str:
-        if r.random() > 0.35:
-            return r.choice(self.PLAIN_REMARKS)
-        pan = "".join(r.choice("ABCDEFGHJKLMNPRSTUVWXY") for _ in range(5)) + "".join(str(r.randint(0, 9)) for _ in range(4)) + r.choice("ABCDEFGHJKLMNPRSTUVWXY")
-        mob = str(r.randint(6, 9)) + "".join(str(r.randint(0, 9)) for _ in range(9))
-        card = luhn_complete("5" + "".join(str(r.randint(0, 9)) for _ in range(14)))
-        return r.choice([f"Rent Nov, PAN {pan}", f"Call me on {mob} for the receipt", f"Refund for card {card}",
-                         f"Fees paid, my PAN is {pan}", f"WhatsApp {mob} when received"])
-
-    def simulate(self, n: int, rng: Optional[random.Random] = None) -> dict:
-        r = rng or random.Random()
-        conn = self.get_db()
-        custs = [dict(x) for x in conn.execute("SELECT a.customer_ref, a.balance_paise FROM accounts a JOIN customers c ON c.customer_ref=a.customer_ref "
-                              "WHERE a.kind='savings' AND a.number NOT LIKE 'ERASED%'").fetchall()]
-        conn.close()
-        if not custs:
-            raise HTTPException(409, "No customers yet. The bank is still seeding its customers.")
-        out = {"requested": n, "created": 0, "success": 0, "held": 0, "failed": 0, "txn_ids": []}
-        burst_cust, burst_left = None, 0
-        for _ in range(n):
-            if burst_left > 0:
-                c, burst_left = burst_cust, burst_left - 1
-            else:
-                c = r.choice(custs)["customer_ref"]
-                if r.random() < 0.08:
-                    burst_cust, burst_left = c, 7
-            conn = self.get_db()
-            bal = conn.execute("SELECT balance_paise FROM accounts WHERE customer_ref=?", (c,)).fetchone()["balance_paise"]
-            if bal < 20_000 * 100:   # salary credit, so a long day does not run dry
-                with self.lock, conn:
-                    self.deposit(conn, c, (50_000 + r.randint(0, 400_000)) * 100)
-                bal = conn.execute("SELECT balance_paise FROM accounts WHERE customer_ref=?", (c,)).fetchone()["balance_paise"]
-            conn.close()
-            rail = r.choices(["UPI", "IMPS", "NEFT", "CARD", "RTGS"], weights=[50, 18, 14, 12, 6])[0]
-            pool = self._payee_pool(c, r)
-            if rail == "UPI":
-                kind = "UPI"
-            elif rail == "CARD":
-                kind = "CARD"
-            else:
-                kind = "ACC"
-            cands = [x for x in pool if x[0] == kind] or [x for x in pool if x[0] == "UPI"]
-            if kind != "UPI" and not [x for x in pool if x[0] == kind]:
-                rail = "UPI"
-            pk, payee, ifsc = r.choice(cands)
-            big = r.random() < 0.08
-            if rail == "RTGS":
-                amt = (200_000 + r.randint(0, 150_000)) * 100
-            elif big:
-                amt = (50_001 + r.randint(0, 45_000)) * 100
-            elif rail == "UPI":
-                amt = r.choice([r.randint(20, 900), r.randint(200, 6000), r.randint(500, 20000)]) * 100 + r.choice([0, 0, 50])
-            else:
-                amt = r.randint(500, 40_000) * 100
-            if rail == "UPI" and amt > RAILS["UPI"]["max"]:
-                amt = RAILS["UPI"]["max"]
-            if amt > bal:
-                if rail == "RTGS":   # not enough for RTGS: an everyday payment instead
-                    rail, pk, payee, ifsc = "UPI", "UPI", next(x[1] for x in pool if x[0] == "UPI") if any(x[0] == "UPI" for x in pool) else "someone1@okaxis", None
-                amt = max(100, min(amt, bal // 2 // 100 * 100))
-            try:
-                res = self.pay({"customer_ref": c, "rail": rail, "payee": payee, "ifsc": ifsc, "amount_paise": int(amt),
-                                "remarks": self._remark(r), "idem_key": f"sim-{uuid.uuid4().hex}",
-                                "to_support_chat": r.random() < 0.15})
-            except HTTPException:
-                continue
-            self.emit_copies(res["txn"]["txn_id"])
-            out["created"] += 1
-            st = res["txn"]["status"]
-            out["success" if st == "success" else "held" if st == "held" else "failed"] += 1
-            out["txn_ids"].append(res["txn"]["txn_id"])
-        return out
-
-    def seed_customers(self, register, n: int = 8) -> int:
-        """Create demo customers through the normal sign-up (which opens their accounts). Returns how many exist."""
-        names = ["Aarav Sharma", "Priya Patel", "Vikram Malhotra", "Ananya Deshmukh", "Rajesh Iyer", "Meera Nair",
-                 "Amitabh Verma", "Sunita Rao", "Kavita Reddy", "Rohan Gupta", "Lakshmi Menon", "Farhan Qureshi"]
-        conn = self.get_db()
-        have = conn.execute("SELECT COUNT(*) FROM customers").fetchone()[0]
-        conn.close()
-        rr = random.Random()
-        for i in range(have, n):
-            aad = str(rr.randint(2, 9)) + "".join(str(rr.randint(0, 9)) for _ in range(10))
-            aad += str(verhoeff_digit(aad))
-            register({"name": names[i % len(names)], "mobile": str(rr.randint(6, 9)) + "".join(str(rr.randint(0, 9)) for _ in range(9)),
-                      "aadhaar": aad, "card": luhn_complete(rr.choice(["4", "5"]) + "".join(str(rr.randint(0, 9)) for _ in range(14)))})
-        conn = self.get_db()
-        have = conn.execute("SELECT COUNT(*) FROM customers").fetchone()[0]
-        conn.close()
-        return have
+DEFAULT_OPENING_PAISE = 1_00_000 * 100   # Rs 1,00,000 when a sign-up does not say how much it pays in
 
 
 # ------------------------------------------------------------------ HTTP
@@ -1192,8 +1110,8 @@ class ReverseIn(BaseModel):
     reason: Optional[str] = ""
 
 
-class SimIn(BaseModel):
-    n: int = 20
+class DepositIn(BaseModel):
+    amount_paise: StrictInt = Field(gt=0, le=1_000_000_000)   # up to Rs 1 crore at a time
 
 
 def install(app: FastAPI, bank: Bank, register=None):
@@ -1218,6 +1136,24 @@ def install(app: FastAPI, bank: Bank, register=None):
         if customer_ref and not out:
             raise HTTPException(404, "No account for that customer")
         return out
+
+    @app.post("/api/accounts/{customer_ref}/deposit")
+    def deposit(customer_ref: str, body: DepositIn):
+        """Cash or a cheque paid in at the branch: money comes into the customer's savings account."""
+        conn = bank.get_db()
+        try:
+            row = conn.execute("SELECT number FROM accounts WHERE customer_ref=? AND kind='savings'", (customer_ref,)).fetchone()
+            if not row:
+                raise HTTPException(404, "No account for that customer")
+            if bank.unseal(row["number"]).startswith("ERASED"):
+                raise HTTPException(409, "This customer's data was erased; the account is closed")
+            with bank.lock, conn:
+                bank.deposit(conn, customer_ref, body.amount_paise)
+            r = conn.execute("SELECT a.*, c.name FROM accounts a LEFT JOIN customers c ON c.customer_ref=a.customer_ref WHERE a.customer_ref=? AND a.kind='savings'",
+                             (customer_ref,)).fetchone()
+            return dict(bank._acct_view(r), name=r["name"])
+        finally:
+            conn.close()
 
     @app.post("/api/transactions")
     def create_txn(body: PaymentIn, idempotency_key: Optional[str] = Header(None)):
@@ -1293,46 +1229,10 @@ def install(app: FastAPI, bank: Bank, register=None):
     def txn_stats():
         return bank.stats()
 
-    @app.post("/api/simulate")
-    def simulate(body: SimIn):
-        if not 1 <= body.n <= 200:
-            raise HTTPException(422, "n must be between 1 and 200")
-        t0 = time.time()
-        res = bank.simulate(body.n)
-        res["seconds"] = round(time.time() - t0, 2)
-        return res
 
-    @app.post("/api/seed")
-    def seed():
-        if register is None:
-            raise HTTPException(501, "seeding is not wired")
-        return {"customers": bank.seed_customers(register)}
-
-
-def start_background(app: FastAPI, bank: Bank, register):
-    """Seed 8 customers on first start, optional steady traffic (BANK_AUTO_TRAFFIC = payments per minute),
-    and a retry of the outbox for Bank B. All in daemon threads so start-up is never blocked."""
-    def seeder():
-        wait = 5
-        for _ in range(60):
-            try:
-                if bank.seed_customers(register) >= 8:
-                    return
-            except Exception:
-                pass
-            time.sleep(wait)
-            wait = min(wait * 2, 60)  # Aran may be asleep on free hosting: back off instead of calling every 5 s
-
-    def traffic(per_min: float):
-        time.sleep(8)
-        gap = 60.0 / per_min
-        while True:
-            try:
-                bank.simulate(1)
-            except Exception:
-                pass
-            time.sleep(gap * random.uniform(0.6, 1.4))
-
+def start_background(app: FastAPI, bank: Bank, register=None):
+    """Bank B only: retry the outbox (copies Aran Cloud could not take while it was asleep) in a daemon
+    thread. Nothing else runs on its own: customers, accounts and payments only come from people using the bank."""
     def flusher():
         while True:
             time.sleep(15)
@@ -1343,14 +1243,6 @@ def start_background(app: FastAPI, bank: Bank, register):
                 pass
 
     def go():
-        if os.environ.get("BANK_SEED", "1") != "0":
-            threading.Thread(target=seeder, daemon=True).start()
-        try:
-            rate = float(os.environ.get("BANK_AUTO_TRAFFIC", "0") or 0)
-        except ValueError:
-            rate = 0
-        if rate > 0:
-            threading.Thread(target=traffic, args=(rate,), daemon=True).start()
         if bank.aran:
             threading.Thread(target=flusher, daemon=True).start()
 

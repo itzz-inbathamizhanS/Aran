@@ -69,6 +69,8 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Learning | Aran Learn 27 - Bank Transactions for Beginners (Markdown and PDF) | https://github.com/itzz-inbathamizhanS/Aran/blob/main/docs/learning/27-bank-transactions-basics.md |
 | Learning | Aran Learn 28 - Dashboards and Metrics (Markdown and PDF) | https://github.com/itzz-inbathamizhanS/Aran/blob/main/docs/learning/28-dashboards-and-metrics.md |
 | Site improvements | Screenshots: customer list and Bank A on a phone, workspace summary in light mode, erase buttons, results | https://github.com/itzz-inbathamizhans/aran/tree/aran-ui-banks-cloud/artifacts/Site%20improvements |
+| Make every Aran site feature work for real | Aran - Every Feature Works for Real (Markdown and PDF, with screenshots) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Real%20data%2C%20no%20demo/Aran%20-%20Every%20Feature%20Works%20for%20Real.md |
+| Make every Aran site feature work for real | Aran Learn 29 - Real Data Paths, Not Demo Data (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/29-real-data-paths-not-demo-data.md |
 
 Note: the Markdown copy replaces the embedded architecture diagram with a text placeholder; the PDF keeps it.
 

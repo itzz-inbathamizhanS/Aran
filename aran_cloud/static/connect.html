@@ -98,7 +98,7 @@
         const saw = (r.provider_saw || []).map((m) => m.content).join('\n');
         out.innerHTML = `<div class="grid g2 kit-gap-s"><div><div class="label">What the AI provider saw</div><pre class="logline">${K.tokened(saw, [])}</pre></div><div><div class="label">Reply shown to customer care</div><pre class="logline">${K.esc(r.reply)}</pre></div></div><div class="kit-row kit-gap-s">${U.pill(r.findings_in_prompt + ' identifiers masked', 'tok')}${U.pill('audit chain ' + (r.audit_ok ? 'valid' : 'broken'), r.audit_ok ? 'ok' : 'danger')}${U.pill(K.esc(r.provider), '')}</div>`;
       } else {
-        const b = Object.assign({}, BODIES[tab][1], { text, customer_ref: tab === 'writes' ? 'CUST-DEMO-LIVE' : undefined });
+        const b = Object.assign({}, BODIES[tab][1], { text, customer_ref: tab === 'writes' ? 'CUST-TEST-0001' : undefined });
         const r = await send('/v1/protect', b);
         const f = r.findings || [];
         out.innerHTML = `<div class="grid g2 kit-gap-s"><div><div class="label">Before · what your app sent</div><pre class="logline">${K.marked(r.before || text, f)}</pre></div><div><div class="label">After · what gets stored</div><pre class="logline">${K.tokened(r.after, f)}</pre></div></div>

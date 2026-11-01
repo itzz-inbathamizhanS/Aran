@@ -188,7 +188,7 @@
     if (S.paused && view() === 'transactions') { S.pending = (S.pending || []).concat(t); paintLive(); return; }
     mergeTx([t]); S.maxId = Math.max(S.maxId, t.id); S.fresh[t.id] = Date.now();
     if (S.ftx && matches(t) && !S.ftx.some((x) => x.id === t.id)) S.ftx.unshift(t);
-    const c = S.counters; if (c) { c.transactions_today++; c.found_today += t.found; c.protected_today += t.protected; c.raw_today += t.raw; c.coverage_today = c.found_today ? c.protected_today / c.found_today : null; c.transactions_stored++; if (t.demo) c.demo_today++; }
+    const c = S.counters; if (c) { c.transactions_today++; c.found_today += t.found; c.protected_today += t.protected; c.raw_today += t.raw; c.coverage_today = c.found_today ? c.protected_today / c.found_today : null; c.transactions_stored++; }
     S.lastOk = Date.now(); paintLive();
   }
   let raf = 0;
@@ -216,26 +216,46 @@
         const p95 = c.p95_ms_last_hour, covTone = c.raw_today ? 'danger' : '';
         const p95state = p95 == null ? '' : p95 > budget ? 'danger' : p95 > budget * 0.8 ? 'warn' : '';
         const p95note = p95 == null ? 'No transactions in the last hour' : p95 > budget ? `✗ over the ${budget} ms budget` : p95 > budget * 0.8 ? `▲ close to the ${budget} ms budget` : `✓ within the ${budget} ms budget`;
-        set('ov-tiles', tile('Transactions today', fmt(c.transactions_today), 'India time, since midnight' + (c.demo_today ? ` · ${fmt(c.demo_today)} are demo data` : '')) +
+        set('ov-tiles', tile('Transactions today', fmt(c.transactions_today), 'India time, since midnight') +
           tile('Values protected today', fmt(c.protected_today), c.found_today ? `of ${fmt(c.found_today)} found, India time` : 'No identifiers found yet today') +
           tile('Coverage today', c.found_today ? pct(c.coverage_today) : '–', !c.found_today ? 'Nothing to cover yet' : c.raw_today ? `✗ ${fmt(c.raw_today)} value${c.raw_today === 1 ? '' : 's'} left raw` : '✓ every value found was protected', covTone) +
           tile('p95 added latency, last hour', ms(p95), p95note, p95state));
-        set('ov-empty', c.transactions_stored === 0 ? `<div class="card kit-empty kit-gap-s"><h2 class="h3">No transactions yet</h2><p class="muted">Counts start at 0. Send one from your system with the SDK, or fill this dashboard with generated demo data.</p><pre class="kit-code" style="text-align:left;max-width:640px;margin:0 auto var(--space-4)">client.protect_transactions([{"txn_id": "TXN-1", "rail": "UPI", "sink": "txn-log",\n  "fields": {"payee": "ravi@okicici", "remarks": "rent"}}])</pre><div class="kit-row" style="justify-content:center"><button class="btn" data-act="seed"><span>Add demo transactions</span><span class="arr">→</span></button><a class="btn secondary" href="/connect"><span>Quick connect</span></a></div><div data-seed-out></div></div>` : '');
+        set('ov-empty', c.transactions_stored === 0 ? `<div class="card kit-empty kit-gap-s"><h2 class="h3">No transactions yet</h2><p class="muted">Counts start at 0 and only real calls fill them. Connect your system with the SDK, or send one transaction from here: it goes through the same protect path, is metered and appears below.</p><pre class="kit-code" style="text-align:left;max-width:640px;margin:0 auto var(--space-4)">client.protect_transactions([{"txn_id": "TXN-1", "rail": "UPI", "sink": "txn-log",\n  "fields": {"payee": "ravi@okicici", "remarks": "rent"}}])</pre>${firstTxnForm()}</div>` : '');
       }
       if (m) {
         set('ov-chart', valueChart(m, 'last 60 minutes', hhmm)); U.keepTip();
-        set('ov-chart-note', m.totals.demo_transactions ? `Includes ${fmt(m.totals.demo_transactions)} demo transactions` : `${fmt(m.totals.transactions)} transactions in this window`);
+        set('ov-chart-note', `${fmt(m.totals.transactions)} transactions in this window`);
       }
       set('ov-latest', S.txns.length ? latestTable(S.txns.slice(0, 8)) : noData('No transactions yet'));
       set('ov-systems', systemsList());
     },
   };
+  /* one real transaction, typed by the person, through POST /v1/transactions/protect */
+  const firstTxnForm = () => `<form class="kit-form" data-first-txn style="max-width:640px;margin:0 auto;text-align:left">
+      <div class="grid g2"><label class="field">Rail<select name="rail">${['UPI', 'IMPS', 'NEFT', 'RTGS', 'CARD'].map((r) => `<option>${r}</option>`).join('')}</select></label>
+      <label class="field">Destination<select name="sink">${['txn-log', 'fraud-desk', 'analytics', 'sms-gateway', 'support-chat'].map((r) => `<option>${r}</option>`).join('')}</select></label></div>
+      <label class="field">Payee (UPI ID or account number)<input name="payee" required maxlength="120" placeholder="e.g. ravi@okicici"></label>
+      <label class="field">Remarks<input name="remarks" maxlength="300" placeholder="e.g. rent, call me on 98xxxxxxxx"></label>
+      <p class="small muted">Use test values only. Never type a real Aadhaar, PAN, card or phone number.</p>
+      <div class="kit-row"><button class="btn" type="submit"><span>Send this transaction</span><span class="arr">→</span></button><a class="btn secondary" href="/connect"><span>Quick connect</span></a></div><div data-first-out></div></form>`;
+  document.addEventListener('submit', async (e) => {
+    const f = e.target.closest && e.target.closest('[data-first-txn]'); if (!f) return;
+    e.preventDefault(); const out = $('[data-first-out]', f), btn = $('button[type="submit"]', f), v = (n) => f.elements[n].value.trim();
+    const fields = { payee: v('payee') }; if (v('remarks')) fields.remarks = v('remarks');
+    btn.disabled = true;
+    try {
+      const r = await call('/v1/transactions/protect', { body: { transactions: [{ txn_id: 'TXN-' + Date.now().toString(36).toUpperCase(), rail: v('rail'), sink: v('sink'), purpose: 'Service', fields }] } }, out);
+      const x = (r.results || r.transactions || [])[0] || {};
+      U.toast(`Transaction protected · ${fmt(x.protected || 0)} value${x.protected === 1 ? '' : 's'} tokenised`); S.maxId = 0; S.txns = []; refresh();
+    } catch (err) { out.innerHTML = U.note('err', esc(err.message)); }
+    finally { btn.disabled = false; }
+  });
   const tokenPreview = (t, n) => {
     const parts = Object.entries(t.fields || {}).filter(([, v]) => v).sort((a, b) => ((t.detail[b[0]] || {}).protected > 0) - ((t.detail[a[0]] || {}).protected > 0)).slice(0, n || 2).map(([k, v]) => { const hit = (t.detail[k] && t.detail[k].protected) > 0; const s = String(v).length > 30 ? String(v).slice(0, 30) + '…' : String(v); return `<span class="dx-fld"><span class="muted">${esc(k)}</span> ${hit ? `<mark class="m-token">${esc(s)}</mark>` : `<span class="mono">${esc(s)}</span>`}</span>`; });
     return parts.join('') || '<span class="muted">–</span>';
   };
   const valuePills = (t) => U.pill(`${t.protected}/${t.found} protected`, t.found ? 'tok' : '') + (t.raw ? ' ' + U.pill(`✗ ${t.raw} raw`, 'danger') : '');
-  const latestTable = (rows) => `<table class="tbl dense"><thead><tr><th>Time</th><th>Transaction</th><th>After Aran</th><th>Values</th></tr></thead><tbody>${rows.map((t) => `<tr><td class="mono">${hhmm(t.at)}</td><td><a class="mono dx-lnk" href="#transactions&id=${t.id}" data-open="${t.id}">${esc(t.txn_id)}</a><div class="small muted">${esc(t.rail)} → ${esc(t.sink)}${t.demo ? ' · demo' : ''}</div></td><td class="dx-prev">${tokenPreview(t, 1)}</td><td>${valuePills(t)}</td></tr>`).join('')}</tbody></table>`;
+  const latestTable = (rows) => `<table class="tbl dense"><thead><tr><th>Time</th><th>Transaction</th><th>After Aran</th><th>Values</th></tr></thead><tbody>${rows.map((t) => `<tr><td class="mono">${hhmm(t.at)}</td><td><a class="mono dx-lnk" href="#transactions&id=${t.id}" data-open="${t.id}">${esc(t.txn_id)}</a><div class="small muted">${esc(t.rail)} → ${esc(t.sink)}</div></td><td class="dx-prev">${tokenPreview(t, 1)}</td><td>${valuePills(t)}</td></tr>`).join('')}</tbody></table>`;
   const systemsList = () => {
     if (!S.keys) return U.skeleton(120);
     const mine = key.slice(0, 14), live = S.keys.filter((k) => !k.revoked);
@@ -264,7 +284,7 @@
       $('#pause-btn') && ($('#pause-btn').innerHTML = `<span>${S.paused ? 'Resume live feed' + (pend ? ` (${pend} new)` : '') : 'Pause live feed'}</span>`, $('#pause-btn').setAttribute('aria-pressed', S.paused));
       set('tx-count', S.paused ? 'Live feed paused. New transactions wait until you resume.' : active ? `${rows.length} match${rows.length === 1 ? '' : 'es'} (newest 100 shown) · filters are on` : `${fmt(S.counters ? S.counters.transactions_stored : rows.length)} transactions stored · showing ${rows.length} of the newest ${all.length}`);
       set('tx-list', !rows.length ? (active ? noData('No transactions match these filters') : noData('No transactions yet')) :
-        `<table class="tbl dense"><thead><tr><th>Time</th><th>Transaction</th><th>Rail</th><th>Destination</th><th>After Aran</th><th>Values</th><th class="num">Added</th></tr></thead><tbody>${rows.map((t) => `<tr class="${S.sel === t.id ? 'sel' : ''}"><td class="mono">${hhmm(t.at)}</td><td><button class="dx-lnk mono" data-open="${t.id}" aria-label="Show fields of ${esc(t.txn_id)}">${esc(t.txn_id)}</button>${S.fresh[t.id] && Date.now() - S.fresh[t.id] < 5000 ? ' <span class="pill ok">new</span>' : ''}${t.demo ? ' <span class="pill">demo</span>' : ''}</td><td>${esc(t.rail)}</td><td>${esc(t.sink)}</td><td class="dx-prev">${tokenPreview(t, 2)}</td><td>${valuePills(t)}</td><td class="num mono">${ms(t.latency_ms)}</td></tr>`).join('')}</tbody></table>${all.length > rows.length ? `<div class="kit-row kit-gap-s"><button class="btn secondary sm" data-act="more"><span>Show 50 more</span></button></div>` : ''}`);
+        `<table class="tbl dense"><thead><tr><th>Time</th><th>Transaction</th><th>Rail</th><th>Destination</th><th>After Aran</th><th>Values</th><th class="num">Added</th></tr></thead><tbody>${rows.map((t) => `<tr class="${S.sel === t.id ? 'sel' : ''}"><td class="mono">${hhmm(t.at)}</td><td><button class="dx-lnk mono" data-open="${t.id}" aria-label="Show fields of ${esc(t.txn_id)}">${esc(t.txn_id)}</button>${S.fresh[t.id] && Date.now() - S.fresh[t.id] < 5000 ? ' <span class="pill ok">new</span>' : ''}</td><td>${esc(t.rail)}</td><td>${esc(t.sink)}</td><td class="dx-prev">${tokenPreview(t, 2)}</td><td>${valuePills(t)}</td><td class="num mono">${ms(t.latency_ms)}</td></tr>`).join('')}</tbody></table>${all.length > rows.length ? `<div class="kit-row kit-gap-s"><button class="btn secondary sm" data-act="more"><span>Show 50 more</span></button></div>` : ''}`);
       const t = rows.concat(S.txns).find((x) => x.id === S.sel);
       set('tx-detail', t ? detailCard(t) : `<h2 class="h3">Transaction detail</h2><p class="muted small">Choose a transaction above to see each field before and after Aran.</p>`);
       $('#tx-detail').classList.toggle('hidden', !t);
@@ -273,7 +293,7 @@
   const detailCard = (t) => {
     const names = Object.keys(t.fields || {});
     return `<div class="between"><h2 class="h3">${esc(t.txn_id)}</h2><button class="btn ghost sm" data-act="close-detail"><span>Close</span></button></div>
-      <dl class="kit-kv"><dt>Rail</dt><dd>${esc(t.rail)}</dd><dt>Destination</dt><dd>${esc(t.sink)} <span class="muted">(${esc(t.purpose || 'Service')})</span></dd><dt>Amount</dt><dd>${rupees(t.amount_paise)}</dd><dt>Customer ref</dt><dd class="mono">${esc(t.customer_ref || '–')}</dd><dt>Sent by</dt><dd>${esc(t.source || '–')}</dd><dt>When</dt><dd>${new Date(t.at * 1000).toLocaleString()}${t.demo ? ' · <span class="pill">demo data</span>' : ''}</dd><dt>Added latency</dt><dd class="mono">${ms(t.latency_ms)}</dd></dl>
+      <dl class="kit-kv"><dt>Rail</dt><dd>${esc(t.rail)}</dd><dt>Destination</dt><dd>${esc(t.sink)} <span class="muted">(${esc(t.purpose || 'Service')})</span></dd><dt>Amount</dt><dd>${rupees(t.amount_paise)}</dd><dt>Customer ref</dt><dd class="mono">${esc(t.customer_ref || '–')}</dd><dt>Sent by</dt><dd>${esc(t.source || '–')}</dd><dt>When</dt><dd>${new Date(t.at * 1000).toLocaleString()}</dd><dt>Added latency</dt><dd class="mono">${ms(t.latency_ms)}</dd></dl>
       ${U.note('info', 'The cloud does not keep the original values, so there is no “before” text here. Instead each field shows how many identifiers Aran found in it, and what the field became.')}
       <div class="kit-scroll kit-gap-s"><table class="tbl dense"><thead><tr><th>Field</th><th>Before (what Aran found)</th><th aria-hidden="true"></th><th>After (what was stored)</th></tr></thead><tbody>${names.map((n) => { const d = t.detail[n] || { found: 0, protected: 0, types: {} }; const left = d.found - d.protected; return `<tr><td class="mono">${esc(n)}</td><td>${d.found ? `${fmt(d.found)} identifier${d.found === 1 ? '' : 's'} found ${typeChips(d.types)}${left ? ' ' + U.pill('✗ ' + left + ' left raw', 'danger') : ''}` : '<span class="muted">nothing to protect</span>'}</td><td aria-hidden="true">→</td><td>${d.protected ? `<mark class="m-token">${esc(t.fields[n])}</mark>` : `<span class="mono">${esc(t.fields[n])}</span>`}</td></tr>`; }).join('') || '<tr><td colspan="4" class="muted">This transaction had no fields.</td></tr>'}</tbody></table></div>
       <div class="kit-row kit-gap-s">${valuePills(t)}${typeChips(t.by_type)}</div>`;
@@ -287,7 +307,7 @@
     load: () => [loadCounters(), loadWin(() => MAP_STEP[S.win])],
     paint: () => {
       const m = S.mwin; if (!m) return; const w = WIN_NAME[S.win];
-      set('map-note', m.totals.demo_transactions ? `${WINS[S.win][0]} · includes ${fmt(m.totals.demo_transactions)} demo transactions` : WINS[S.win][0]);
+      set('map-note', WINS[S.win][0]);
       const src = Object.entries(m.by_source || {}).sort((a, b) => b[1].transactions - a[1].transactions);
       const dst = Object.entries(m.by_sink || {}).sort((a, b) => b[1].transactions - a[1].transactions), t = m.totals;
       set('map', `<section class="card dx-col"><h2 class="h3">Systems <span class="small muted">(${esc(w)})</span></h2>${src.length ? src.map(([k, v]) => `<div class="dx-node"><b>${esc(k)}</b><div class="small muted">${fmt(v.transactions)} transaction${v.transactions === 1 ? '' : 's'} sent</div></div>`).join('') : noData('No transactions yet')}<p class="small muted">A system is the key a call used.</p></section>
@@ -314,7 +334,7 @@
       const m = S.mwin, slo = S.slo; if (!m || !slo) return; const budget = slo.budget_ms, t = m.totals, w = WIN_NAME[S.win], xf = xfFor(S.win);
       const unit = m.step === '1m' ? 'minute' : m.step === '5m' ? '5 minutes' : 'hour';
       const bad = m.buckets.filter((b) => b.p95_ms != null && b.p95_ms > budget).length, perMin = t.transactions / ((m.to - m.from) / 60);
-      set('perf-note', WINS[S.win][0] + (t.demo_transactions ? ` · includes ${fmt(t.demo_transactions)} demo transactions` : ''));
+      set('perf-note', WINS[S.win][0]);
       set('perf-tiles', tile(`p50 latency, ${w}`, ms(t.p50_ms), t.transactions ? 'a typical transaction' : 'No transactions yet') +
         tile(`p95 latency, ${w}`, ms(t.p95_ms), t.p95_ms == null ? 'No transactions yet' : t.p95_ms > budget ? `✗ over the ${budget} ms budget` : `✓ within the ${budget} ms budget`, t.p95_ms != null && t.p95_ms > budget ? 'danger' : '') +
         tile(`Error rate, ${w}`, t.transactions || t.errors ? pct(t.error_rate) : '–', t.errors ? `✗ ${fmt(t.errors)} failed call${t.errors === 1 ? '' : 's'}` : t.transactions ? '✓ no failed calls' : 'No transactions yet', t.errors ? 'danger' : '') +
@@ -497,11 +517,6 @@
       return;
     }
     const act = t.closest('[data-act]'); if (!act) return; const a = act.dataset.act;
-    if (a === 'seed') return K.busy(act, async () => {
-      const out = $('[data-seed-out]');
-      try { const r = await call('/v1/demo/seed', { method: 'POST', body: {} }, out); U.toast(r.demo_transactions ? `${r.demo_transactions} demo transactions added` : 'Demo mode is off on this server: no demo transactions'); S.maxId = 0; S.txns = []; refresh(); }
-      catch (err) { out && (out.innerHTML = U.note('err', esc(err.message))); }
-    });
     if (a === 'more') { S.txLimit += 50; V.transactions.paint(); return; }
     if (a === 'pause') { S.paused = !S.paused; if (!S.paused) { const p = S.pending || []; S.pending = []; mergeTx(p); } V.transactions.paint(); return; }
     if (a === 'clear') { S.filters = { q: '', rail: '', sink: '' }; ['f-q', 'f-rail', 'f-sink'].forEach((id) => { const el = $('#' + id); if (el) el.value = ''; }); S.ftx = null; V.transactions.paint(); return; }

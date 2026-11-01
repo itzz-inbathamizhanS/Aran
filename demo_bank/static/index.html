@@ -11,16 +11,16 @@
 <link rel="stylesheet" href="/aran/css/style.css">
 <link rel="stylesheet" href="/aran/kit/kit.css">
 <link rel="stylesheet" href="/static/bank.css">
-<title>Demo bank · Aran</title>
+<title>Bank · Aran</title>
 </head>
 <body>
 <main id="view" tabindex="-1" class="page kit">
   <header class="phead" style="margin-bottom:var(--space-5)">
-    <div class="eyebrow" id="eyebrow">Demo bank</div>
-    <h1 id="title">Demo bank</h1>
+    <div class="eyebrow" id="eyebrow">Bank</div>
+    <h1 id="title">Bank</h1>
     <p class="lede" id="lede">Loading this bank’s settings…</p>
   </header>
-  <div class="kit-row" style="margin-bottom:var(--space-5)"><span class="pill" id="mode">mode</span><span class="pill" id="port"></span><span class="small muted">Sample data only. Never type real Aadhaar, card or phone numbers.</span></div>
+  <div class="kit-row" style="margin-bottom:var(--space-5)"><span class="pill" id="mode">mode</span><span class="pill" id="port"></span><span class="small muted">Use test values only. Never type a real Aadhaar, card or phone number.</span></div>
 
   <div class="bk-bar">
     <nav class="bk-nav" aria-label="Bank sections" id="bk-nav">
@@ -33,10 +33,10 @@
     </nav>
     <div class="bk-who">
       <label class="field">Customer<select id="bk-cust"><option value="">Loading…</option></select></label>
-      <button class="btn secondary" id="run-day" type="button"><span>Run the day</span></button>
+      <a class="btn secondary" id="open-acct" href="#kyc"><span>Open an account</span></a>
     </div>
   </div>
-  <p class="small muted" id="run-day-out" role="status" aria-live="polite"></p>
+  <p class="small muted" id="bank-msg" role="status" aria-live="polite"></p>
 
   <!-- 1 · Home -->
   <section class="bk-view" id="v-home" data-view="home" aria-labelledby="h-home" hidden>
@@ -72,7 +72,7 @@
         <label class="bk-check"><input type="checkbox" id="p-chat"><span>Also post the remarks to the support chat</span></label>
         <div class="kit-row">
           <button class="btn" type="submit" id="pay-go"><span>Send payment</span><span class="arr">→</span></button>
-          <button class="btn ghost" type="button" id="pay-sample"><span>Fill a sample payee</span></button>
+          <button class="btn ghost" type="button" id="pay-sample"><span>Fill a test payee</span></button>
         </div>
         <p class="small muted">Idempotency key <code class="mono" id="idem-show"></code>. Pressing send twice with the same key never pays twice.</p>
         <div id="pay-err" role="alert"></div>
@@ -145,12 +145,12 @@
 
   <div class="grid g2" style="align-items:start">
     <section class="card">
-      <div class="between"><h2 class="h3">1 · Customer sign-up</h2><button class="btn ghost sm" id="sample"><span>Fill a valid sample</span></button></div>
+      <div class="between"><h2 class="h3">1 · Customer sign-up</h2><button class="btn ghost sm" id="sample"><span>Fill a test identity</span></button></div>
       <p class="small muted" id="write-hint">The write path: what this bank stores when a customer opens an account.</p>
       <form class="kit-form kit-gap-s" id="signup">
         <label class="field">Full name<input id="f-name" required placeholder="e.g. Sunita Rao"></label>
-        <div class="grid g2"><label class="field">Mobile · 10 digits<input id="f-mobile" class="mono" required inputmode="numeric" placeholder="e.g. 98765 43210"></label><label class="field">Aadhaar · 12 digits, Verhoeff<input id="f-aadhaar" class="mono" required inputmode="numeric" placeholder="or press Fill a valid sample"></label></div>
-        <label class="field">Card · 16 digits, Luhn<input id="f-card" class="mono" required inputmode="numeric" placeholder="or press Fill a valid sample"></label>
+        <div class="grid g2"><label class="field">Mobile · 10 digits<input id="f-mobile" class="mono" required inputmode="numeric" placeholder="e.g. 98765 43210"></label><label class="field">Aadhaar · 12 digits, Verhoeff<input id="f-aadhaar" class="mono" required inputmode="numeric" placeholder="or press Fill a test identity"></label></div>
+        <div class="grid g2"><label class="field">Card · 16 digits, Luhn<input id="f-card" class="mono" required inputmode="numeric" placeholder="or press Fill a test identity"></label><label class="field">Opening deposit in rupees<input id="f-deposit" class="mono" required inputmode="decimal" autocomplete="off" value="100000"></label></div>
         <button class="btn" type="submit" id="open"><span>Open account</span><span class="arr">→</span></button>
       </form>
       <div id="signup-out"></div>
@@ -166,7 +166,7 @@
 
   <section class="card kit-gap-s hidden" id="officer">
     <div class="between"><h2 class="h3">3 · Authorised officer view</h2><span class="pill tok">Aran only</span></div>
-    <p class="small muted">A demo role switch, not real sign-in. Each role sees a different view of the same tokenised record, and every reveal is written to the Aran Cloud audit log.</p>
+    <p class="small muted">A role switch for trying each view, not real sign-in. Each role sees a different view of the same tokenised record, and every reveal is written to the Aran Cloud audit log.</p>
     <div class="kit-cols-4 kit-gap-s" style="grid-template-columns:1.4fr 1.4fr auto"><label class="field">Customer<select id="o-cust"></select></label><label class="field">Role<select id="o-role"><option value="teller">Teller · masked</option><option value="compliance">Compliance · full value</option><option value="developer">Developer · tokens only</option></select></label><button class="btn secondary" id="o-go"><span>Inspect record</span></button></div>
     <div id="o-out" class="kit-gap-s"></div>
   </section>
