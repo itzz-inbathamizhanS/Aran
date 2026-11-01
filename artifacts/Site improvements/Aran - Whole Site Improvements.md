@@ -68,6 +68,7 @@ The Render logs showed no server errors. The problems were in how the page behav
 | 25 | **Unclear error text** when the host answered 502, 503 or 504 ("HTTP 504") | Any button that calls the server | "The Aran server is waking up or restarting. Try again in a few seconds." |
 | 26 | **Names in mixed case** in the customer list (SURESH KULKARNI next to Rajesh Verma) | Customers & erasure | Names show in title case in lists. The data is unchanged; ALL CAPS names stay in the records on purpose, because real bank records contain them |
 | 27 | **The sound button looked like a row of dots** when off | Top bar | A still equaliser icon when off; it moves when sound is on |
+| 28 | **The menu would not scroll with the mouse wheel**; you had to drag its scrollbar. The same was true for the scrolling lists (customers, logs, arena feed) | Menu and lists, on a computer | The smooth-scroll library (Lenis) took every wheel turn for the page. The menu and dialogs are now marked to be left alone (`data-lenis-prevent`), and lists that scroll on their own get the wheel first (`allowNestedScroll`). The page itself still scrolls smoothly |
 
 Tested with the console behind a Vercel-style proxy that can switch the server off: the bar appears within about 6 seconds, only 6 requests go out in 20 seconds while disconnected (before: about 30), the page recovers by itself, and a real server restart shows the restart bar. The full check found no errors, no sideways overflow and zero accessibility problems on all 46 runs.
 
