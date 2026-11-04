@@ -59,7 +59,7 @@ if lsof -Pi :8100 -sTCP:LISTEN -t >/dev/null ; then
     echo "✔ Aran Cloud already running on port 8100"
 else
     echo "▶ Starting Aran Cloud SaaS on port 8100..."
-    (cd "$REPO_ROOT/aran_cloud" && PORT=8100 ARAN_DEMO_MODE=1 ARAN_SIGNUP_LIMIT="$ARAN_SIGNUP_LIMIT" ARAN_INTERNAL_SECRET="$ARAN_INTERNAL_SECRET" "$VENV_PYTHON" -m uvicorn main:app --port 8100 --no-proxy-headers > /tmp/aran_cloud.log 2>&1 &)
+    (cd "$REPO_ROOT/aran_cloud" && PORT=8100 ARAN_DEMO_MODE=1 ARAN_FAAS_ALLOW_PRIVATE_UPSTREAMS=1 ARAN_FAAS_TEST_HOOKS=1 ARAN_SIGNUP_LIMIT="$ARAN_SIGNUP_LIMIT" ARAN_INTERNAL_SECRET="$ARAN_INTERNAL_SECRET" "$VENV_PYTHON" -m uvicorn main:app --port 8100 --no-proxy-headers > /tmp/aran_cloud.log 2>&1 &)
 fi
 
 # Wait for core health
@@ -114,7 +114,7 @@ if lsof -Pi :9002 -sTCP:LISTEN -t >/dev/null ; then
     echo "✔ Bank B already running on port 9002"
 else
     echo "▶ Starting Bank B connected to Aran Cloud (8100)..."
-    (cd "$REPO_ROOT/demo_bank" && BANK_MODE=aran PORT=9002 ARAN_URL=http://127.0.0.1:8100 ARAN_API_KEY="$DEMO_ADMIN_KEY" ARAN_INTERNAL_SECRET="$ARAN_INTERNAL_SECRET" "$VENV_PYTHON" -m uvicorn app:app --port 9002 > /tmp/bank_b.log 2>&1 &)
+    (cd "$REPO_ROOT/demo_bank" && BANK_MODE=aran PORT=9002 ARAN_ANALYTICS_ROUTE=analytics ARAN_URL=http://127.0.0.1:8100 ARAN_API_KEY="$DEMO_ADMIN_KEY" ARAN_INTERNAL_SECRET="$ARAN_INTERNAL_SECRET" "$VENV_PYTHON" -m uvicorn app:app --port 9002 > /tmp/bank_b.log 2>&1 &)
 fi
 
 echo ""

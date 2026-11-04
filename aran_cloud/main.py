@@ -30,6 +30,17 @@ import numpy as np
 from pydantic import BaseModel, Field, field_validator
 import requests
 
+try:  # package layout (aran_cloud.main) and flat layout (run from inside aran_cloud/)
+    from . import db
+    from . import faas
+    from . import edge_plane
+    from . import prod
+except ImportError:
+    import db
+    import faas
+    import edge_plane
+    import prod
+
 # ---------------------------------------------------------------- configuration
 PORT = int(os.environ.get("PORT", 8100))
 ARAN_CORE_URL = os.environ.get("ARAN_CORE_URL", "http://127.0.0.1:8000").rstrip("/")
@@ -38,9 +49,10 @@ ARAN_ADMIN_TOKEN = os.environ.get("ARAN_ADMIN_TOKEN")
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(HERE, "static")
 DB_PATH = os.environ.get("ARAN_CLOUD_DB") or os.path.join(HERE, "cloud.db")  # a container keeps it on a volume
+DATABASE_URL = os.environ.get("ARAN_CLOUD_DATABASE_URL")  # postgresql://... switches from the SQLite file to Postgres
 
-VALID_SCOPES = {"admin", "protect", "gateway", "trace", "detokenise", "erase", "verify", "dashboard"}
-DEFAULT_ADMIN_SCOPES = "admin,protect,gateway,trace,detokenise,erase,verify,dashboard"
+VALID_SCOPES = {"admin", "protect", "gateway", "trace", "detokenise", "erase", "verify", "dashboard", "route", "policy", "webhook", "edge"}
+DEFAULT_ADMIN_SCOPES = "admin,protect,gateway,trace,detokenise,erase,verify,dashboard,route,policy,webhook,edge"
 
 # Rate limiting settings (Item 5 & Hardening 1a)
 RATE_LIMIT_PER_KEY = int(os.environ.get("ARAN_RATE_LIMIT_PER_KEY", "300"))
@@ -147,15 +159,14 @@ async def add_no_cache_headers(request: Request, call_next):
 
 # ---------------------------------------------------------------- storage
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL;")
-    return conn
+    return db.connect(DB_PATH, DATABASE_URL)
 
 
 def init_db():
     conn = get_db()
     with conn:
+        if DATABASE_URL:
+            conn.execute("BEGIN IMMEDIATE")   # Postgres: instances starting together take turns creating tables
         conn.execute("""
             CREATE TABLE IF NOT EXISTS tenants (
                 id TEXT PRIMARY KEY,
@@ -378,6 +389,9 @@ def init_db():
                 updated_at TEXT
             );
         """)
+        faas.init_schema(conn)
+        edge_plane.init_schema(conn)
+        prod.init_schema(conn)
     conn.close()
 
 
@@ -2166,7 +2180,9 @@ def seed_demo_transactions(tenant: dict, n: int = 200) -> int:
         items.append(TxnIn(txn_id=f"DEMO-{run}-{i + 1:04d}", rail=rail, sink=rnd.choice(DEMO_SINKS), purpose="Service",
                            customer_ref=f"CUST-D{rnd.randint(1, 60):04d}", amount_paise=rnd.randint(5_000, 5_000_000), fields=fields))
     # more traffic in the later minutes, none in the last few seconds
-    ats = sorted(now - 3540 + 3500 * (rnd.random() ** 0.7) for _ in range(n))
+    # (the 1h metrics window starts at the beginning of a 5-minute bucket, so stay inside it)
+    lo = max(now - 3540, int(now // 300) * 300 - 3300 + 1)
+    ats = sorted(lo + (now - 40 - lo) * (rnd.random() ** 0.7) for _ in range(n))
     for i in range(0, n, 100):
         run_transactions(tenant, items[i:i + 100], at_list=ats[i:i + 100], demo=True)
     return n
@@ -2201,3 +2217,19 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 ARAN_UI_DIR = os.environ.get("ARAN_UI_DIR", os.path.join(HERE, "..", "app", "ui"))
 if os.path.isdir(ARAN_UI_DIR):
     app.mount("/aran", StaticFiles(directory=ARAN_UI_DIR), name="aran-ui")
+
+
+# ---------------------------------------------------------------- firewall as a service (routes, /fw proxy)
+_faas_ctx = faas.Ctx(get_db=get_db, get_tenant=get_current_tenant_and_key, require_scope=require_scope,
+                     protect_text=protect_text, record_tokens=record_tokens, call_core=call_core,
+                     core_url=ARAN_CORE_URL, port=PORT)
+_faas_ctx.plans = PLANS
+_faas_ctx.tenant_plan = lambda tid: tenant_plan(tid)
+_faas_ctx.plan_key = plan_key
+_faas_ctx.require_admin = require_admin_token
+_faas_ctx.postgres = db.is_postgres(DATABASE_URL)
+app.middleware("http")(faas.host_middleware)       # <route>.<tenant-slug>.fw.aran.local/... is /fw/<route>/...
+app.include_router(faas.build_router(_faas_ctx))
+app.include_router(edge_plane.build_router(_faas_ctx))
+app.include_router(prod.build_router(_faas_ctx))   # status page and billing
+app.router.on_startup.append(lambda: faas.start_sweeper(_faas_ctx))

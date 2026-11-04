@@ -3,6 +3,8 @@ Aran Python SDK.
 Standard library only. Provides typed client for Aran Cloud Data-Flow Firewall.
 """
 
+import hashlib
+import hmac
 import json
 import time
 import urllib.error
@@ -145,6 +147,16 @@ class Aran:
         """Scans and redacts prompts sent to LLMs / AI agents."""
         return self._request("POST", "/v1/gateway", payload={"prompt": prompt, "role": role}, idempotent=False)
 
+    def ai_base_url(self, format: str = "anthropic") -> str:
+        """The base URL that makes an AI client go through Aran. Use your Aran key as the client's API key.
+
+        ``format="anthropic"`` (default) is for the Anthropic SDK, ``format="openai"`` for the OpenAI SDK. Nothing else
+        in your code changes. Needs the 'gateway' scope.
+        """
+        if format not in ("anthropic", "openai"):
+            raise ValueError("format is 'anthropic' or 'openai'")
+        return f"{self.base_url}/v1/ai" + ("/v1" if format == "openai" else "")
+
     def trace(self, dump: str) -> Dict[str, Any]:
         """Traces leaked tokens in a database/log dump to identify origin sink."""
         return self._request("POST", "/v1/trace", payload={"dump": dump}, idempotent=True)
@@ -189,3 +201,25 @@ class Aran:
         query = urllib.parse.urlencode({"window": window, "step": step})
         return self._request("GET", f"/v1/metrics?{query}", idempotent=True)
 
+
+def verify_webhook(secret: str, timestamp: str, body, signature: str, tolerance: Optional[float] = 300.0) -> bool:
+    """Checks the signature of a webhook that Aran Cloud sent you.
+
+    Pass the webhook secret, the ``X-Aran-Timestamp`` header, the raw request body (bytes, exactly as received, not
+    re-serialised JSON) and the ``X-Aran-Signature`` header. Returns True only when the signature matches
+    ``sha256=HMAC-SHA256(secret, timestamp + "." + body)`` and, if ``tolerance`` is set (seconds, default 300), the
+    timestamp is that recent. Pass ``tolerance=None`` to skip the age check.
+    """
+    if not secret or not timestamp or not signature:
+        return False
+    raw = body.encode("utf-8") if isinstance(body, str) else bytes(body)
+    want = "sha256=" + hmac.new(secret.encode("utf-8"), str(timestamp).encode("utf-8") + b"." + raw, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(want.encode("utf-8"), signature.strip().encode("utf-8")):
+        return False
+    if tolerance is not None:
+        try:
+            if abs(time.time() - float(timestamp)) > tolerance:
+                return False
+        except ValueError:
+            return False
+    return True

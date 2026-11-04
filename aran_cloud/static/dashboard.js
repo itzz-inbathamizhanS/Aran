@@ -13,6 +13,9 @@
   const VIEWS = [
     ['overview', 'Overview', 'Is Aran working, is it protecting us, is it slowing payments? This workspace only.'],
     ['transactions', 'Transactions', 'Every payment copy sent through Aran, newest first. The cloud keeps the protected text and the counts, never the original values.'],
+    ['routes', 'Routes', 'Point a system at an Aran route and everything it sends passes through the firewall first. Monitor mode only counts; enforce mode forwards the cleaned request.'],
+    ['policies', 'Policies', 'What to do with each kind of identifier that passes through a route: tokenise, mask, allow, alert or block. Every change is versioned and written to a tamper-evident log.'],
+    ['webhooks', 'Webhooks', 'Send alerts (blocks, alerts, spikes, route failures) to your own systems, signed so you can check they came from Aran. Payloads hold identifier types and counts, never values.'],
     ['datamap', 'Data map', 'Where identifiers go: the systems that call Aran, Aran itself, and the destinations that receive tokens.'],
     ['performance', 'Performance', 'How much time Aran adds to a payment, against the latency budget and the service objective.'],
     ['compliance', 'Compliance', 'Erasure receipts, who read real values back, and proof that the audit log was not edited.'],
@@ -34,7 +37,7 @@
   const S = {
     counters: null, m1h: null, mwin: null, win: '1h', txns: [], ftx: null, maxId: 0, keys: null, slo: null, settings: null, usage: null,
     team: null, dash: null, audit: null, lastOk: 0, err: '', stream: 'off', filters: { q: '', rail: '', sink: '' }, sel: null, paused: false,
-    fresh: {}, txLimit: 50, tick: 0, sinks: [],
+    fresh: {}, txLimit: 50, tick: 0, sinks: [], routes: null, rtEvents: null, rtSel: null, pols: null, polMeta: null, polAudit: null, polSel: null, polRules: null, hooks: null, hookDl: null,
   };
   let timer = null, es = null, esTimer = null, esRetry = 0, painted = null, wsName = '';
 
@@ -348,10 +351,85 @@
     once: true,
   };
 
+  /* ---- Routes (firewall as a service) ---- */
+  const routeUrl = (r) => location.origin + '/fw/' + r.name + '/';
+  const routeHost = (u) => { try { return new URL(u).host; } catch (e) { return u; } };
+  const OUTCOME = { forwarded: ['✓ forwarded', 'ok'], held: ['▲ held', 'warn'], blocked: ['✗ refused', 'danger'], failed_open: ['▲ failed open', 'warn'], failed_closed: ['✗ failed closed', 'danger'] };
+  V.routes = {
+    shell: () => `<section class="card"><h2 class="h3">Your routes</h2><div class="kit-scroll kit-gap-s" id="rt-list">${U.skeleton(120)}</div><div id="rt-out"></div></section>
+      <section class="card kit-gap-s" id="rt-curl-box" hidden><h2 class="h3">Use a route</h2><div id="rt-curl"></div></section>
+      <section class="card kit-gap-s"><h2 class="h3">Add a route</h2><p class="small muted">A new route starts in monitor mode: requests are forwarded untouched and Aran only counts what it would have protected. Flip it to enforce when the counts look right.</p>
+        <form class="kit-form" id="rt-form"><div class="kit-cols-4" style="grid-template-columns:1fr 2fr 1fr 1fr"><label class="field">Name<input id="rt-name" required pattern="[a-z0-9][a-z0-9_-]{0,39}" placeholder="analytics" autocomplete="off"></label><label class="field">Upstream URL<input id="rt-url" class="mono" required placeholder="https://vendor.example/ingest" autocomplete="off"></label><label class="field">Purpose<select id="rt-purpose"><option>Service</option><option>KYC</option><option>Loans</option><option>Marketing</option></select></label><label class="field">If Aran is down<select id="rt-fail"><option value="hold">hold (queue masked)</option><option value="open">open (send as is)</option><option value="closed">closed (refuse)</option></select></label></div><div class="kit-row"><button class="btn" type="submit"><span>Add route</span></button><span id="rt-form-out" role="status"></span></div></form></section>
+      <section class="card kit-gap-s"><h2 class="h3">AI gateway</h2><p class="small muted">Drop-in for AI clients: change the base URL and use your Aran key (gateway scope). Prompts are cleaned before a model sees them.</p><div id="ai-card">${U.skeleton(60)}</div></section>
+      <section class="card kit-gap-s"><h2 class="h3">Data planes</h2><p class="small muted">Self-hosted edges (aran_edge) that clean traffic inside your own network. They pull a signed config from here and send back counts only.</p><div class="kit-scroll" id="edge-list">${U.skeleton(60)}</div></section>
+      <section class="card kit-gap-s"><h2 class="h3">Recent calls</h2><p class="small muted">Counts and outcomes only. The path shown is the cleaned one; no original value is stored.</p><div class="kit-scroll" id="rt-events">${U.skeleton(120)}</div></section>`,
+    load: () => [get('/v1/routes').then((d) => { S.routes = d.routes; }), get('/v1/route-events?limit=30').then((d) => { S.rtEvents = d.events; }), get('/v1/ai/stats').then((d) => { S.aiStats = d; }).catch(() => { S.aiStats = null; }), get('/v1/edges').then((d) => { S.edges = d.edges; }).catch(() => { S.edges = null; })],
+    paint: () => {
+      const rs = S.routes;
+      if (rs) {
+        set('rt-list', rs.length ? `<table class="tbl dense"><thead><tr><th>Name</th><th>Mode</th><th>If Aran is down</th><th>Upstream</th><th class="num">Calls, 24 h</th><th class="num">Protected</th><th class="num">Held</th><th></th></tr></thead><tbody>${rs.map((r) => {
+          const st = r.stats_24h, enf = r.mode === 'enforce';
+          return `<tr><td class="mono">${esc(r.name)}${r.disabled ? ' ' + U.pill('off', 'warn') : ''}${r.require_client_cert ? ' ' + U.pill('mTLS', 'info') : ''}</td><td>${U.pill(enf ? '● enforce' : '◌ monitor', enf ? 'ok' : 'warn')}</td><td>${esc(r.fail_mode)}</td><td class="mono small">${esc(routeHost(r.upstream_url))}</td><td class="num mono">${fmt(st.calls)}</td><td class="num mono">${enf ? fmt(st.protected) : fmt(st.would_protect) + ' <span class="muted small">would</span>'}</td><td class="num mono">${fmt(st.held_pending)}</td><td class="kit-row"><button class="btn ghost sm" data-rt-use="${esc(r.id)}"><span>Copy URL</span></button><button class="btn secondary sm" data-rt-flip="${esc(r.id)}" data-to="${enf ? 'monitor' : 'enforce'}"><span>${enf ? 'Set monitor' : 'Enforce'}</span></button><button class="btn ghost sm" data-rt-del="${esc(r.id)}" aria-label="Delete route ${esc(r.name)}"><span>Delete</span></button></td></tr>`;
+        }).join('')}</tbody></table>` : noData('No routes yet. Add one below.'));
+        const sel = rs.find((r) => r.id === S.rtSel); const box = $('#rt-curl-box');
+        if (box) { box.hidden = !sel; if (sel) set('rt-curl', `<p class="small muted">Send traffic to this URL with your Aran key. Aran cleans it and forwards it to <span class="mono">${esc(sel.upstream_url)}</span>.</p><div class="kit-key"><code>${esc(routeUrl(sel))}</code><button class="btn secondary sm" data-copy="${esc(routeUrl(sel))}"><span>Copy</span></button></div><pre class="logline out kit-gap-s">curl -X POST ${esc(routeUrl(sel))}ingest \\\n  -H "X-API-Key: &lt;your key&gt;" -H "Content-Type: application/json" \\\n  -d '{"customer": "9876543210"}'</pre>`); }
+      }
+      if (S.edges) set('edge-list', S.edges.length ? `<table class="tbl dense"><thead><tr><th>Edge</th><th>Status</th><th>Last report</th><th class="num">Version applied</th><th class="num">Calls, 24 h</th><th class="num">Protected</th><th class="num">Held</th></tr></thead><tbody>${S.edges.map((e) => `<tr><td class="mono">${esc(e.name)}<div class="muted small">${esc(e.id)}</div></td><td>${e.online ? U.pill('● online', 'ok') : U.pill('◌ quiet', 'warn')}</td><td class="small">${e.last_report_at ? esc(ago(e.last_report_at)) : 'no report yet'}</td><td class="num mono">${e.applied_version}${e.applied_version < e.current_version ? ' <span class="muted small">of ' + e.current_version + '</span>' : ''}</td><td class="num mono">${fmt(e.totals_24h.calls)}</td><td class="num mono">${fmt(e.totals_24h.protected)}</td><td class="num mono">${fmt(e.totals_24h.held)}</td></tr>`).join('')}</tbody></table>` : noData('No data planes yet. Make a key with the edge scope and start aran_edge (see aran_edge/README.md).'));
+      else if (S.edges === null) set('edge-list', noData('Data planes need a key with the dashboard or edge scope.'));
+      if (S.aiStats) { const a = S.aiStats; set('ai-card', `<div class="kit-key"><code>${esc(a.base_url)}</code></div><p class="small muted">OpenAI format: <span class="mono">${esc(a.openai_base_url)}</span>. Answers come from: ${esc(a.upstream)}.</p><p class="small">Last 24 h: <b>${a.calls_24h}</b> calls, <b>${a.protected_24h}</b> protected, <b>${a.blocked_24h}</b> refused.</p>`); }
+      else if (S.aiStats === null) set('ai-card', noData('The AI gateway needs a key with the gateway or dashboard scope.'));
+      if (S.rtEvents) set('rt-events', S.rtEvents.length ? `<table class="tbl dense"><thead><tr><th>Time</th><th>Route</th><th>Request</th><th>Status</th><th>Outcome</th><th class="num">Protected</th><th class="num">Would protect</th><th class="num">Added</th></tr></thead><tbody>${S.rtEvents.map((e) => { const o = OUTCOME[e.outcome] || [e.outcome, '']; return `<tr><td class="mono">${K.time(e.at)}</td><td class="mono">${esc(e.route_name || '–')}</td><td class="mono small">${esc(e.method)} ${esc(e.path)}</td><td class="mono">${e.status_code == null ? '–' : e.status_code}</td><td>${U.pill(o[0], o[1])}</td><td class="num mono">${fmt(e.protected_count)}</td><td class="num mono">${fmt(e.would_protect_count)}</td><td class="num mono">${ms(e.fw_ms)}</td></tr>`; }).join('')}</tbody></table>` : noData('No calls through a route yet'));
+    },
+    once: false,
+  };
+
+  /* ---- Webhooks (alerts out) ---- */
+  const DL_STATE = { delivered: ['✓ delivered', 'ok'], pending: ['◌ retrying', 'warn'], sending: ['◌ sending', 'warn'], failed: ['✗ failed', 'danger'] };
+  V.webhooks = {
+    shell: () => `<section class="card"><h2 class="h3">Your webhooks</h2><div class="kit-scroll kit-gap-s" id="wh-list">${U.skeleton(100)}</div><div id="wh-out"></div></section>
+      <section class="card kit-gap-s"><h2 class="h3">Add a webhook</h2><p class="small muted">Aran sends a POST with the headers <span class="mono">X-Aran-Event</span>, <span class="mono">X-Aran-Delivery</span>, <span class="mono">X-Aran-Timestamp</span> and <span class="mono">X-Aran-Signature: sha256=…</span> (HMAC-SHA256 of the timestamp, a dot and the raw body, keyed with the secret). A failed delivery is retried after 1 s, 5 s, 30 s, 2 min and 10 min.</p>
+        <form class="kit-form" id="wh-form"><div class="kit-cols-4" style="grid-template-columns:2fr 2fr"><label class="field">Receiver URL<input id="wh-url" class="mono" required placeholder="https://siem.example/aran" autocomplete="off"></label><fieldset class="field"><legend>Events</legend><div class="kit-row" id="wh-ev"><label><input type="checkbox" value="block" checked> block</label><label><input type="checkbox" value="alert" checked> alert</label><label><input type="checkbox" value="spike" checked> spike</label><label><input type="checkbox" value="route_failure" checked> route failure</label></div></fieldset></div>
+        <div class="kit-row"><button class="btn" type="submit"><span>Add webhook</span></button><span id="wh-form-out" role="status"></span></div></form><div id="wh-secret"></div></section>
+      <section class="card kit-gap-s"><h2 class="h3">Recent deliveries</h2><p class="small muted">Types and counts only. Each row is one event sent to one webhook.</p><div class="kit-scroll" id="wh-dl">${U.skeleton(100)}</div></section>
+      <section class="card kit-gap-s"><h2 class="h3">Export to a SIEM</h2><p class="small muted">Pull route events, blocks included, as JSON lines or CEF. Use the <span class="mono">X-Aran-Next-Since</span> header of one answer as <span class="mono">since</span> of the next.</p><pre class="logline out">curl -H "X-API-Key: &lt;your key&gt;" "${esc(location.origin)}/v1/events/export?format=cef&amp;since=0"</pre></section>`,
+    load: () => [get('/v1/webhooks').then((d) => { S.hooks = d.webhooks; }), get('/v1/webhook-deliveries?limit=30').then((d) => { S.hookDl = d.deliveries; })],
+    paint: () => {
+      if (S.hooks) set('wh-list', S.hooks.length ? `<table class="tbl dense"><thead><tr><th>Receiver</th><th>Events</th><th>Status</th><th class="num">Delivered</th><th class="num">Failed</th><th></th></tr></thead><tbody>${S.hooks.map((w) => `<tr><td class="mono small">${esc(routeHost(w.url))}<div class="muted">${esc(w.id)}</div></td><td class="small">${w.events.map((e) => `<span class="pill tok">${esc(e)}</span>`).join(' ')}</td><td>${w.disabled ? U.pill('off', 'warn') : U.pill('● on', 'ok')}</td><td class="num mono">${fmt(w.deliveries.delivered || 0)}</td><td class="num mono">${fmt(w.deliveries.failed || 0)}</td><td class="kit-row"><button class="btn secondary sm" data-wh-test="${esc(w.id)}"><span>Send test</span></button><button class="btn ghost sm" data-wh-off="${esc(w.id)}" data-to="${w.disabled ? '0' : '1'}"><span>${w.disabled ? 'Turn on' : 'Turn off'}</span></button><button class="btn ghost sm" data-wh-del="${esc(w.id)}" aria-label="Delete webhook ${esc(w.id)}"><span>Delete</span></button></td></tr>`).join('')}</tbody></table>` : noData('No webhooks yet. Add one below.'));
+      if (S.hookDl) set('wh-dl', S.hookDl.length ? `<table class="tbl dense"><thead><tr><th>Time</th><th>Event</th><th>What</th><th>Result</th><th class="num">Attempts</th><th class="num">HTTP</th></tr></thead><tbody>${S.hookDl.map((d) => { const st = DL_STATE[d.state] || [d.state, '']; const dt = d.payload.data || {}; const what = [dt.route, (dt.types || []).join(', '), dt.protected_last_minute != null ? dt.protected_last_minute + '/min' : ''].filter(Boolean).join(' · '); return `<tr><td class="mono">${K.time(d.at)}</td><td>${U.pill(esc(d.event_type), '')}</td><td class="small mono">${esc(what || '–')}</td><td>${U.pill(st[0], st[1])}${d.error && d.state !== 'delivered' ? `<div class="small muted">${esc(d.error)}</div>` : ''}</td><td class="num mono">${d.attempts}</td><td class="num mono">${d.status_code == null ? '–' : d.status_code}</td></tr>`; }).join('')}</tbody></table>` : noData('No deliveries yet'));
+    },
+    once: false,
+  };
+
+  /* ---- Policies (what to do with each identifier type) ---- */
+  const ACTION_HELP = { tokenise: 'replace with a token', mask: 'keep the last 4 characters', allow: 'send as is', alert: 'tokenise and raise an alert', block: 'refuse the whole request (enforce)' };
+  const ruleRow = (r, i, meta) => `<tr><td class="num mono">${i + 1}</td><td><select data-pr-type="${i}" aria-label="Type of rule ${i + 1}">${['*'].concat(meta.types).map((t) => `<option ${t === r.type ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></td><td><select data-pr-action="${i}" aria-label="Action of rule ${i + 1}">${meta.actions.map((a) => `<option ${a === r.action ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select></td><td class="small muted">${esc(ACTION_HELP[r.action] || '')}</td><td><button class="btn ghost sm" data-pr-del="${i}" aria-label="Remove rule ${i + 1}"><span>Remove</span></button></td></tr>`;
+  V.policies = {
+    shell: () => `<section class="card"><h2 class="h3">Your policies</h2><p class="small muted">Rules are checked top to bottom and the first match wins. Anything no rule matches is tokenised. A route uses a policy once you pick it in the Routes tab or below.</p><div class="kit-scroll kit-gap-s" id="pl-list">${U.skeleton(100)}</div><div id="pl-out"></div></section>
+      <section class="card kit-gap-s"><h2 class="h3" id="pl-edit-h">New policy</h2><p class="small muted">Saving makes a new version; older versions stay and can be rolled back to.</p>
+        <form class="kit-form" id="pl-form"><label class="field">Name<input id="pl-name" required pattern="[a-z0-9][a-z0-9_-]{0,39}" placeholder="vendor-analytics" autocomplete="off"></label>
+        <div class="kit-scroll" id="pl-rules"></div><div class="kit-row"><button class="btn ghost sm" type="button" data-act="pl-add"><span>Add rule</span></button><button class="btn" type="submit"><span>Save as new version</span></button><span id="pl-form-out" role="status"></span></div></form></section>
+      <section class="card kit-gap-s"><h2 class="h3">Try the rules</h2><p class="small muted">Runs the rules above on a text you paste and shows what each finding would become. Nothing is stored. Use generated or demo identifiers.</p>
+        <label class="field">Text<textarea id="pl-text" rows="3" class="mono" placeholder="Aadhaar: 2345 6789 0123 and mobile 9876543210"></textarea></label>
+        <div class="kit-row"><button class="btn secondary" data-act="pl-test"><span>Test</span></button></div><div id="pl-test-out"></div></section>
+      <section class="card kit-gap-s"><h2 class="h3">Configuration log</h2><p class="small muted">Every policy and route change, each entry chained to the one before it.</p><div class="kit-row"><button class="btn secondary sm" data-act="pl-verify"><span>Verify chain</span></button><span id="pl-verify-out" role="status"></span></div><div class="kit-scroll" id="pl-audit">${U.skeleton(100)}</div></section>`,
+    load: () => [get('/v1/policies').then((d) => { S.pols = d.policies; S.polMeta = { types: d.types, actions: d.actions }; if (!S.polRules) S.polRules = [{ type: '*', action: 'tokenise' }]; }), get('/v1/routes').then((d) => { S.routes = d.routes; }).catch(() => {}), get('/v1/config-audit?limit=25').then((d) => { S.polAudit = d.audit; })],
+    paint: () => {
+      const meta = S.polMeta;
+      if (S.pols && meta) {
+        const rts = S.routes || [];
+        set('pl-list', S.pols.length ? `<table class="tbl dense"><thead><tr><th>Name</th><th class="num">Version</th><th>Rules</th><th>Used by</th><th></th></tr></thead><tbody>${S.pols.map((p) => `<tr><td class="mono">${esc(p.name)}</td><td class="num mono">v${p.version} <span class="muted small">of ${p.versions}</span></td><td class="small">${p.rules.length ? p.rules.map((r) => `<span class="pill tok">${esc(r.type)} ${esc(r.action)}</span>`).join(' ') : '<span class="muted">tokenise everything</span>'}</td><td class="small mono">${p.routes.length ? p.routes.map(esc).join(', ') : '–'}</td><td class="kit-row"><button class="btn ghost sm" data-pl-edit="${esc(p.id)}"><span>Edit</span></button><button class="btn ghost sm" data-pl-roll="${esc(p.name)}" ${p.versions > 1 && p.version > 1 ? '' : 'disabled'}><span>Roll back</span></button>${rts.length ? `<select data-pl-attach="${esc(p.id)}" aria-label="Attach ${esc(p.name)} to a route"><option value="">Attach to route…</option>${rts.map((r) => `<option value="${esc(r.id)}">${esc(r.name)}${r.policy_id === p.id ? ' (attached)' : ''}</option>`).join('')}</select>` : ''}</td></tr>`).join('')}</tbody></table>` : noData('No policies yet. Write one below.'));
+        const rules = S.polRules || [];
+        set('pl-rules', rules.length ? `<table class="tbl dense"><thead><tr><th class="num">#</th><th>Identifier type</th><th>Action</th><th></th><th></th></tr></thead><tbody>${rules.map((r, i) => ruleRow(r, i, meta)).join('')}</tbody></table>` : noData('No rules: every identifier is tokenised.'));
+      }
+      if (S.polAudit) set('pl-audit', S.polAudit.length ? `<table class="tbl dense"><thead><tr><th>Time</th><th>Who</th><th>Change</th><th>Target</th><th>Entry hash</th></tr></thead><tbody>${S.polAudit.map((a) => `<tr><td class="mono">${K.time(a.at)}</td><td class="small">${esc(a.actor || '–')}</td><td>${esc(a.action)}</td><td class="mono small">${esc(a.detail.name || a.target_id)}${a.detail.version ? ' v' + a.detail.version : ''}${a.detail.to_version ? ' → v' + a.detail.to_version : ''}</td><td class="mono small">${esc((a.entry_hash || '').slice(0, 12))}…</td></tr>`).join('')}</tbody></table>` : noData('No configuration changes yet'));
+    },
+    once: true,
+  };
+
   /* ---- Keys and team ---- */
   V.keys = {
     shell: () => `<section class="card"><h2 class="h3">Workspace keys</h2><div class="kit-scroll kit-gap-s" id="keys">${U.skeleton(140)}</div></section>
-      <section class="card kit-gap-s"><h2 class="h3">Mint a scoped key</h2><div class="kit-cols-4" style="grid-template-columns:1.2fr 2fr auto"><label class="field">Label<input id="mk-l" value="Application service key"></label><div class="field">Scopes<div class="kit-row" id="mk-s" style="margin:0">${['protect', 'gateway', 'trace', 'detokenise', 'erase', 'verify', 'dashboard', 'admin'].map((s) => `<label class="chip dx-chk"><input type="checkbox" value="${s}" ${s === 'protect' || s === 'dashboard' ? 'checked' : ''}> ${s}</label>`).join('')}</div></div><button class="btn" data-act="mint"><span>Mint key</span></button></div><div id="mk-out"></div></section>
+      <section class="card kit-gap-s"><h2 class="h3">Mint a scoped key</h2><div class="kit-cols-4" style="grid-template-columns:1.2fr 2fr auto"><label class="field">Label<input id="mk-l" value="Application service key"></label><div class="field">Scopes<div class="kit-row" id="mk-s" style="margin:0">${['protect', 'gateway', 'trace', 'detokenise', 'erase', 'verify', 'dashboard', 'route', 'policy', 'admin'].map((s) => `<label class="chip dx-chk"><input type="checkbox" value="${s}" ${s === 'protect' || s === 'dashboard' ? 'checked' : ''}> ${s}</label>`).join('')}</div></div><button class="btn" data-act="mint"><span>Mint key</span></button></div><div id="mk-out"></div></section>
       <section class="card kit-gap-s"><h2 class="h3">Team</h2><p class="small muted">Roles decide the scopes of the key issued to a person: admin (everything), security (dashboard, trace, detokenise, erase, verify), auditor (dashboard, verify), developer (protect, gateway, dashboard). Reading the team needs an admin key.</p><div id="team-box"><div id="team">${U.skeleton(100)}</div></div>
         <form class="dx-team-add" id="team-form"><label class="field">Email<input id="tm-email" type="email" required placeholder="name@bank.example" autocomplete="off"></label><label class="field">Role<select id="tm-role"><option>admin</option><option>security</option><option>auditor</option><option selected>developer</option></select></label><label class="chip dx-chk"><input id="tm-key" type="checkbox"> issue a key</label><button class="btn" type="submit"><span>Add person</span></button></form><div id="tm-out"></div></section>`,
     load: () => [loadKeys()],
@@ -376,8 +454,9 @@
     shell: () => `<div class="grid g3" id="us-tiles">${U.skeleton(120)}</div><div id="us-flag"></div>
       <section class="card kit-gap-s"><h2 class="h3" id="us-h">Calls per day</h2><div id="us-chart">${U.skeleton(190)}</div></section>
       <section class="card kit-gap-s"><h2 class="h3">Plan</h2><div class="grid g3" id="us-plans"></div><div id="plan-out"></div></section>
-      <section class="card kit-gap-s"><h2 class="h3">Invoice preview</h2><div id="us-invoice"></div></section>`,
-    load: () => [loadCounters(), get('/v1/usage').then((d) => { S.usage = d; })],
+      <section class="card kit-gap-s"><h2 class="h3">Invoice preview</h2><div id="us-invoice"></div></section>
+      <section class="card kit-gap-s"><h2 class="h3">Invoice from usage</h2><div id="us-bill">${U.skeleton(120)}</div></section>`,
+    load: () => [loadCounters(), get('/v1/usage').then((d) => { S.usage = d; }), get('/v1/billing/preview').then((d) => { S.bill = d; }).catch(() => { S.bill = null; })],
     paint: () => {
       const u = S.usage; if (!u) return;
       set('us-tiles', tile(`Calls ${u.month}`, fmt(u.used), `of ${fmt(u.limit)} on ${u.plan_label}, India time`, u.over_limit ? 'danger' : '') + tile('Plan used', u.used ? u.percent + '%' : '0%', u.over_limit ? '▲ over the plan limit' : '✓ within the plan limit', u.over_limit ? 'danger' : '') + tile(`Transactions ${u.month}`, fmt(u.transactions_this_month), 'protected transactions, a part of the calls'));
@@ -388,6 +467,11 @@
       set('us-plans', Object.entries(u.plans).map(([k, p]) => `<div class="card flat dx-plan ${u.plan === k ? 'cur' : ''}"><div class="between"><b>${esc(p.label)}</b>${u.plan === k ? U.pill('✓ current', 'ok') : ''}</div><div class="mono">${p.price_inr ? inr(p.price_inr) + ' / month' : 'Free'}</div><p class="small muted">${fmt(p.monthly_limit)} calls a month. ${esc(p.blurb)}</p><button class="btn ${u.plan === k ? 'ghost' : 'secondary'} sm" data-plan="${k}" ${u.plan === k ? 'disabled aria-disabled="true"' : ''}><span>${u.plan === k ? 'Current plan' : 'Switch to ' + esc(p.label)}</span></button></div>`).join(''));
       const iv = u.invoice_preview;
       set('us-invoice', `<table class="tbl dense"><tbody><tr><td>${esc(u.plan_label)} plan, ${esc(u.month)}</td><td class="num mono">${inr(iv.base)}</td></tr><tr><td>Included calls</td><td class="num mono">${fmt(iv.included_calls)}</td></tr><tr><td>Calls over the limit</td><td class="num mono">${fmt(iv.extra_calls)}</td></tr><tr><td>Charge for calls over the limit</td><td class="num mono">${inr(iv.extra_charge)}</td></tr><tr><td><b>Total so far</b></td><td class="num mono"><b>${inr(iv.total)}</b></td></tr></tbody></table><p class="small muted">${esc(iv.rule)} ${esc(iv.note)}</p>`);
+      const b = S.bill;
+      if (b) {
+        const unit = (l) => (l.code === 'overage' && l.qty ? `${fmt(l.qty)} calls at ${inr(l.rate_inr_per_million)} per million, each started 1000 billed` : l.code === 'plan' ? 'per month' : `${fmt(l.qty)} ${l.unit}${l.of ? ' of ' + fmt(l.of) : ''}${l.values_protected ? ', ' + fmt(l.values_protected) + ' values protected' : ''}`);
+        set('us-bill', `<table class="tbl dense"><tbody>${b.lines.map((l) => `<tr><td>${esc(l.label)}<div class="small muted">${esc(unit(l))}</div></td><td class="num mono">${inr(l.amount_paise / 100)}</td></tr>`).join('')}<tr><td><b>Total so far, ${esc(b.period)}</b></td><td class="num mono"><b>${inr(b.total_paise / 100)}</b></td></tr></tbody></table><p class="small muted">${esc(b.note)}</p>`);
+      } else if (b === null) set('us-bill', noData('The invoice preview needs a key with the dashboard scope.'));
     },
     once: true,
   };
@@ -447,7 +531,15 @@
   let ftimer = 0;
   const readFilters = () => { S.filters = { q: ($('#f-q') || {}).value.trim(), rail: ($('#f-rail') || {}).value, sink: ($('#f-sink') || {}).value }; clearTimeout(ftimer); ftimer = setTimeout(() => { loadTxns().then(() => V.transactions.paint()).catch(() => {}); }, 250); };
   body.addEventListener('input', (e) => { if (e.target.closest('#tx-filters')) readFilters(); });
-  body.addEventListener('change', (e) => { if (e.target.closest('#tx-filters')) readFilters(); });
+  body.addEventListener('change', async (e) => {
+    const t = e.target;
+    if (t.closest('#tx-filters')) readFilters();
+    if (t.dataset.prType != null) { S.polRules[Number(t.dataset.prType)].type = t.value; V.policies.paint(); return; }
+    if (t.dataset.prAction != null) { S.polRules[Number(t.dataset.prAction)].action = t.value; V.policies.paint(); return; }
+    if (t.dataset.plAttach && t.value) {
+      try { await call('/v1/routes/' + t.value, { method: 'PATCH', body: { policy_id: t.dataset.plAttach } }, $('#pl-out')); U.toast('Policy attached to the route'); refresh(); } catch (err) { $('#pl-out').innerHTML = U.note('err', esc(err.message)); }
+    }
+  });
   body.addEventListener('submit', async (e) => {
     const f = e.target; e.preventDefault();
     if (f.id === 'tx-filters') return;
@@ -458,6 +550,30 @@
       if (!(await U.confirm({ title: `Erase ${ref} for ${purpose}?`, body: 'The purpose key is destroyed. Tokens made under it can never be turned back into the real values.', confirmLabel: 'Shred key' }))) return;
       try { const r = await call('/v1/erase', { body: { customer_ref: ref, purpose } }, out); out.innerHTML = U.verdict(true, 'Purpose key shredded. Receipt signed and added to the log.') + `<pre class="logline out kit-gap-s">${esc(JSON.stringify(r, null, 2))}</pre>`; refresh(); }
       catch (err) { out.innerHTML = U.note('err', esc(err.message)); }
+    });
+    if (f.id === 'rt-form') return K.busy(btn, async () => {
+      const out = $('#rt-form-out');
+      try {
+        const r = await call('/v1/routes', { body: { name: $('#rt-name').value.trim(), upstream_url: $('#rt-url').value.trim(), purpose: $('#rt-purpose').value, fail_mode: $('#rt-fail').value } }, out);
+        out.innerHTML = U.pill('✓ added in monitor mode', 'ok'); S.rtSel = r.id; f.reset(); refresh();
+      } catch (err) { out.innerHTML = U.pill('✗ ' + esc(err.message), 'danger'); }
+    });
+    if (f.id === 'wh-form') return K.busy(btn, async () => {
+      const out = $('#wh-form-out'), events = $$('#wh-ev input:checked').map((i) => i.value);
+      if (!events.length) { out.innerHTML = U.pill('✗ pick at least one event', 'danger'); return; }
+      try {
+        const r = await call('/v1/webhooks', { body: { url: $('#wh-url').value.trim(), events } }, out);
+        out.innerHTML = U.pill('✓ added', 'ok'); f.reset();
+        set('wh-secret', U.note('ok', 'Copy the secret now, it is not shown again.') + `<div class="kit-key kit-gap-s"><code>${esc(r.secret)}</code><button class="btn secondary sm" data-copy="${esc(r.secret)}"><span>Copy</span></button></div>`);
+        refresh();
+      } catch (err) { out.innerHTML = U.pill('✗ ' + esc(err.message), 'danger'); }
+    });
+    if (f.id === 'pl-form') return K.busy(btn, async () => {
+      const out = $('#pl-form-out');
+      try {
+        const r = await call('/v1/policies', { body: { name: $('#pl-name').value.trim(), rules: S.polRules || [] } }, out);
+        out.innerHTML = U.pill('✓ saved as v' + r.version, 'ok'); U.toast('Policy saved'); refresh();
+      } catch (err) { out.innerHTML = U.pill('✗ ' + esc(err.message), 'danger'); }
     });
     if (f.id === 'team-form') return K.busy(btn, async () => {
       const out = $('#tm-out');
@@ -481,6 +597,38 @@
     const win = t.closest('[data-win]'); if (win) { S.win = win.dataset.win; S.mwin = null; $$('[data-win]').forEach((b) => { b.classList.toggle('on', b.dataset.win === S.win); b.setAttribute('aria-pressed', b.dataset.win === S.win); }); refresh(); return; }
     const open = t.closest('[data-open]'); if (open) { if (view() === 'overview') return; e.preventDefault(); S.sel = Number(open.dataset.open); V.transactions.paint(); const d = $('#tx-detail'); d && d.scrollIntoView({ block: 'nearest' }); return; }
     const cp = t.closest('[data-copy]'); if (cp) { K.copy(cp.dataset.copy, cp); return; }
+    const ru = t.closest('[data-rt-use]'); if (ru) { S.rtSel = ru.dataset.rtUse; const r = (S.routes || []).find((x) => x.id === S.rtSel); if (r) K.copy(routeUrl(r), ru); V.routes.paint(); return; }
+    const rf = t.closest('[data-rt-flip]'); if (rf) {
+      const to = rf.dataset.to;
+      if (to === 'enforce' && !(await U.confirm({ title: 'Switch this route to enforce?', body: 'From now on the upstream receives the cleaned request, not the original.', confirmLabel: 'Enforce' }))) return;
+      try { await call('/v1/routes/' + rf.dataset.rtFlip, { method: 'PATCH', body: { mode: to } }, $('#rt-out')); U.toast('Route is now in ' + to + ' mode'); refresh(); } catch (err) { $('#rt-out').innerHTML = U.note('err', esc(err.message)); }
+      return;
+    }
+    const rd = t.closest('[data-rt-del]'); if (rd) {
+      if (!(await U.confirm({ title: 'Delete this route?', body: 'Callers get a 404 at once. Held requests for it are dropped.', confirmLabel: 'Delete route' }))) return;
+      try { await call('/v1/routes/' + rd.dataset.rtDel, { method: 'DELETE' }, $('#rt-out')); U.toast('Route deleted'); S.rtSel = null; refresh(); } catch (err) { $('#rt-out').innerHTML = U.note('err', esc(err.message)); }
+      return;
+    }
+    const wt = t.closest('[data-wh-test]'); if (wt) {
+      try { const r = await call('/v1/webhooks/' + wt.dataset.whTest + '/test', { method: 'POST', body: {} }, $('#wh-out')); $('#wh-out').innerHTML = r.delivered ? U.note('ok', 'Test event delivered (HTTP ' + r.status_code + ').') : U.note('err', 'Test event not delivered: ' + esc(r.error || 'unknown error')); refresh(); } catch (err) { $('#wh-out').innerHTML = U.note('err', esc(err.message)); }
+      return;
+    }
+    const wo = t.closest('[data-wh-off]'); if (wo) {
+      try { await call('/v1/webhooks/' + wo.dataset.whOff, { method: 'PATCH', body: { disabled: wo.dataset.to === '1' } }, $('#wh-out')); refresh(); } catch (err) { $('#wh-out').innerHTML = U.note('err', esc(err.message)); }
+      return;
+    }
+    const wd = t.closest('[data-wh-del]'); if (wd) {
+      if (!(await U.confirm({ title: 'Delete this webhook?', body: 'Events waiting to be sent to it are dropped.', confirmLabel: 'Delete webhook' }))) return;
+      try { await call('/v1/webhooks/' + wd.dataset.whDel, { method: 'DELETE' }, $('#wh-out')); U.toast('Webhook deleted'); refresh(); } catch (err) { $('#wh-out').innerHTML = U.note('err', esc(err.message)); }
+      return;
+    }
+    const pe = t.closest('[data-pl-edit]'); if (pe) { const p = (S.pols || []).find((x) => x.id === pe.dataset.plEdit); if (p) { S.polRules = p.rules.map((r) => Object.assign({}, r)); $('#pl-name').value = p.name; $('#pl-edit-h').textContent = 'New version of ' + p.name; V.policies.paint(); $('#pl-form').scrollIntoView({ block: 'nearest' }); } return; }
+    const pd = t.closest('[data-pr-del]'); if (pd) { S.polRules.splice(Number(pd.dataset.prDel), 1); V.policies.paint(); return; }
+    const pr = t.closest('[data-pl-roll]'); if (pr) {
+      if (!(await U.confirm({ title: 'Roll back ' + pr.dataset.plRoll + '?', body: 'The version before the current one becomes active at once for every route that uses this policy.', confirmLabel: 'Roll back' }))) return;
+      try { await call('/v1/policies/' + encodeURIComponent(pr.dataset.plRoll) + '/rollback', { body: {} }, $('#pl-out')); U.toast('Rolled back'); refresh(); } catch (err) { $('#pl-out').innerHTML = U.note('err', esc(err.message)); }
+      return;
+    }
     const rm = t.closest('[data-rm]'); if (rm) {
       if (!(await U.confirm({ title: 'Remove this person?', body: 'Their key, if one was issued, is revoked at once.', confirmLabel: 'Remove' }))) return;
       try { await call('/v1/team/' + rm.dataset.rm, { method: 'DELETE' }, $('#tm-out')); U.toast('Person removed'); loadTeam(); loadKeys().then(() => V.keys.paint()); } catch (err) { $('#tm-out').innerHTML = U.note('err', esc(err.message)); }
@@ -502,6 +650,16 @@
       try { const r = await call('/v1/demo/seed', { method: 'POST', body: {} }, out); U.toast(r.demo_transactions ? `${r.demo_transactions} demo transactions added` : 'Demo mode is off on this server: no demo transactions'); S.maxId = 0; S.txns = []; refresh(); }
       catch (err) { out && (out.innerHTML = U.note('err', esc(err.message))); }
     });
+    if (a === 'pl-add') { S.polRules = (S.polRules || []).concat([{ type: '*', action: 'tokenise' }]); V.policies.paint(); return; }
+    if (a === 'pl-test') return K.busy(act, async () => {
+      const out = $('#pl-test-out'), text = $('#pl-text').value;
+      if (!text.trim()) { out.innerHTML = U.note('err', 'Paste a text first.'); return; }
+      try {
+        const r = await call('/v1/policies/test', { body: { text, rules: S.polRules || [] } }, out);
+        out.innerHTML = (r.blocked ? U.verdict(false, 'A block rule matched: in enforce mode this request is refused.') : U.verdict(true, 'The request would pass.')) + `<div class="kit-row kit-gap-s">${r.findings.length ? r.findings.map((f) => `<span class="pill tok">${esc(f.type)} → ${esc(f.action)}</span>`).join(' ') : '<span class="muted small">No identifiers found.</span>'}</div><pre class="logline out kit-gap-s">${esc(r.output)}</pre>`;
+      } catch (err) { out.innerHTML = U.note('err', esc(err.message)); }
+    });
+    if (a === 'pl-verify') return K.busy(act, async () => { try { const r = await get('/v1/config-audit/verify'); set('pl-verify-out', r.valid ? U.verdict(true, `Chain valid · ${fmt(r.total_rows)} entries checked`) : U.verdict(false, 'Tampered: ' + esc(r.error || ''))); } catch (err) { set('pl-verify-out', U.note('err', esc(err.message))); } });
     if (a === 'more') { S.txLimit += 50; V.transactions.paint(); return; }
     if (a === 'pause') { S.paused = !S.paused; if (!S.paused) { const p = S.pending || []; S.pending = []; mergeTx(p); } V.transactions.paint(); return; }
     if (a === 'clear') { S.filters = { q: '', rail: '', sink: '' }; ['f-q', 'f-rail', 'f-sink'].forEach((id) => { const el = $('#' + id); if (el) el.value = ''; }); S.ftx = null; V.transactions.paint(); return; }

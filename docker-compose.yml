@@ -38,25 +38,85 @@ services:
     <<: *common
     working_dir: /srv
     command: aran-entry python3 -m uvicorn aran_cloud.main:app --host 0.0.0.0 --port 8100 --no-proxy-headers
-    environment:
+    environment: &cloud-env
       - ARAN_CORE_URL=http://core:8000
       - ARAN_CLOUD_DB=/srv/data/cloud.db
+      # empty = the SQLite file above. For the "ha" profile set it to the postgres service:
+      #   ARAN_CLOUD_DATABASE_URL=postgresql://aran:aran-dev-only@postgres:5432/aran docker compose --profile ha up
+      - ARAN_CLOUD_DATABASE_URL=${ARAN_CLOUD_DATABASE_URL:-}
       - ARAN_DEMO_MODE=1
+      - ARAN_FAAS_ALLOW_PRIVATE_UPSTREAMS=1  # demo only: lets a route point at Bank B on the private network
+      - ARAN_TRUSTED_PROXIES=172.28.0.10     # the nginx load balancer of the "ha" profile (a fixed address, see networks)
+      - ARAN_FAAS_TRUST_CLIENT_CERT_HEADER=1 # routes with require_client_cert read X-Client-Cert-Fingerprint, only from that proxy
       - PORT=8100
     ports:
       - "8100:8100"
     volumes:
       - cloud-data:/srv/data
       - secrets:/srv/secrets
-    depends_on:
+    depends_on: &cloud-deps
       core:
         condition: service_healthy
-    healthcheck:
+      postgres:
+        condition: service_healthy
+        required: false      # only started with --profile ha
+    healthcheck: &cloud-health
       test: ["CMD-SHELL", "curl -f http://localhost:8100/v1/health || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 10
       start_period: 5s
+
+  # ---- profile "ha": two Cloud instances on one Postgres behind an nginx load balancer
+  #   ARAN_CLOUD_DATABASE_URL=postgresql://aran:aran-dev-only@postgres:5432/aran docker compose --profile ha up
+  # The sweepers (held requests, webhooks) take a lease in the database, so only one instance runs each at a time.
+  # The rate limiter is in memory per instance: with two instances a key can use up to twice the limit.
+  postgres:
+    image: postgres:16-alpine
+    profiles: ["ha"]
+    environment:
+      - POSTGRES_USER=aran
+      - POSTGRES_PASSWORD=${ARAN_PG_PASSWORD:-aran-dev-only}
+      - POSTGRES_DB=aran
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    networks:
+      - aran-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aran -d aran"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  cloud2:
+    <<: *common
+    profiles: ["ha"]
+    working_dir: /srv
+    command: aran-entry python3 -m uvicorn aran_cloud.main:app --host 0.0.0.0 --port 8100 --no-proxy-headers
+    environment: *cloud-env
+    volumes:
+      - secrets:/srv/secrets
+    depends_on: *cloud-deps
+    healthcheck: *cloud-health
+
+  # nginx: per-tenant host names (<route>.<tenant>.fw.aran.local) and the mTLS example. See deploy/nginx/aran-cloud.conf.
+  lb:
+    image: nginx:1.27-alpine
+    profiles: ["ha"]
+    volumes:
+      - ./deploy/nginx/aran-cloud.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/nginx/certs:/etc/nginx/certs:ro   # server.crt, server.key, clients-ca.crt (only for the 8443 mTLS listener)
+    ports:
+      - "8180:80"
+      - "8443:8443"
+    networks:
+      aran-net:
+        ipv4_address: 172.28.0.10
+    depends_on:
+      cloud:
+        condition: service_healthy
+      cloud2:
+        condition: service_healthy
 
   bank-a:
     <<: *common
@@ -87,6 +147,8 @@ services:
       - ARAN_URL=http://cloud:8100
       - BANK_DATA_DIR=/srv/data
       - ARAN_AUTO_WORKSPACE=1  # creates Bank B's workspace once and keeps its key on the volume
+      - ARAN_ANALYTICS_ROUTE=analytics  # the analytics copy goes out through Aran Cloud's /fw/analytics route
+      - ARAN_ANALYTICS_UPSTREAM=http://bank-b:9002/vendor/analytics
     ports:
       - "9002:9002"
     volumes:
@@ -102,9 +164,43 @@ services:
       retries: 10
       start_period: 10s
 
+  # A self-hosted data plane (profile "edge"): docker compose --profile edge up edge
+  # Needs ARAN_EDGE_KEY (a Cloud key with the edge scope), ARAN_EDGE_PUBLIC_KEY and ARAN_EDGE_LOCAL_KEY in the environment or .env.local.
+  # See aran_edge/README.md. It cleans with the core on this network and sends Cloud counts only.
+  edge:
+    <<: *common
+    profiles: ["edge"]
+    working_dir: /srv
+    command: aran-entry python3 -m uvicorn aran_edge.edge:app --host 0.0.0.0 --port 8200 --no-proxy-headers
+    environment:
+      - ARAN_CLOUD_URL=http://cloud:8100
+      - ARAN_CORE_URL=http://core:8000
+      - ARAN_EDGE_KEY=${ARAN_EDGE_KEY:-}
+      - ARAN_EDGE_LOCAL_KEY=${ARAN_EDGE_LOCAL_KEY:-}
+      - ARAN_EDGE_PUBLIC_KEY=${ARAN_EDGE_PUBLIC_KEY:-}  # required: from GET /v1/edge/public-key (see aran_edge/README.md)
+      - ARAN_EDGE_DB=/srv/data/edge.db
+      - ARAN_EDGE_ALLOW_PRIVATE_UPSTREAMS=1  # demo only: lets a route point at a service on the private network
+    ports:
+      - "127.0.0.1:8200:8200"
+    volumes:
+      - edge-data:/srv/data
+      - secrets:/srv/secrets
+    depends_on:
+      cloud:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8200/edge/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
 networks:
   aran-net:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
 
 volumes:
   secrets:
@@ -112,3 +208,5 @@ volumes:
   cloud-data:
   bank-a-data:
   bank-b-data:
+  edge-data:
+  pg-data:
