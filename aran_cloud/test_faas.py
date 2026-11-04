@@ -1,5 +1,6 @@
 """
-Tests for firewall as a service: routes (CRUD), the /fw/<route>/... proxy, policies, monitor mode and the config audit.
+Tests for firewall as a service: routes (CRUD), the /fw/<route>/... proxy, policies, monitor mode, the config audit,
+signed webhooks, spike alerts and the SIEM export.
 
 They run against a live Aran Cloud (ARAN_CLOUD_URL, default http://127.0.0.1:8100) in front of a live core, started the
 way scripts/run_demo.sh starts them (ARAN_DEMO_MODE=1, ARAN_FAAS_ALLOW_PRIVATE_UPSTREAMS=1, ARAN_FAAS_TEST_HOOKS=1).
@@ -11,6 +12,7 @@ import json
 import os
 import random
 import socket
+import sys
 import sqlite3
 import threading
 import time
@@ -18,6 +20,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 import requests
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "aran_sdk"))
+from aran import verify_webhook  # noqa: E402
 
 CLOUD_URL = os.environ.get("ARAN_CLOUD_URL", "http://127.0.0.1:8100")
 CORE_URL = os.environ.get("ARAN_CORE_URL", "http://127.0.0.1:8000")
@@ -113,7 +118,7 @@ def db_text(tenant_id):
     """Every stored text of this tenant's FaaS tables, in one string."""
     conn = sqlite3.connect(CLOUD_DB)
     parts = []
-    for table in ("routes", "route_events", "route_outbox", "usage_events", "tenant_tokens", "policies", "config_audit"):
+    for table in ("routes", "route_events", "route_outbox", "usage_events", "tenant_tokens", "policies", "config_audit", "webhooks", "webhook_deliveries"):
         for row in conn.execute(f"SELECT * FROM {table} WHERE tenant_id = ?", (tenant_id,)).fetchall():
             parts.append(json.dumps(row, default=str))
     conn.close()
@@ -737,3 +742,339 @@ def test_no_raw_identifier_stored_with_policies(alpha, up):
     blob = db_text(alpha["tenant_id"])
     for raw in (ids["mobile"], ids["card"], ids["aadhaar"]):
         assert raw not in blob, raw
+
+
+# ================================================================ phase 3: webhooks, spikes, export
+class Receiver:
+    """A webhook receiver. The first `fail_first` calls answer 500; every call is recorded with its raw body."""
+
+    def __init__(self, fail_first=0):
+        self.calls = []
+        self.fail_first = fail_first
+        outer = self
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                n = int(self.headers.get("Content-Length") or 0)
+                body = self.rfile.read(n) if n else b""
+                outer.calls.append({"at": time.time(), "body": body, "headers": {k.lower(): v for k, v in self.headers.items()}})
+                code = 500 if len(outer.calls) <= outer.fail_first else 200
+                self.send_response(code)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+
+            def log_message(self, *a):
+                pass
+
+        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.url = f"http://127.0.0.1:{self.server.server_address[1]}/hook"
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+
+    def wait_for(self, n=1, timeout=20):
+        end = time.time() + timeout
+        while time.time() < end and len(self.calls) < n:
+            time.sleep(0.2)
+        return self.calls
+
+    def close(self):
+        self.server.shutdown()
+        self.server.server_close()
+
+
+@pytest.fixture()
+def rcv():
+    r = Receiver()
+    yield r
+    r.close()
+
+
+@pytest.fixture(autouse=True)
+def clean_hooks(request):
+    """Webhooks are limited per workspace and old ones would receive new events: remove them after each test."""
+    yield
+    for name in ("alpha", "beta"):
+        if name in request.fixturenames:
+            key = request.getfixturevalue(name)["admin_key"]
+            for w in requests.get(f"{CLOUD_URL}/v1/webhooks", headers=H(key), timeout=10).json().get("webhooks", []):
+                requests.delete(f"{CLOUD_URL}/v1/webhooks/{w['id']}", headers=H(key), timeout=10)
+
+
+def make_hook(key, url, events=None):
+    body = {"url": url}
+    if events is not None:
+        body["events"] = events
+    r = requests.post(f"{CLOUD_URL}/v1/webhooks", headers=H(key), json=body, timeout=10)
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+def hook_deliveries(key, hook_id=None):
+    q = f"?webhook_id={hook_id}" if hook_id else ""
+    return requests.get(f"{CLOUD_URL}/v1/webhook-deliveries{q}", headers=H(key), timeout=10).json()["deliveries"]
+
+
+def signature_ok(call, secret):
+    h = call["headers"]
+    return verify_webhook(secret, h["x-aran-timestamp"], call["body"], h["x-aran-signature"])
+
+
+def test_webhook_crud_and_secret_shown_once(alpha, rcv):
+    key = alpha["admin_key"]
+    wh = make_hook(key, rcv.url, ["alert", "block"])
+    assert wh["id"].startswith("wh_") and wh["secret"].startswith("whsec_") and wh["events"] == ["alert", "block"]
+    got = requests.get(f"{CLOUD_URL}/v1/webhooks/{wh['id']}", headers=H(key), timeout=10).json()
+    assert "secret" not in got
+    lst = requests.get(f"{CLOUD_URL}/v1/webhooks", headers=H(key), timeout=10).json()
+    assert wh["id"] in [w["id"] for w in lst["webhooks"]] and all("secret" not in w for w in lst["webhooks"])
+    r = requests.patch(f"{CLOUD_URL}/v1/webhooks/{wh['id']}", headers=H(key), json={"events": ["*"], "disabled": True}, timeout=10)
+    assert r.status_code == 200 and r.json()["events"] == ["*"] and r.json()["disabled"] is True and "secret" not in r.json()
+    assert requests.post(f"{CLOUD_URL}/v1/webhooks", headers=H(key), json={"url": rcv.url, "events": ["nope"]}, timeout=10).status_code == 422
+    assert requests.delete(f"{CLOUD_URL}/v1/webhooks/{wh['id']}", headers=H(key), timeout=10).json()["deleted"] is True
+    assert requests.get(f"{CLOUD_URL}/v1/webhooks/{wh['id']}", headers=H(key), timeout=10).status_code == 404
+
+
+def test_webhook_scope(alpha, rcv):
+    key = alpha["admin_key"]
+    weak = mint(key, "protect only", ["protect"])
+    assert requests.post(f"{CLOUD_URL}/v1/webhooks", headers=H(weak), json={"url": rcv.url}, timeout=10).status_code == 403
+    assert requests.get(f"{CLOUD_URL}/v1/webhooks", headers=H(weak), timeout=10).status_code == 403
+    dash = mint(key, "dashboard only", ["dashboard"])
+    assert requests.get(f"{CLOUD_URL}/v1/webhooks", headers=H(dash), timeout=10).status_code == 200
+    assert requests.post(f"{CLOUD_URL}/v1/webhooks", headers=H(dash), json={"url": rcv.url}, timeout=10).status_code == 403
+
+
+@pytest.mark.parametrize("url", [
+    "http://169.254.169.254/latest/meta-data/",
+    "http://127.0.0.1:8100/hook",
+    "http://127.0.0.1:8000/hook",
+    "http://[::1]:8100/hook",
+    "ftp://example.com/hook",
+    "file:///etc/passwd",
+    "http://user:pass@127.0.0.1:9/hook",
+])
+def test_webhook_ssrf_refused(alpha, url):
+    key = alpha["admin_key"]
+    r = requests.post(f"{CLOUD_URL}/v1/webhooks", headers=H(key), json={"url": url}, timeout=10)
+    assert r.status_code == 400, r.text
+    wh = make_hook(key, "http://127.0.0.1:9/ok")
+    r = requests.patch(f"{CLOUD_URL}/v1/webhooks/{wh['id']}", headers=H(key), json={"url": url}, timeout=10)
+    assert r.status_code == 400, r.text
+
+
+def test_test_endpoint_delivers_a_signed_event(alpha, rcv):
+    key = alpha["admin_key"]
+    wh = make_hook(key, rcv.url, ["spike"])
+    r = requests.post(f"{CLOUD_URL}/v1/webhooks/{wh['id']}/test", headers=H(key), timeout=20)
+    assert r.status_code == 200 and r.json()["delivered"] is True and r.json()["status_code"] == 200
+    call = rcv.calls[0]
+    h = call["headers"]
+    assert h["x-aran-event"] == "test" and h["x-aran-delivery"] == r.json()["delivery_id"]
+    assert h["x-aran-signature"].startswith("sha256=") and h["x-aran-timestamp"].isdigit()
+    assert signature_ok(call, wh["secret"])
+    assert not verify_webhook("whsec_wrong", h["x-aran-timestamp"], call["body"], h["x-aran-signature"])
+    assert not verify_webhook(wh["secret"], h["x-aran-timestamp"], call["body"] + b" ", h["x-aran-signature"])
+    # the recipe in the spec, written out by hand
+    import hashlib, hmac
+    mac = hmac.new(wh["secret"].encode(), h["x-aran-timestamp"].encode() + b"." + call["body"], hashlib.sha256).hexdigest()
+    assert h["x-aran-signature"] == "sha256=" + mac
+    body = json.loads(call["body"])
+    assert body["type"] == "test" and body["tenant_id"] == alpha["tenant_id"]
+    d = [x for x in hook_deliveries(key, wh["id"]) if x["event_type"] == "test"]
+    assert d and d[0]["state"] == "delivered"
+
+
+def test_test_endpoint_reports_a_failing_receiver(alpha):
+    key = alpha["admin_key"]
+    wh = make_hook(key, f"http://127.0.0.1:{free_port()}/nothing-here")
+    r = requests.post(f"{CLOUD_URL}/v1/webhooks/{wh['id']}/test", headers=H(key), timeout=20)
+    assert r.status_code == 200 and r.json()["delivered"] is False and r.json()["error"]
+
+
+def alert_setup(key, up_url, action="alert", mode="enforce"):
+    pol = make_policy(key, pname(), [{"type": "MOBILE", "action": action}])
+    return make_route(key, up_url, mode=mode, policy_id=pol["id"])
+
+
+def test_retries_on_500_then_succeeds(alpha, up):
+    ids = sample_ids()
+    key = alpha["admin_key"]
+    r500 = Receiver(fail_first=1)
+    try:
+        wh = make_hook(key, r500.url, ["alert"])
+        route = alert_setup(key, up.url)
+        assert fw(key, route, "x", json={"mobile": ids["mobile"]}).status_code == 200
+        got = r500.wait_for(2, timeout=30)
+        assert len(got) == 2, "no retry after the 500"
+        assert got[0]["headers"]["x-aran-delivery"] == got[1]["headers"]["x-aran-delivery"]      # same delivery, second attempt
+        assert 0.8 <= got[1]["at"] - got[0]["at"] < 8                                           # first backoff is 1 s
+        assert signature_ok(got[0], wh["secret"]) and signature_ok(got[1], wh["secret"])
+        time.sleep(1.5)
+        d = hook_deliveries(key, wh["id"])
+        assert len(d) == 1 and d[0]["state"] == "delivered" and d[0]["attempts"] == 2 and d[0]["status_code"] == 200
+        assert len(r500.calls) == 2                                                             # no third attempt
+    finally:
+        r500.close()
+
+
+def test_failed_test_delivery_is_recorded(alpha):
+    """A dead receiver: the test event is one attempt, recorded as failed with the error."""
+    key = alpha["admin_key"]
+    wh = make_hook(key, f"http://127.0.0.1:{free_port()}/dead")
+    requests.post(f"{CLOUD_URL}/v1/webhooks/{wh['id']}/test", headers=H(key), timeout=20)
+    d = hook_deliveries(key, wh["id"])
+    assert d[0]["state"] == "failed" and d[0]["attempts"] == 1 and d[0]["error"]
+
+
+def test_alert_payload_has_types_and_counts_never_raw(alpha, up, rcv):
+    ids = sample_ids()
+    key = alpha["admin_key"]
+    wh = make_hook(key, rcv.url, ["alert"])
+    route = alert_setup(key, up.url)
+    r = fw(key, route, f"look/{ids['mobile']}", json={"mobile": ids["mobile"], "note": f"card {ids['card']} aadhaar {ids['aadhaar']}"})
+    assert r.status_code == 200
+    got = rcv.wait_for(1)
+    assert got and got[0]["headers"]["x-aran-event"] == "alert" and signature_ok(got[0], wh["secret"])
+    body = json.loads(got[0]["body"])
+    assert body["type"] == "alert" and body["data"]["route"] == route["name"] and body["data"]["types"] == ["MOBILE"]
+    for raw in (ids["mobile"], ids["card"], ids["aadhaar"]):
+        assert raw not in got[0]["body"].decode(), raw
+    time.sleep(1)
+    rows = db_rows("SELECT payload_json FROM webhook_deliveries WHERE webhook_id=?", wh["id"])
+    assert rows
+    for raw in (ids["mobile"], ids["card"], ids["aadhaar"]):
+        assert all(raw not in x["payload_json"] for x in rows)
+        assert raw not in db_text(alpha["tenant_id"])
+
+
+def test_block_event_and_event_filter(alpha, up):
+    ids = sample_ids()
+    key = alpha["admin_key"]
+    only_spike, blocks = Receiver(), Receiver()
+    try:
+        make_hook(key, only_spike.url, ["spike"])
+        wh = make_hook(key, blocks.url, ["block"])
+        route = alert_setup(key, up.url, action="block")
+        assert fw(key, route, "x", json={"mobile": ids["mobile"]}).status_code == 403
+        got = blocks.wait_for(1)
+        assert got and json.loads(got[0]["body"])["type"] == "block" and signature_ok(got[0], wh["secret"])
+        assert json.loads(got[0]["body"])["data"]["types"] == ["MOBILE"]
+        assert ids["mobile"] not in got[0]["body"].decode()
+        time.sleep(1.5)
+        assert only_spike.calls == []          # not subscribed to 'block'
+    finally:
+        only_spike.close()
+        blocks.close()
+
+
+def test_monitor_mode_still_raises_alert_but_not_would_events(alpha, up, rcv):
+    ids = sample_ids()
+    key = alpha["admin_key"]
+    make_hook(key, rcv.url, ["*"])
+    route = alert_setup(key, up.url, action="tokenise", mode="monitor")        # monitor + tokenise: only 'would_protect' internally
+    fw(key, route, "x", json={"mobile": ids["mobile"]})
+    time.sleep(2)
+    assert rcv.calls == []                  # would_protect is not delivered
+
+
+def test_route_failure_event(alpha, up, rcv):
+    ids = sample_ids()
+    key = alpha["admin_key"]
+    make_hook(key, rcv.url, ["route_failure"])
+    route = make_route(key, up.url, mode="enforce", fail_mode="closed")
+    r = fw(key, route, "x", json={"mobile": ids["mobile"]}, headers=core_down_headers(key))
+    if r.status_code != 503:
+        pytest.skip("server was not started with ARAN_FAAS_TEST_HOOKS=1")
+    got = rcv.wait_for(1)
+    assert got and json.loads(got[0]["body"])["type"] == "route_failure"
+    assert json.loads(got[0]["body"])["data"]["route"] == route["name"]
+    assert ids["mobile"] not in got[0]["body"].decode()
+
+
+def test_webhooks_are_isolated_between_tenants(alpha, beta, up):
+    ids = sample_ids()
+    ka, kb = alpha["admin_key"], beta["admin_key"]
+    ra, rb = Receiver(), Receiver()
+    try:
+        wa = make_hook(ka, ra.url, ["alert"])
+        wb = make_hook(kb, rb.url, ["alert"])
+        # B cannot see, change, test or delete A's webhook; it also does not appear in B's list or deliveries
+        assert requests.get(f"{CLOUD_URL}/v1/webhooks/{wa['id']}", headers=H(kb), timeout=10).status_code == 404
+        assert requests.patch(f"{CLOUD_URL}/v1/webhooks/{wa['id']}", headers=H(kb), json={"disabled": True}, timeout=10).status_code == 404
+        assert requests.post(f"{CLOUD_URL}/v1/webhooks/{wa['id']}/test", headers=H(kb), timeout=10).status_code == 404
+        assert requests.delete(f"{CLOUD_URL}/v1/webhooks/{wa['id']}", headers=H(kb), timeout=10).status_code == 404
+        assert wa["id"] not in [w["id"] for w in requests.get(f"{CLOUD_URL}/v1/webhooks", headers=H(kb), timeout=10).json()["webhooks"]]
+        # an alert in A reaches A only
+        route = alert_setup(ka, up.url)
+        fw(ka, route, "x", json={"mobile": ids["mobile"]})
+        assert ra.wait_for(1)
+        time.sleep(2)
+        assert rb.calls == []
+        assert hook_deliveries(kb, wa["id"]) == [] and hook_deliveries(kb) == []
+        assert requests.get(f"{CLOUD_URL}/v1/webhooks/{wa['id']}", headers=H(ka), timeout=10).status_code == 200
+        assert wb["id"] != wa["id"]
+    finally:
+        ra.close()
+        rb.close()
+
+
+def test_spike_event_fires_once(alpha, up, rcv):
+    ids = sample_ids()
+    key = alpha["admin_key"]
+    wh = make_hook(key, rcv.url, ["spike"])
+    route = make_route(key, up.url, mode="enforce")
+    burst = {"values": [f"call {ids['mobile']} " for _ in range(25)]}
+    assert fw(key, route, "burst", json=burst).status_code == 200
+    got = rcv.wait_for(1)
+    assert got, "no spike event"
+    body = json.loads(got[0]["body"])
+    assert body["type"] == "spike" and body["data"]["route"] == route["name"] and body["data"]["protected_last_minute"] >= 20
+    assert signature_ok(got[0], wh["secret"]) and ids["mobile"] not in got[0]["body"].decode()
+    fw(key, route, "burst", json=burst)                                   # second burst within 10 minutes: no second event
+    time.sleep(2.5)
+    assert len(rcv.calls) == 1
+    small = make_route(key, up.url, mode="enforce")
+    fw(key, small, "x", json={"mobile": ids["mobile"]})                   # below 20: no spike
+    time.sleep(2)
+    assert len(rcv.calls) == 1
+
+
+def test_export_json_and_cef(alpha, up):
+    ids = sample_ids()
+    key = alpha["admin_key"]
+    t0 = time.time() - 1
+    pol = make_policy(key, pname(), [{"type": "AADHAAR", "action": "block"}])
+    ok_route = make_route(key, up.url, mode="enforce")
+    blk_route = make_route(key, up.url, mode="enforce", policy_id=pol["id"])
+    fw(key, ok_route, f"seen/{ids['mobile']}", json={"mobile": ids["mobile"], "card": ids["card"]})
+    assert fw(key, blk_route, "x", json={"aadhaar": ids["aadhaar"]}).status_code == 403
+    r = requests.get(f"{CLOUD_URL}/v1/events/export?format=json&since={t0}", headers=H(key), timeout=10)
+    assert r.status_code == 200 and "ndjson" in r.headers["content-type"]
+    rows = [json.loads(x) for x in r.text.splitlines()]
+    assert len(rows) == int(r.headers["X-Aran-Count"]) >= 2
+    types = {x["route"]: x for x in rows}
+    assert types[ok_route["name"]]["type"] == "route.forwarded" and types[ok_route["name"]]["protected"] >= 2
+    assert types[blk_route["name"]]["type"] == "route.blocked" and types[blk_route["name"]]["blocked"] is True
+    assert all(x["tenant_id"] == alpha["tenant_id"] for x in rows)
+    c = requests.get(f"{CLOUD_URL}/v1/events/export?format=cef&since={t0}", headers=H(key), timeout=10)
+    assert c.status_code == 200
+    lines = c.text.splitlines()
+    assert len(lines) == len(rows) and all(l.startswith("CEF:0|Aran|Aran Cloud|1.0|") for l in lines)
+    blocked = [l for l in lines if "|route.blocked|route.blocked|8|" in l]
+    assert blocked and "act=blocked" in blocked[0] and f"cs1={blk_route['name']}" in blocked[0] and "cn1Label=protected" in blocked[0]
+    for raw in (ids["mobile"], ids["card"], ids["aadhaar"]):
+        assert raw not in r.text and raw not in c.text
+    # reading on from the last event returns nothing new
+    nxt = requests.get(f"{CLOUD_URL}/v1/events/export?format=json&since={r.headers['X-Aran-Next-Since']}", headers=H(key), timeout=10)
+    assert nxt.status_code == 200 and nxt.text == ""
+    assert requests.get(f"{CLOUD_URL}/v1/events/export?format=xml", headers=H(key), timeout=10).status_code == 422
+
+
+def test_export_scope_and_isolation(alpha, beta, up):
+    ids = sample_ids()
+    ka, kb = alpha["admin_key"], beta["admin_key"]
+    route = make_route(ka, up.url, mode="enforce")
+    fw(ka, route, "x", json={"mobile": ids["mobile"]})
+    weak = mint(ka, "protect only", ["protect"])
+    assert requests.get(f"{CLOUD_URL}/v1/events/export", headers=H(weak), timeout=10).status_code == 403
+    mine = requests.get(f"{CLOUD_URL}/v1/events/export?format=json", headers=H(kb), timeout=10)
+    assert mine.status_code == 200 and route["name"] not in mine.text and alpha["tenant_id"] not in mine.text

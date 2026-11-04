@@ -10,10 +10,11 @@ build_router(ctx) and init_schema(conn). Pure helpers (body walking, masking, SS
 
 Later phases plug in here:
 - clean_body() is the one place a request is cleaned; a policy (a rule list) is applied through its `policy` argument.
-- emit_event() is the one place an alert is raised; webhooks will be delivered from it.
+- emit_event() is the one place an alert is raised; signed webhooks are delivered from it (phase 3).
 """
 
 import hashlib
+import hmac
 import json
 import os
 import re
@@ -155,6 +156,40 @@ def init_schema(conn: sqlite3.Connection):
         );
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_config_audit_tenant ON config_audit(tenant_id, id);")
+    # webhooks: where alerts go. The secret signs every delivery and is shown once, at creation.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS webhooks (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            url TEXT NOT NULL,
+            secret TEXT NOT NULL,
+            events TEXT NOT NULL DEFAULT '*',
+            created_at REAL NOT NULL,
+            disabled INTEGER NOT NULL DEFAULT 0
+        );
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_webhooks_tenant ON webhooks(tenant_id);")
+    # one row per event per webhook; payload_json holds types and counts only
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS webhook_deliveries (
+            id TEXT PRIMARY KEY,
+            webhook_id TEXT NOT NULL,
+            tenant_id TEXT NOT NULL,
+            event_id TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            at REAL NOT NULL,
+            attempts INTEGER NOT NULL DEFAULT 0,
+            status_code INTEGER,
+            state TEXT NOT NULL DEFAULT 'pending',
+            next_at REAL NOT NULL,
+            payload_json TEXT NOT NULL,
+            last_error TEXT
+        );
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_wh_deliveries_due ON webhook_deliveries(state, next_at);")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_wh_deliveries_tenant ON webhook_deliveries(tenant_id, at);")
+    # a restart must not leave a delivery stuck in 'sending'
+    conn.execute("UPDATE webhook_deliveries SET state='pending' WHERE state='sending'")
 
 
 # ---------------------------------------------------------------- config audit (hash chain)
@@ -195,11 +230,156 @@ def verify_audit(conn: sqlite3.Connection, tenant_id: str) -> dict:
     return {"valid": True, "total_rows": len(rows), "latest_hash": prev, "verified_at": time.strftime("%Y-%m-%d %H:%M:%S")}
 
 
-# ---------------------------------------------------------------- events (hook for alerts)
+# ---------------------------------------------------------------- events and webhooks
+WEBHOOK_EVENTS = ("block", "alert", "spike", "route_failure")
+DELIVERABLE = set(WEBHOOK_EVENTS) | {"test"}      # other events ('would_protect', 'would_block') are not sent out
+BACKOFF_S = (1, 5, 30, 120, 600)                  # wait after attempt 1, 2, 3, 4; the 5th failure is final
+MAX_ATTEMPTS = 5
+MAX_WEBHOOKS = 10
+SPIKE_MIN = 20
+SPIKE_FACTOR = 5
+SPIKE_EVERY_S = 600
+
+_ctx: Optional["Ctx"] = None
+_wake = threading.Event()
+
+
+def _hook_match(events_csv: str, event_type: str) -> bool:
+    ev = {e.strip() for e in (events_csv or "").split(",") if e.strip()}
+    return "*" in ev or event_type in ev
+
+
 def emit_event(tenant_id: str, event_type: str, payload: dict):
-    """The single place an alert is raised ('would_protect', 'block', 'route_failure' ...). Payloads hold types and
-    counts, never raw values. Nothing is delivered yet; webhooks plug in here later."""
-    return None
+    """The single place an alert is raised. Queues one signed delivery per matching webhook of this tenant; the
+    background thread sends it. Payloads hold types and counts, never raw values. Never raises into a request."""
+    if _ctx is None or event_type not in DELIVERABLE:
+        return None
+    eid = "evt_" + secrets.token_hex(8)
+    try:
+        conn = _ctx.get_db()
+        try:
+            hooks = [w for w in conn.execute("SELECT id, events FROM webhooks WHERE tenant_id=? AND disabled=0", (tenant_id,)).fetchall()
+                     if _hook_match(w["events"], event_type)]
+            if hooks:
+                now = time.time()
+                body = json.dumps({"id": eid, "type": event_type, "created_at": now, "tenant_id": tenant_id, "data": payload},
+                                  sort_keys=True, separators=(",", ":"))
+                with conn:
+                    for w in hooks:
+                        conn.execute(
+                            """INSERT INTO webhook_deliveries (id, webhook_id, tenant_id, event_id, event_type, at, attempts, state, next_at, payload_json)
+                               VALUES (?, ?, ?, ?, ?, ?, 0, 'pending', ?, ?)""",
+                            ("dl_" + secrets.token_hex(8), w["id"], tenant_id, eid, event_type, now, now, body))
+        finally:
+            conn.close()
+    except Exception:
+        return None
+    _wake.set()
+    return eid
+
+
+def sign_payload(secret: str, timestamp: str, body: bytes) -> str:
+    """X-Aran-Signature value: sha256=<hex HMAC-SHA256(secret, timestamp + "." + body)>."""
+    mac = hmac.new(secret.encode("utf-8"), timestamp.encode("utf-8") + b"." + body, hashlib.sha256).hexdigest()
+    return "sha256=" + mac
+
+
+def send_webhook(ctx: "Ctx", url: str, secret: str, event_type: str, delivery_id: str, body: bytes):
+    """One signed POST. Returns (status_code or None, error text). 2xx is success; redirects are never followed."""
+    try:
+        check_upstream(ctx, url)         # checked again now: DNS can change after the webhook was saved
+    except fw_core.UpstreamBlocked as err:
+        return None, f"refused: {err}"
+    ts = str(int(time.time()))
+    headers = {"Content-Type": "application/json", "User-Agent": "Aran-Webhook/1",
+               "X-Aran-Event": event_type, "X-Aran-Delivery": delivery_id, "X-Aran-Timestamp": ts,
+               "X-Aran-Signature": sign_payload(secret, ts, body)}
+    try:
+        r = requests.post(url, data=body, headers=headers, timeout=(3.0, 5.0), allow_redirects=False)
+        code = r.status_code
+        r.close()
+    except requests.exceptions.RequestException as err:
+        return None, err.__class__.__name__
+    return code, ("" if 200 <= code < 300 else f"receiver answered {code}")
+
+
+_hook_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="fw-hook")
+_hooks_started = False
+
+
+def _deliver_loop(ctx: "Ctx"):
+    while True:
+        _wake.wait(timeout=float(os.environ.get("ARAN_FAAS_WEBHOOK_TICK_S", "1")))
+        _wake.clear()
+        try:
+            sweep_webhooks(ctx)
+        except Exception:
+            pass
+
+
+def _deliver_one(ctx: "Ctx", d) -> None:
+    conn = ctx.get_db()
+    try:
+        w = conn.execute("SELECT * FROM webhooks WHERE id=?", (d["webhook_id"],)).fetchone()
+        if not w or w["disabled"]:
+            with conn:
+                conn.execute("UPDATE webhook_deliveries SET state='failed', last_error='webhook removed or disabled' WHERE id=?", (d["id"],))
+            return
+        code, err = send_webhook(ctx, w["url"], w["secret"], d["event_type"], d["id"], d["payload_json"].encode("utf-8"))
+        n = d["attempts"] + 1
+        with conn:
+            if not err:
+                conn.execute("UPDATE webhook_deliveries SET state='delivered', attempts=?, status_code=?, last_error=NULL WHERE id=?", (n, code, d["id"]))
+            elif n >= MAX_ATTEMPTS:
+                conn.execute("UPDATE webhook_deliveries SET state='failed', attempts=?, status_code=?, last_error=? WHERE id=?", (n, code, err[:200], d["id"]))
+            else:
+                conn.execute("UPDATE webhook_deliveries SET state='pending', attempts=?, status_code=?, last_error=?, next_at=? WHERE id=?",
+                             (n, code, err[:200], time.time() + BACKOFF_S[n - 1], d["id"]))
+    finally:
+        conn.close()
+
+
+def sweep_webhooks(ctx: "Ctx", limit: int = 20) -> int:
+    """Sends the deliveries that are due. A row is claimed ('sending') before it is sent."""
+    conn = ctx.get_db()
+    try:
+        rows = conn.execute("SELECT * FROM webhook_deliveries WHERE state='pending' AND next_at<=? ORDER BY next_at LIMIT ?",
+                            (time.time(), limit)).fetchall()
+        mine = []
+        for r in rows:
+            with conn:
+                cur = conn.execute("UPDATE webhook_deliveries SET state='sending' WHERE id=? AND state='pending'", (r["id"],))
+            if cur.rowcount == 1:
+                mine.append(r)
+    finally:
+        conn.close()
+    list(_hook_pool.map(lambda d: _deliver_one(ctx, d), mine))
+    return len(mine)
+
+
+# a spike is reported at most once per route per 10 minutes
+_spike_last: Dict[str, float] = {}
+_spike_lock = threading.Lock()
+
+
+def check_spike(conn: sqlite3.Connection, tenant_id: str, route: dict, now: Optional[float] = None):
+    """Protected values in the last minute above 5x the per-minute average of the 30 minutes before, and at least 20."""
+    now = now or time.time()
+    cur = conn.execute("SELECT COALESCE(SUM(protected_count + would_protect_count), 0) FROM route_events WHERE route_id=? AND at>=?",
+                       (route["id"], now - 60)).fetchone()[0]
+    if cur < SPIKE_MIN:
+        return
+    prev = conn.execute("SELECT COALESCE(SUM(protected_count + would_protect_count), 0) FROM route_events WHERE route_id=? AND at>=? AND at<?",
+                        (route["id"], now - 60 - 1800, now - 60)).fetchone()[0]
+    avg = prev / 30.0
+    if cur <= SPIKE_FACTOR * avg:
+        return
+    with _spike_lock:
+        if now - _spike_last.get(route["id"], 0) < SPIKE_EVERY_S:
+            return
+        _spike_last[route["id"]] = now
+    emit_event(tenant_id, "spike", {"route": route["name"], "protected_last_minute": int(cur),
+                                    "average_per_minute_30m": round(avg, 2), "factor": SPIKE_FACTOR})
 
 
 # ---------------------------------------------------------------- cleaning
@@ -382,6 +562,7 @@ def start_sweeper(ctx: Ctx):
             return
         _sweeper_started = True
     threading.Thread(target=_sweep_loop, args=(ctx,), daemon=True, name="fw-outbox").start()
+    threading.Thread(target=_deliver_loop, args=(ctx,), daemon=True, name="fw-webhooks").start()
 
 
 def _sweep_loop(ctx: Ctx):
@@ -466,8 +647,74 @@ class RoutePatch(BaseModel):
     disabled: Optional[bool] = None
 
 
+class WebhookIn(BaseModel):
+    url: str
+    events: Optional[list] = None        # default: all events
+
+
+class WebhookPatch(BaseModel):
+    url: Optional[str] = None
+    events: Optional[list] = None
+    disabled: Optional[bool] = None
+
+
+# ---------------------------------------------------------------- SIEM export (CEF)
+CEF_SEV = {"blocked": 8, "failed_closed": 6, "held": 5, "failed_open": 5, "forwarded": 1}
+
+
+def _cef_head(v: str) -> str:
+    return str(v).replace("\\", "\\\\").replace("|", "\\|").replace("\n", " ").replace("\r", " ")
+
+
+def _cef_ext(v) -> str:
+    return str(v).replace("\\", "\\\\").replace("=", "\\=").replace("\n", "\\n").replace("\r", "\\n")
+
+
+def export_name(r) -> str:
+    return "route.would_block" if r["would_block"] else "route." + r["outcome"]
+
+
+def cef_line(r) -> str:
+    """One route event as a CEF line. Only counts, outcomes and the cleaned path: no request data."""
+    name = export_name(r)
+    sev = 3 if r["would_block"] else CEF_SEV.get(r["outcome"], 3)
+    ext = (f"rt={int(r['at'] * 1000)} act={_cef_ext(r['outcome'])} requestMethod={_cef_ext(r['method'] or '')} "
+           f"request={_cef_ext(r['path'] or '')} cs1Label=route cs1={_cef_ext(r['route_name'] or r['route_id'])} "
+           f"cs2Label=tenant cs2={_cef_ext(r['tenant_id'])} cn1Label=protected cn1={r['protected_count']} "
+           f"cn2Label=wouldProtect cn2={r['would_protect_count']} cn3Label=httpStatus cn3={r['status_code'] if r['status_code'] is not None else 0}")
+    return f"CEF:0|Aran|Aran Cloud|1.0|{_cef_head(name)}|{_cef_head(name)}|{sev}|{ext}"
+
+
+def json_line(r) -> str:
+    return json.dumps({"id": r["id"], "at": r["at"], "type": export_name(r), "route": r["route_name"] or r["route_id"],
+                       "tenant_id": r["tenant_id"], "method": r["method"], "path": r["path"], "status_code": r["status_code"],
+                       "upstream_status": r["upstream_status"], "outcome": r["outcome"], "blocked": bool(r["blocked"]),
+                       "would_block": bool(r["would_block"]), "protected": r["protected_count"],
+                       "would_protect": r["would_protect_count"], "latency_ms": r["latency_ms"], "fw_ms": r["fw_ms"]},
+                      sort_keys=True, separators=(",", ":"))
+
+
+def parse_since(v: Optional[str]) -> float:
+    if not v:
+        return 0.0
+    try:
+        return float(v)
+    except ValueError:
+        pass
+    try:
+        import datetime as _dt
+        d = _dt.datetime.fromisoformat(v.replace("Z", "+00:00"))
+        if d.tzinfo is None:
+            d = d.replace(tzinfo=_dt.timezone.utc)
+        return d.timestamp()
+    except ValueError:
+        raise HTTPException(422, "since must be a unix time or an ISO 8601 time")
+
+
 # ---------------------------------------------------------------- the router
 def build_router(ctx: Ctx) -> APIRouter:
+    global _ctx
+    _ctx = ctx
     router = APIRouter()
     manage = ctx.require_scope("route")
 
@@ -804,6 +1051,194 @@ def build_router(ctx: Ctx) -> APIRouter:
         finally:
             conn.close()
 
+    # ---- webhooks
+    hook_manage = ctx.require_scope("webhook")
+
+    def hook_reader(tenant: dict = Depends(ctx.get_tenant)) -> dict:
+        if not ({"admin", "webhook", "dashboard"} & set(tenant.get("scopes", []))):
+            raise HTTPException(403, "this key lacks the 'webhook' or 'dashboard' scope")
+        return tenant
+
+    def own_hook(conn, tenant_id: str, hook_id: str):
+        row = conn.execute("SELECT * FROM webhooks WHERE id=? AND tenant_id=?", (hook_id, tenant_id)).fetchone()
+        if not row:
+            raise HTTPException(404, "webhook not found")
+        return row
+
+    def hook_view(row, secret: bool = False) -> dict:
+        d = {"id": row["id"], "url": row["url"], "events": [e for e in row["events"].split(",") if e],
+             "created_at": row["created_at"], "disabled": bool(row["disabled"])}
+        if secret:
+            d["secret"] = row["secret"]      # only in the answer to create
+            d["note"] = "Copy the secret now. It is not shown again."
+        return d
+
+    def clean_events(events) -> str:
+        if events is None or events == []:
+            return "*"
+        if not isinstance(events, list) or not all(isinstance(e, str) for e in events):
+            raise HTTPException(422, "events must be a list of event names")
+        bad = [e for e in events if e not in WEBHOOK_EVENTS and e != "*"]
+        if bad:
+            raise HTTPException(422, f"unknown events {bad}; use {list(WEBHOOK_EVENTS)} or '*'")
+        return ",".join(dict.fromkeys(events))
+
+    def check_hook_url(url: str):
+        if len(url) > 500:
+            raise HTTPException(422, "url is too long")
+        try:
+            check_upstream(ctx, url)
+        except fw_core.UpstreamBlocked as err:
+            raise HTTPException(400, f"url refused: {err}")
+
+    @router.post("/v1/webhooks", status_code=201)
+    def create_webhook(body: WebhookIn, tenant: dict = Depends(hook_manage)):
+        url = body.url.strip()
+        events = clean_events(body.events)
+        check_hook_url(url)
+        wid, secret = "wh_" + secrets.token_hex(8), "whsec_" + secrets.token_hex(24)
+        conn = ctx.get_db()
+        try:
+            n = conn.execute("SELECT COUNT(*) FROM webhooks WHERE tenant_id=?", (tenant["id"],)).fetchone()[0]
+            if n >= MAX_WEBHOOKS:
+                raise HTTPException(409, f"a workspace can have {MAX_WEBHOOKS} webhooks at most")
+            with conn:
+                conn.execute("INSERT INTO webhooks (id, tenant_id, url, secret, events, created_at, disabled) VALUES (?, ?, ?, ?, ?, ?, 0)",
+                             (wid, tenant["id"], url, secret, events, time.time()))
+                audit_config(conn, tenant, "webhook.create", "webhook", wid, {"host": host_of(url), "events": events})
+            row = own_hook(conn, tenant["id"], wid)
+        finally:
+            conn.close()
+        start_sweeper(ctx)
+        return hook_view(row, secret=True)
+
+    @router.get("/v1/webhooks")
+    def list_webhooks(tenant: dict = Depends(hook_reader)):
+        conn = ctx.get_db()
+        try:
+            rows = conn.execute("SELECT * FROM webhooks WHERE tenant_id=? ORDER BY created_at", (tenant["id"],)).fetchall()
+            states: Dict[str, dict] = {}
+            for r in conn.execute("SELECT webhook_id, state, COUNT(*) n FROM webhook_deliveries WHERE tenant_id=? GROUP BY webhook_id, state", (tenant["id"],)):
+                states.setdefault(r["webhook_id"], {})[r["state"]] = r["n"]
+            out = []
+            for r in rows:
+                d = hook_view(r)
+                d["deliveries"] = states.get(r["id"], {})
+                out.append(d)
+            return {"webhooks": out, "events": list(WEBHOOK_EVENTS)}
+        finally:
+            conn.close()
+
+    @router.get("/v1/webhook-deliveries")
+    def list_deliveries(limit: int = 50, webhook_id: Optional[str] = None, tenant: dict = Depends(hook_reader)):
+        limit = max(1, min(200, limit))
+        conn = ctx.get_db()
+        try:
+            sql = "SELECT * FROM webhook_deliveries WHERE tenant_id=?"
+            args: list = [tenant["id"]]
+            if webhook_id:
+                sql += " AND webhook_id=?"
+                args.append(webhook_id)
+            rows = conn.execute(sql + " ORDER BY at DESC, rowid DESC LIMIT ?", [*args, limit]).fetchall()
+            return {"deliveries": [{"id": r["id"], "webhook_id": r["webhook_id"], "event_id": r["event_id"], "event_type": r["event_type"],
+                                    "at": r["at"], "attempts": r["attempts"], "status_code": r["status_code"], "state": r["state"],
+                                    "next_at": r["next_at"] if r["state"] == "pending" else None, "error": r["last_error"],
+                                    "payload": json.loads(r["payload_json"])} for r in rows]}
+        finally:
+            conn.close()
+
+    @router.get("/v1/webhooks/{hook_id}")
+    def get_webhook(hook_id: str, tenant: dict = Depends(hook_reader)):
+        conn = ctx.get_db()
+        try:
+            return hook_view(own_hook(conn, tenant["id"], hook_id))
+        finally:
+            conn.close()
+
+    @router.patch("/v1/webhooks/{hook_id}")
+    def patch_webhook(hook_id: str, body: WebhookPatch, tenant: dict = Depends(hook_manage)):
+        conn = ctx.get_db()
+        try:
+            before = own_hook(conn, tenant["id"], hook_id)
+            sets, args, changes = [], [], {}
+            if body.url is not None:
+                url = body.url.strip()
+                check_hook_url(url)
+                sets.append("url=?")
+                args.append(url)
+                changes["host"] = {"from": host_of(before["url"]), "to": host_of(url)}
+            if body.events is not None:
+                ev = clean_events(body.events)
+                sets.append("events=?")
+                args.append(ev)
+                changes["events"] = {"from": before["events"], "to": ev}
+            if body.disabled is not None:
+                sets.append("disabled=?")
+                args.append(1 if body.disabled else 0)
+                changes["disabled"] = {"from": bool(before["disabled"]), "to": bool(body.disabled)}
+            if sets:
+                with conn:
+                    conn.execute(f"UPDATE webhooks SET {', '.join(sets)} WHERE id=? AND tenant_id=?", [*args, hook_id, tenant["id"]])
+                    audit_config(conn, tenant, "webhook.update", "webhook", hook_id, {"changes": changes})
+            return hook_view(own_hook(conn, tenant["id"], hook_id))
+        finally:
+            conn.close()
+
+    @router.delete("/v1/webhooks/{hook_id}")
+    def delete_webhook(hook_id: str, tenant: dict = Depends(hook_manage)):
+        conn = ctx.get_db()
+        try:
+            old = own_hook(conn, tenant["id"], hook_id)
+            with conn:
+                audit_config(conn, tenant, "webhook.delete", "webhook", hook_id, {"host": host_of(old["url"])})
+                conn.execute("DELETE FROM webhooks WHERE id=? AND tenant_id=?", (hook_id, tenant["id"]))
+                conn.execute("UPDATE webhook_deliveries SET state='failed', last_error='webhook deleted' WHERE webhook_id=? AND state='pending'", (hook_id,))
+            return {"deleted": True, "id": hook_id}
+        finally:
+            conn.close()
+
+    @router.post("/v1/webhooks/{hook_id}/test")
+    def test_webhook(hook_id: str, tenant: dict = Depends(hook_manage)):
+        """Sends one signed 'test' event now, a single attempt, and records it."""
+        conn = ctx.get_db()
+        try:
+            w = own_hook(conn, tenant["id"], hook_id)
+            now, did, eid = time.time(), "dl_" + secrets.token_hex(8), "evt_" + secrets.token_hex(8)
+            body = json.dumps({"id": eid, "type": "test", "created_at": now, "tenant_id": tenant["id"],
+                               "data": {"message": "This is a test event from Aran Cloud."}}, sort_keys=True, separators=(",", ":"))
+            code, err = send_webhook(ctx, w["url"], w["secret"], "test", did, body.encode("utf-8"))
+            with conn:
+                conn.execute(
+                    """INSERT INTO webhook_deliveries (id, webhook_id, tenant_id, event_id, event_type, at, attempts, status_code, state, next_at, payload_json, last_error)
+                       VALUES (?, ?, ?, ?, 'test', ?, 1, ?, ?, ?, ?, ?)""",
+                    (did, w["id"], tenant["id"], eid, now, code, "failed" if err else "delivered", now, body, err[:200] or None))
+            return {"delivered": not err, "status_code": code, "error": err or None, "delivery_id": did, "event_id": eid}
+        finally:
+            conn.close()
+
+    # ---- SIEM export
+    @router.get("/v1/events/export")
+    def export_events(format: str = "json", since: Optional[str] = None, limit: int = 1000, tenant: dict = Depends(reader)):
+        """Route events (blocks included) as NDJSON or CEF lines, oldest first. Pass the X-Aran-Next-Since header
+        of one answer as `since` of the next to read on."""
+        if format not in ("json", "cef"):
+            raise HTTPException(422, "format must be json or cef")
+        t0 = parse_since(since)
+        limit = max(1, min(5000, limit))
+        conn = ctx.get_db()
+        try:
+            rows = conn.execute(
+                """SELECT e.*, r.name AS route_name FROM route_events e LEFT JOIN routes r ON r.id=e.route_id
+                   WHERE e.tenant_id=? AND e.at>? ORDER BY e.at, e.id LIMIT ?""", (tenant["id"], t0, limit)).fetchall()
+        finally:
+            conn.close()
+        lines = [cef_line(r) if format == "cef" else json_line(r) for r in rows]
+        resp = Response(content=("\n".join(lines) + "\n") if lines else "",
+                        media_type="application/x-ndjson" if format == "json" else "text/plain; charset=utf-8")
+        resp.headers["X-Aran-Count"] = str(len(lines))
+        resp.headers["X-Aran-Next-Since"] = repr(rows[-1]["at"]) if rows else repr(t0)
+        return resp
+
     # ---- the proxy
     def record(conn, tenant_id: str, route: dict, ev: dict, usage: Optional[dict]):
         now = time.time()
@@ -850,6 +1285,8 @@ def build_router(ctx: Ctx) -> APIRouter:
             ev["latency_ms"] = round((time.perf_counter() - t0) * 1000, 2)
             try:
                 record(conn, tenant_id, route, ev, usage)
+                if ev.get("protected") or ev.get("would"):
+                    check_spike(conn, tenant_id, route)
             finally:
                 conn.close()
             resp.headers["X-Aran-Route"] = route["name"]

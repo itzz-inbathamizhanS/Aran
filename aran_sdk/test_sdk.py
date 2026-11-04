@@ -14,7 +14,7 @@ SDK_DIR = os.path.dirname(os.path.abspath(__file__))
 if SDK_DIR not in sys.path:
     sys.path.insert(0, SDK_DIR)
 
-from aran import Aran, AranAuthError, AranScopeError, AranRateLimit, AranError
+from aran import Aran, AranAuthError, AranScopeError, AranRateLimit, AranError, verify_webhook
 
 
 CLOUD_URL = os.environ.get("ARAN_CLOUD_URL", "http://127.0.0.1:8100")
@@ -264,3 +264,23 @@ def test_sdk_transaction_requests_without_a_server():
         assert seen[-1][:3] == ("GET", "/v1/metrics?window=24h&step=5m", "aran_live_stub")
     finally:
         srv.shutdown()
+
+
+def test_verify_webhook_signature():
+    """The signature is HMAC-SHA256(secret, timestamp + "." + body); a changed body, secret or old timestamp fails."""
+    import hashlib
+    import hmac
+
+    secret, body = "whsec_test", b'{"type":"alert","data":{"types":["PAN"]}}'
+    ts = str(int(time.time()))
+    sig = "sha256=" + hmac.new(secret.encode(), ts.encode() + b"." + body, hashlib.sha256).hexdigest()
+    assert verify_webhook(secret, ts, body, sig) is True
+    assert verify_webhook(secret, ts, body.decode(), sig) is True            # text body is accepted too
+    assert verify_webhook(secret, ts, body + b" ", sig) is False             # body changed
+    assert verify_webhook("whsec_other", ts, body, sig) is False             # wrong secret
+    assert verify_webhook(secret, ts, body, sig[:-1] + ("0" if sig[-1] != "0" else "1")) is False
+    assert verify_webhook(secret, ts, body, "") is False
+    old = str(int(time.time()) - 3600)
+    old_sig = "sha256=" + hmac.new(secret.encode(), old.encode() + b"." + body, hashlib.sha256).hexdigest()
+    assert verify_webhook(secret, old, body, old_sig) is False               # replayed after an hour
+    assert verify_webhook(secret, old, body, old_sig, tolerance=None) is True

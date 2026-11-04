@@ -2172,7 +2172,9 @@ def seed_demo_transactions(tenant: dict, n: int = 200) -> int:
         items.append(TxnIn(txn_id=f"DEMO-{run}-{i + 1:04d}", rail=rail, sink=rnd.choice(DEMO_SINKS), purpose="Service",
                            customer_ref=f"CUST-D{rnd.randint(1, 60):04d}", amount_paise=rnd.randint(5_000, 5_000_000), fields=fields))
     # more traffic in the later minutes, none in the last few seconds
-    ats = sorted(now - 3540 + 3500 * (rnd.random() ** 0.7) for _ in range(n))
+    # (the 1h metrics window starts at the beginning of a 5-minute bucket, so stay inside it)
+    lo = max(now - 3540, int(now // 300) * 300 - 3300 + 1)
+    ats = sorted(lo + (now - 40 - lo) * (rnd.random() ** 0.7) for _ in range(n))
     for i in range(0, n, 100):
         run_transactions(tenant, items[i:i + 100], at_list=ats[i:i + 100], demo=True)
     return n

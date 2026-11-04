@@ -15,6 +15,7 @@
     ['transactions', 'Transactions', 'Every payment copy sent through Aran, newest first. The cloud keeps the protected text and the counts, never the original values.'],
     ['routes', 'Routes', 'Point a system at an Aran route and everything it sends passes through the firewall first. Monitor mode only counts; enforce mode forwards the cleaned request.'],
     ['policies', 'Policies', 'What to do with each kind of identifier that passes through a route: tokenise, mask, allow, alert or block. Every change is versioned and written to a tamper-evident log.'],
+    ['webhooks', 'Webhooks', 'Send alerts (blocks, alerts, spikes, route failures) to your own systems, signed so you can check they came from Aran. Payloads hold identifier types and counts, never values.'],
     ['datamap', 'Data map', 'Where identifiers go: the systems that call Aran, Aran itself, and the destinations that receive tokens.'],
     ['performance', 'Performance', 'How much time Aran adds to a payment, against the latency budget and the service objective.'],
     ['compliance', 'Compliance', 'Erasure receipts, who read real values back, and proof that the audit log was not edited.'],
@@ -36,7 +37,7 @@
   const S = {
     counters: null, m1h: null, mwin: null, win: '1h', txns: [], ftx: null, maxId: 0, keys: null, slo: null, settings: null, usage: null,
     team: null, dash: null, audit: null, lastOk: 0, err: '', stream: 'off', filters: { q: '', rail: '', sink: '' }, sel: null, paused: false,
-    fresh: {}, txLimit: 50, tick: 0, sinks: [], routes: null, rtEvents: null, rtSel: null, pols: null, polMeta: null, polAudit: null, polSel: null, polRules: null,
+    fresh: {}, txLimit: 50, tick: 0, sinks: [], routes: null, rtEvents: null, rtSel: null, pols: null, polMeta: null, polAudit: null, polSel: null, polRules: null, hooks: null, hookDl: null,
   };
   let timer = null, es = null, esTimer = null, esRetry = 0, painted = null, wsName = '';
 
@@ -376,6 +377,23 @@
     once: false,
   };
 
+  /* ---- Webhooks (alerts out) ---- */
+  const DL_STATE = { delivered: ['✓ delivered', 'ok'], pending: ['◌ retrying', 'warn'], sending: ['◌ sending', 'warn'], failed: ['✗ failed', 'danger'] };
+  V.webhooks = {
+    shell: () => `<section class="card"><h2 class="h3">Your webhooks</h2><div class="kit-scroll kit-gap-s" id="wh-list">${U.skeleton(100)}</div><div id="wh-out"></div></section>
+      <section class="card kit-gap-s"><h2 class="h3">Add a webhook</h2><p class="small muted">Aran sends a POST with the headers <span class="mono">X-Aran-Event</span>, <span class="mono">X-Aran-Delivery</span>, <span class="mono">X-Aran-Timestamp</span> and <span class="mono">X-Aran-Signature: sha256=…</span> (HMAC-SHA256 of the timestamp, a dot and the raw body, keyed with the secret). A failed delivery is retried after 1 s, 5 s, 30 s, 2 min and 10 min.</p>
+        <form class="kit-form" id="wh-form"><div class="kit-cols-4" style="grid-template-columns:2fr 2fr"><label class="field">Receiver URL<input id="wh-url" class="mono" required placeholder="https://siem.example/aran" autocomplete="off"></label><fieldset class="field"><legend>Events</legend><div class="kit-row" id="wh-ev"><label><input type="checkbox" value="block" checked> block</label><label><input type="checkbox" value="alert" checked> alert</label><label><input type="checkbox" value="spike" checked> spike</label><label><input type="checkbox" value="route_failure" checked> route failure</label></div></fieldset></div>
+        <div class="kit-row"><button class="btn" type="submit"><span>Add webhook</span></button><span id="wh-form-out" role="status"></span></div></form><div id="wh-secret"></div></section>
+      <section class="card kit-gap-s"><h2 class="h3">Recent deliveries</h2><p class="small muted">Types and counts only. Each row is one event sent to one webhook.</p><div class="kit-scroll" id="wh-dl">${U.skeleton(100)}</div></section>
+      <section class="card kit-gap-s"><h2 class="h3">Export to a SIEM</h2><p class="small muted">Pull route events, blocks included, as JSON lines or CEF. Use the <span class="mono">X-Aran-Next-Since</span> header of one answer as <span class="mono">since</span> of the next.</p><pre class="logline out">curl -H "X-API-Key: &lt;your key&gt;" "${esc(location.origin)}/v1/events/export?format=cef&amp;since=0"</pre></section>`,
+    load: () => [get('/v1/webhooks').then((d) => { S.hooks = d.webhooks; }), get('/v1/webhook-deliveries?limit=30').then((d) => { S.hookDl = d.deliveries; })],
+    paint: () => {
+      if (S.hooks) set('wh-list', S.hooks.length ? `<table class="tbl dense"><thead><tr><th>Receiver</th><th>Events</th><th>Status</th><th class="num">Delivered</th><th class="num">Failed</th><th></th></tr></thead><tbody>${S.hooks.map((w) => `<tr><td class="mono small">${esc(routeHost(w.url))}<div class="muted">${esc(w.id)}</div></td><td class="small">${w.events.map((e) => `<span class="pill tok">${esc(e)}</span>`).join(' ')}</td><td>${w.disabled ? U.pill('off', 'warn') : U.pill('● on', 'ok')}</td><td class="num mono">${fmt(w.deliveries.delivered || 0)}</td><td class="num mono">${fmt(w.deliveries.failed || 0)}</td><td class="kit-row"><button class="btn secondary sm" data-wh-test="${esc(w.id)}"><span>Send test</span></button><button class="btn ghost sm" data-wh-off="${esc(w.id)}" data-to="${w.disabled ? '0' : '1'}"><span>${w.disabled ? 'Turn on' : 'Turn off'}</span></button><button class="btn ghost sm" data-wh-del="${esc(w.id)}" aria-label="Delete webhook ${esc(w.id)}"><span>Delete</span></button></td></tr>`).join('')}</tbody></table>` : noData('No webhooks yet. Add one below.'));
+      if (S.hookDl) set('wh-dl', S.hookDl.length ? `<table class="tbl dense"><thead><tr><th>Time</th><th>Event</th><th>What</th><th>Result</th><th class="num">Attempts</th><th class="num">HTTP</th></tr></thead><tbody>${S.hookDl.map((d) => { const st = DL_STATE[d.state] || [d.state, '']; const dt = d.payload.data || {}; const what = [dt.route, (dt.types || []).join(', '), dt.protected_last_minute != null ? dt.protected_last_minute + '/min' : ''].filter(Boolean).join(' · '); return `<tr><td class="mono">${K.time(d.at)}</td><td>${U.pill(esc(d.event_type), '')}</td><td class="small mono">${esc(what || '–')}</td><td>${U.pill(st[0], st[1])}${d.error && d.state !== 'delivered' ? `<div class="small muted">${esc(d.error)}</div>` : ''}</td><td class="num mono">${d.attempts}</td><td class="num mono">${d.status_code == null ? '–' : d.status_code}</td></tr>`; }).join('')}</tbody></table>` : noData('No deliveries yet'));
+    },
+    once: false,
+  };
+
   /* ---- Policies (what to do with each identifier type) ---- */
   const ACTION_HELP = { tokenise: 'replace with a token', mask: 'keep the last 4 characters', allow: 'send as is', alert: 'tokenise and raise an alert', block: 'refuse the whole request (enforce)' };
   const ruleRow = (r, i, meta) => `<tr><td class="num mono">${i + 1}</td><td><select data-pr-type="${i}" aria-label="Type of rule ${i + 1}">${['*'].concat(meta.types).map((t) => `<option ${t === r.type ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></td><td><select data-pr-action="${i}" aria-label="Action of rule ${i + 1}">${meta.actions.map((a) => `<option ${a === r.action ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select></td><td class="small muted">${esc(ACTION_HELP[r.action] || '')}</td><td><button class="btn ghost sm" data-pr-del="${i}" aria-label="Remove rule ${i + 1}"><span>Remove</span></button></td></tr>`;
@@ -528,6 +546,16 @@
         out.innerHTML = U.pill('✓ added in monitor mode', 'ok'); S.rtSel = r.id; f.reset(); refresh();
       } catch (err) { out.innerHTML = U.pill('✗ ' + esc(err.message), 'danger'); }
     });
+    if (f.id === 'wh-form') return K.busy(btn, async () => {
+      const out = $('#wh-form-out'), events = $$('#wh-ev input:checked').map((i) => i.value);
+      if (!events.length) { out.innerHTML = U.pill('✗ pick at least one event', 'danger'); return; }
+      try {
+        const r = await call('/v1/webhooks', { body: { url: $('#wh-url').value.trim(), events } }, out);
+        out.innerHTML = U.pill('✓ added', 'ok'); f.reset();
+        set('wh-secret', U.note('ok', 'Copy the secret now, it is not shown again.') + `<div class="kit-key kit-gap-s"><code>${esc(r.secret)}</code><button class="btn secondary sm" data-copy="${esc(r.secret)}"><span>Copy</span></button></div>`);
+        refresh();
+      } catch (err) { out.innerHTML = U.pill('✗ ' + esc(err.message), 'danger'); }
+    });
     if (f.id === 'pl-form') return K.busy(btn, async () => {
       const out = $('#pl-form-out');
       try {
@@ -567,6 +595,19 @@
     const rd = t.closest('[data-rt-del]'); if (rd) {
       if (!(await U.confirm({ title: 'Delete this route?', body: 'Callers get a 404 at once. Held requests for it are dropped.', confirmLabel: 'Delete route' }))) return;
       try { await call('/v1/routes/' + rd.dataset.rtDel, { method: 'DELETE' }, $('#rt-out')); U.toast('Route deleted'); S.rtSel = null; refresh(); } catch (err) { $('#rt-out').innerHTML = U.note('err', esc(err.message)); }
+      return;
+    }
+    const wt = t.closest('[data-wh-test]'); if (wt) {
+      try { const r = await call('/v1/webhooks/' + wt.dataset.whTest + '/test', { method: 'POST', body: {} }, $('#wh-out')); $('#wh-out').innerHTML = r.delivered ? U.note('ok', 'Test event delivered (HTTP ' + r.status_code + ').') : U.note('err', 'Test event not delivered: ' + esc(r.error || 'unknown error')); refresh(); } catch (err) { $('#wh-out').innerHTML = U.note('err', esc(err.message)); }
+      return;
+    }
+    const wo = t.closest('[data-wh-off]'); if (wo) {
+      try { await call('/v1/webhooks/' + wo.dataset.whOff, { method: 'PATCH', body: { disabled: wo.dataset.to === '1' } }, $('#wh-out')); refresh(); } catch (err) { $('#wh-out').innerHTML = U.note('err', esc(err.message)); }
+      return;
+    }
+    const wd = t.closest('[data-wh-del]'); if (wd) {
+      if (!(await U.confirm({ title: 'Delete this webhook?', body: 'Events waiting to be sent to it are dropped.', confirmLabel: 'Delete webhook' }))) return;
+      try { await call('/v1/webhooks/' + wd.dataset.whDel, { method: 'DELETE' }, $('#wh-out')); U.toast('Webhook deleted'); refresh(); } catch (err) { $('#wh-out').innerHTML = U.note('err', esc(err.message)); }
       return;
     }
     const pe = t.closest('[data-pl-edit]'); if (pe) { const p = (S.pols || []).find((x) => x.id === pe.dataset.plEdit); if (p) { S.polRules = p.rules.map((r) => Object.assign({}, r)); $('#pl-name').value = p.name; $('#pl-edit-h').textContent = 'New version of ' + p.name; V.policies.paint(); $('#pl-form').scrollIntoView({ block: 'nearest' }); } return; }
