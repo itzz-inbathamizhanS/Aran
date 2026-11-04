@@ -69,6 +69,7 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Learning | Aran Learn 27 - Bank Transactions for Beginners (Markdown and PDF) | https://github.com/itzz-inbathamizhanS/Aran/blob/main/docs/learning/27-bank-transactions-basics.md |
 | Learning | Aran Learn 28 - Dashboards and Metrics (Markdown and PDF) | https://github.com/itzz-inbathamizhanS/Aran/blob/main/docs/learning/28-dashboards-and-metrics.md |
 | Site improvements | Screenshots: customer list and Bank A on a phone, workspace summary in light mode, erase buttons, results | https://github.com/itzz-inbathamizhans/aran/tree/aran-ui-banks-cloud/artifacts/Site%20improvements |
+| Live check and weak spots | Aran - Live Link Check and Weak Spots (every hosted link tested on 4 Nov 2026, and the weak or unfinished parts in priority order; Markdown and PDF) | https://github.com/itzz-inbathamizhanS/Aran/blob/main/artifacts/Live%20check%20and%20weak%20spots/Aran%20-%20Live%20Link%20Check%20and%20Weak%20Spots.md |
 
 Note: the Markdown copy replaces the embedded architecture diagram with a text placeholder; the PDF keeps it.
 
