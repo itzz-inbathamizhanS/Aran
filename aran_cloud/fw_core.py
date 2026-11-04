@@ -411,7 +411,8 @@ def apply_policy(original: str, findings: list, rules: Optional[List[Dict[str, s
 # ---------------------------------------------------------------- the plain masker (core unreachable)
 _PAN = re.compile(r"\b[A-Za-z]{5}\d{4}[A-Za-z]\b")
 _UPI = re.compile(r"\b[A-Za-z0-9._\-]{2,64}@[A-Za-z][A-Za-z0-9.\-]{1,30}\b")
-_DIGITS = re.compile(r"(?<![\dA-Za-z])\d(?:[ \-]?\d){7,18}(?![\dA-Za-z])")
+# 9 to 19 digits: mobile, Aadhaar, account and card numbers. Eight digits is left alone so dates such as 2026-11-05 stay readable.
+_DIGITS = re.compile(r"(?<![\dA-Za-z])\d(?:[ \-]?\d){8,18}(?![\dA-Za-z])")
 
 
 def mask_text(s: str) -> str:
