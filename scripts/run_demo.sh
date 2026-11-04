@@ -30,7 +30,7 @@ source "$ENV_LOCAL"
 export ARAN_MASTER_KEY
 export ARAN_INTERNAL_SECRET
 export ARAN_STORE="$REPO_ROOT/data/aran.db"
-export ARAN_DEMO_MODE=1
+export ARAN_LOCAL_SIGNUPS=1
 export ARAN_SIGNUP_LIMIT="${ARAN_SIGNUP_LIMIT:-5}"
 
 echo "=========================================================="
@@ -59,7 +59,7 @@ if lsof -Pi :8100 -sTCP:LISTEN -t >/dev/null ; then
     echo "✔ Aran Cloud already running on port 8100"
 else
     echo "▶ Starting Aran Cloud SaaS on port 8100..."
-    (cd "$REPO_ROOT/aran_cloud" && PORT=8100 ARAN_DEMO_MODE=1 ARAN_SIGNUP_LIMIT="$ARAN_SIGNUP_LIMIT" ARAN_INTERNAL_SECRET="$ARAN_INTERNAL_SECRET" "$VENV_PYTHON" -m uvicorn main:app --port 8100 --no-proxy-headers > /tmp/aran_cloud.log 2>&1 &)
+    (cd "$REPO_ROOT/aran_cloud" && PORT=8100 ARAN_LOCAL_SIGNUPS=1 ARAN_SIGNUP_LIMIT="$ARAN_SIGNUP_LIMIT" ARAN_INTERNAL_SECRET="$ARAN_INTERNAL_SECRET" "$VENV_PYTHON" -m uvicorn main:app --port 8100 --no-proxy-headers > /tmp/aran_cloud.log 2>&1 &)
 fi
 
 # Wait for core health

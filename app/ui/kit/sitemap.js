@@ -5,8 +5,8 @@
    Order follows the story a visitor needs:
      1 Start          what Aran is: live overview, guided tour, how it works
      2 Firewall       the tools: send traffic, erase, trace, immune layer, evidence
-     3 Live demos     the stand-out demos
-     4 Demo banks     the same bank with and without Aran
+     3 Try it live    the stand-out features
+     4 Banks          the same bank with and without Aran
      5 Aran Cloud     Aran as a product for banks
 
    Groups marked local are only shown where those services run: on localhost, or when a
@@ -36,7 +36,7 @@ window.ARAN = window.ARAN || {};
       ['immune', 'Immune layer', 'console', '#immune'],
       ['results', 'Results & tests', 'console', '#results'],
     ] },
-    { id: 'demos', label: 'Live demos', pages: [
+    { id: 'demos', label: 'Try it live', pages: [
       ['versus', 'With / without Aran', 'console', '#versus'],
       ['arena-live', 'Beat the firewall', 'console', '#arena-live'],
       ['ledger', 'Leakage ledger', 'console', '#ledger'],
@@ -45,7 +45,7 @@ window.ARAN = window.ARAN || {};
       ['me', 'My data', 'console', '#me'],
       ['arena', 'Beat the firewall · phone', 'console', '#arena'],
     ] },
-    { id: 'banks', label: 'Demo banks', local: true, pages: [
+    { id: 'banks', label: 'Banks', local: true, pages: [
       ['compare', 'Side by side', 'bankB', '/compare'],
       ['bankA', 'Bank A · legacy', 'bankA', '/'],
       ['bankB', 'Bank B · with Aran', 'bankB', '/'],

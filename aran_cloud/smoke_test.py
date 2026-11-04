@@ -321,7 +321,7 @@ def main():
     repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     venv_py = os.path.join(repo_root, ".venv", "bin", "python3")
     cloud_env = dict(os.environ)
-    cloud_env["ARAN_DEMO_MODE"] = os.environ.get("ARAN_DEMO_MODE", "1")
+    cloud_env["ARAN_LOCAL_SIGNUPS"] = os.environ.get("ARAN_LOCAL_SIGNUPS", os.environ.get("ARAN_DEMO_MODE", "1"))
     if INTERNAL_SECRET:
         cloud_env["ARAN_INTERNAL_SECRET"] = INTERNAL_SECRET
 
