@@ -19,9 +19,10 @@ RUN bash research/fetch_data.sh
 COPY app/server/ app/server/
 COPY app/ui/ app/ui/
 COPY --from=web /web/dist app/web/dist
-# Aran Cloud, the demo bank and the Python SDK (docker-compose.yml runs each as its own service)
+# Aran Cloud, the self-hosted edge, the demo bank and the Python SDK (docker-compose.yml runs each as its own service)
 COPY aran_sdk/ aran_sdk/
 COPY aran_cloud/ aran_cloud/
+COPY aran_edge/ aran_edge/
 COPY demo_bank/ demo_bank/
 COPY --chmod=755 scripts/compose_entry.sh /usr/local/bin/aran-entry
 COPY scripts/apps_proxy.py scripts/apps_proxy.py

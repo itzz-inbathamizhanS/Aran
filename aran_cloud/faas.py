@@ -22,7 +22,7 @@ import secrets
 import sqlite3
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, Dict, List, Optional
 from urllib.parse import quote, urlsplit
 
@@ -383,56 +383,17 @@ def check_spike(conn: sqlite3.Connection, tenant_id: str, route: dict, now: Opti
 
 
 # ---------------------------------------------------------------- cleaning
-class CleanResult:
-    """The outcome of cleaning one request: protected path, query and body, plus the counts."""
-
-    def __init__(self):
-        self.path = ""
-        self.query = ""
-        self.body: bytes = b""
-        self.protected = 0
-        self.unprotected = 0
-        self.ignored = 0
-        self.by_type: Dict[str, int] = {}
-        self.findings: list = []
-        self.latency_ms = 0.0
-        self.supported = True       # False for a content type that cannot be cleaned
-        self.actions: Dict[str, int] = {}     # policy decisions: action -> findings handled that way
-        self.block_types: List[str] = []      # finding types whose rule is "block"
-        self.alert_types: List[str] = []      # finding types whose rule is "alert"
-
-
-class CleanFailed(Exception):
-    """The core could not be reached (or was too slow) while cleaning."""
-
-
-_pool = ThreadPoolExecutor(max_workers=8, thread_name_prefix="fw-clean")
-_core_pool = ThreadPoolExecutor(max_workers=8, thread_name_prefix="fw-core")
-
-
-def core_budget_ms() -> float:
-    try:
-        return float(os.environ.get("ARAN_FAAS_CORE_TIMEOUT_MS", "300"))
-    except ValueError:
-        return 300.0
+CleanResult = fw_core.CleanResult
+CleanFailed = fw_core.CleanFailed
+_core_pool = fw_core.core_pool
+core_budget_ms = fw_core.core_budget_ms
+mask_request = fw_core.mask_request
 
 
 def clean_body(ctx: Ctx, tenant_id: str, route: dict, content_type: str, body: bytes, path: str, query: str,
                customer_ref: Optional[str] = None, policy: Any = None, fault: bool = False,
                parsed: Optional[tuple] = None) -> CleanResult:
-    """Cleans the path, query and body of one request with the core. Raises fw_core.BodyError for a body that does
-    not match its content type and CleanFailed when the core fails or is too slow. Writes nothing.
-    `policy` is a normalised rule list (or None for the default, tokenise everything): each finding becomes a token,
-    a mask, the original (allow), or flags the request to be blocked or alerted."""
-    res = CleanResult()
-    if parsed is None:
-        parsed = (fw_core.parse_body(content_type, body), fw_core.parse_path(path), fw_core.parse_query(query))
-    pbody, ppath, pquery = parsed
-    if pbody is None:
-        res.supported = False
-        return res
-    parts = [ppath, pquery, pbody]
-    units = [u for p in parts for u in p.units]
+    """Cleans the path, query and body of one request with the core (see fw_core.clean_request)."""
     purpose, sink = route["purpose"], route["sink"]
 
     def protect_fn(text: str) -> dict:
@@ -444,61 +405,7 @@ def clean_body(ctx: Ctx, tenant_id: str, route: dict, content_type: str, body: b
         d["findings"] = out["res"].get("findings", [])
         return d
 
-    groups = max(1, sum(len(v) for _, v in units) // fw_core.MAX_JOIN_CHARS + 1)
-    budget = (core_budget_ms() + 25.0 * (groups - 1)) / 1000.0
-    actions: Dict[str, int] = {}
-    block_types: set = set()
-    alert_types: set = set()
-
-    def postprocess(original: str, cleaned: str, findings: list) -> str:
-        text, decisions = fw_core.apply_policy(original, findings, policy)
-        for d in decisions:
-            actions[d["action"]] = actions.get(d["action"], 0) + 1
-            if d["action"] == "block":
-                block_types.add(d["type"])
-            elif d["action"] == "alert":
-                alert_types.add(d["type"])
-        return text
-
-    if policy is None:
-        postprocess = None
-    fut = _pool.submit(fw_core.clean_units, units, protect_fn, _core_pool.map, fw_core.MAX_JOIN_CHARS, postprocess)
-    try:
-        out = fut.result(timeout=budget)
-    except FutureTimeout:
-        fut.cancel()
-        raise CleanFailed("the core did not answer within the budget")
-    except fw_core.BodyError:
-        raise
-    except Exception as err:
-        raise CleanFailed(f"{err.__class__.__name__}")
-
-    pos = 0
-    rebuilt = []
-    for p in parts:
-        n = len(p.units)
-        rebuilt.append(p.rebuild(out.values[pos:pos + n]))
-        pos += n
-    res.path, res.query, res.body = rebuilt
-    res.protected, res.unprotected, res.ignored = out.protected, out.unprotected, out.ignored
-    res.by_type, res.findings, res.latency_ms = out.by_type, out.findings, out.latency_ms
-    if policy is not None:
-        res.actions = actions
-        res.block_types, res.alert_types = sorted(block_types), sorted(alert_types)
-        # "protected" is what the policy changed in the request: allowed findings stay as they were
-        res.protected = sum(n for a, n in actions.items() if a != "allow")
-    return res
-
-
-def mask_request(parsed: tuple) -> CleanResult:
-    """The core is down: a masked copy of the request (last 4 digits only). Used by fail mode 'hold'."""
-    pbody, ppath, pquery = parsed
-    res = CleanResult()
-    outs = []
-    for p in (ppath, pquery, pbody):
-        outs.append(p.rebuild([fw_core.mask_text(v) for _, v in p.units]))
-    res.path, res.query, res.body = outs
-    return res
+    return fw_core.clean_request(protect_fn, content_type, body, path, query, policy, parsed)
 
 
 # ---------------------------------------------------------------- upstream

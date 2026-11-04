@@ -105,6 +105,36 @@ services:
       retries: 10
       start_period: 10s
 
+  # A self-hosted data plane (profile "edge"): docker compose --profile edge up edge
+  # Needs ARAN_EDGE_KEY (a Cloud key with the edge scope) and ARAN_EDGE_LOCAL_KEY in the environment or .env.local.
+  # See aran_edge/README.md. It cleans with the core on this network and sends Cloud counts only.
+  edge:
+    <<: *common
+    profiles: ["edge"]
+    working_dir: /srv
+    command: aran-entry python3 -m uvicorn aran_edge.edge:app --host 0.0.0.0 --port 8200 --no-proxy-headers
+    environment:
+      - ARAN_CLOUD_URL=http://cloud:8100
+      - ARAN_CORE_URL=http://core:8000
+      - ARAN_EDGE_KEY=${ARAN_EDGE_KEY:-}
+      - ARAN_EDGE_LOCAL_KEY=${ARAN_EDGE_LOCAL_KEY:-}
+      - ARAN_EDGE_DB=/srv/data/edge.db
+      - ARAN_EDGE_ALLOW_PRIVATE_UPSTREAMS=1  # demo only: lets a route point at a service on the private network
+    ports:
+      - "127.0.0.1:8200:8200"
+    volumes:
+      - edge-data:/srv/data
+      - secrets:/srv/secrets
+    depends_on:
+      cloud:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8200/edge/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
 networks:
   aran-net:
     driver: bridge
@@ -115,3 +145,4 @@ volumes:
   cloud-data:
   bank-a-data:
   bank-b-data:
+  edge-data:

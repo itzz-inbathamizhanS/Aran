@@ -32,8 +32,10 @@ import requests
 
 try:  # package layout (aran_cloud.main) and flat layout (run from inside aran_cloud/)
     from . import faas
+    from . import edge_plane
 except ImportError:
     import faas
+    import edge_plane
 
 # ---------------------------------------------------------------- configuration
 PORT = int(os.environ.get("PORT", 8100))
@@ -44,8 +46,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(HERE, "static")
 DB_PATH = os.environ.get("ARAN_CLOUD_DB") or os.path.join(HERE, "cloud.db")  # a container keeps it on a volume
 
-VALID_SCOPES = {"admin", "protect", "gateway", "trace", "detokenise", "erase", "verify", "dashboard", "route", "policy", "webhook"}
-DEFAULT_ADMIN_SCOPES = "admin,protect,gateway,trace,detokenise,erase,verify,dashboard,route,policy,webhook"
+VALID_SCOPES = {"admin", "protect", "gateway", "trace", "detokenise", "erase", "verify", "dashboard", "route", "policy", "webhook", "edge"}
+DEFAULT_ADMIN_SCOPES = "admin,protect,gateway,trace,detokenise,erase,verify,dashboard,route,policy,webhook,edge"
 
 # Rate limiting settings (Item 5 & Hardening 1a)
 RATE_LIMIT_PER_KEY = int(os.environ.get("ARAN_RATE_LIMIT_PER_KEY", "300"))
@@ -384,6 +386,7 @@ def init_db():
             );
         """)
         faas.init_schema(conn)
+        edge_plane.init_schema(conn)
     conn.close()
 
 
@@ -2216,4 +2219,5 @@ _faas_ctx = faas.Ctx(get_db=get_db, get_tenant=get_current_tenant_and_key, requi
                      protect_text=protect_text, record_tokens=record_tokens, call_core=call_core,
                      core_url=ARAN_CORE_URL, port=PORT)
 app.include_router(faas.build_router(_faas_ctx))
+app.include_router(edge_plane.build_router(_faas_ctx))
 app.router.on_startup.append(lambda: faas.start_sweeper(_faas_ctx))

@@ -12,8 +12,10 @@ and a self-hosted data plane can use the same ones later. Everything here works 
 
 import ipaddress
 import json
+import os
 import re
 import socket
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 from urllib.parse import parse_qsl, quote, unquote, urlencode, urlsplit
 
@@ -508,3 +510,201 @@ def safe_path(path: str) -> bool:
     """False for a path that tries to climb out of the upstream's base path."""
     segs = unquote(path).replace("\\", "/").split("/")
     return ".." not in segs and "\x00" not in path
+
+
+# ---------------------------------------------------------------- cleaning a whole request
+class CleanResult:
+    """The outcome of cleaning one request: protected path, query and body, plus the counts."""
+
+    def __init__(self):
+        self.path = ""
+        self.query = ""
+        self.body: bytes = b""
+        self.protected = 0
+        self.unprotected = 0
+        self.ignored = 0
+        self.by_type: Dict[str, int] = {}
+        self.findings: list = []
+        self.latency_ms = 0.0
+        self.supported = True       # False for a content type that cannot be cleaned
+        self.actions: Dict[str, int] = {}     # policy decisions: action -> findings handled that way
+        self.block_types: List[str] = []      # finding types whose rule is "block"
+        self.alert_types: List[str] = []      # finding types whose rule is "alert"
+
+
+class CleanFailed(Exception):
+    """The core could not be reached (or was too slow) while cleaning."""
+
+
+_pool = ThreadPoolExecutor(max_workers=8, thread_name_prefix="fw-clean")
+core_pool = ThreadPoolExecutor(max_workers=8, thread_name_prefix="fw-core")
+
+
+def core_budget_ms() -> float:
+    try:
+        return float(os.environ.get("ARAN_FAAS_CORE_TIMEOUT_MS", "300"))
+    except ValueError:
+        return 300.0
+
+
+def clean_request(protect_fn: Callable[[str], dict], content_type: str, body: bytes, path: str, query: str,
+                  policy: Any = None, parsed: Optional[tuple] = None) -> CleanResult:
+    """Cleans the path, query and body of one request. protect_fn(text) calls the core and returns
+    {"after", "findings", "protected", "unprotected", "ignored", "by_type", "latency_ms"}.
+    Raises BodyError for a body that does not match its content type and CleanFailed when the core fails or is
+    too slow. Writes nothing. `policy` is a normalised rule list (or None for the default, tokenise everything)."""
+    res = CleanResult()
+    if parsed is None:
+        parsed = (parse_body(content_type, body), parse_path(path), parse_query(query))
+    pbody, ppath, pquery = parsed
+    if pbody is None:
+        res.supported = False
+        return res
+    parts = [ppath, pquery, pbody]
+    units = [u for p in parts for u in p.units]
+
+    groups = max(1, sum(len(v) for _, v in units) // MAX_JOIN_CHARS + 1)
+    budget = (core_budget_ms() + 25.0 * (groups - 1)) / 1000.0
+    actions: Dict[str, int] = {}
+    block_types: set = set()
+    alert_types: set = set()
+
+    def postprocess(original: str, cleaned: str, findings: list) -> str:
+        text, decisions = apply_policy(original, findings, policy)
+        for d in decisions:
+            actions[d["action"]] = actions.get(d["action"], 0) + 1
+            if d["action"] == "block":
+                block_types.add(d["type"])
+            elif d["action"] == "alert":
+                alert_types.add(d["type"])
+        return text
+
+    if policy is None:
+        postprocess = None
+    fut = _pool.submit(clean_units, units, protect_fn, core_pool.map, MAX_JOIN_CHARS, postprocess)
+    try:
+        out = fut.result(timeout=budget)
+    except FutureTimeout:
+        fut.cancel()
+        raise CleanFailed("the core did not answer within the budget")
+    except BodyError:
+        raise
+    except Exception as err:
+        raise CleanFailed(f"{err.__class__.__name__}")
+
+    pos = 0
+    rebuilt = []
+    for p in parts:
+        n = len(p.units)
+        rebuilt.append(p.rebuild(out.values[pos:pos + n]))
+        pos += n
+    res.path, res.query, res.body = rebuilt
+    res.protected, res.unprotected, res.ignored = out.protected, out.unprotected, out.ignored
+    res.by_type, res.findings, res.latency_ms = out.by_type, out.findings, out.latency_ms
+    if policy is not None:
+        res.actions = actions
+        res.block_types, res.alert_types = sorted(block_types), sorted(alert_types)
+        # "protected" is what the policy changed in the request: allowed findings stay as they were
+        res.protected = sum(n for a, n in actions.items() if a != "allow")
+    return res
+
+
+def mask_request(parsed: tuple) -> CleanResult:
+    """The core is down: a masked copy of the request (last 4 digits only). Used by fail mode 'hold'."""
+    pbody, ppath, pquery = parsed
+    res = CleanResult()
+    outs = []
+    for p in (ppath, pquery, pbody):
+        outs.append(p.rebuild([mask_text(v) for _, v in p.units]))
+    res.path, res.query, res.body = outs
+    return res
+
+
+# ---------------------------------------------------------------- signed edge config (Ed25519)
+# Cloud signs the config of a self-hosted data plane; the edge checks it with the public key.
+# The signature covers the exact JSON text in envelope["payload"], so nothing is re-serialised before checking.
+EDGE_CONFIG_TTL_S = 600          # a config is valid for 10 minutes
+EDGE_SKEW_S = 60                 # clock difference tolerated on issued_at
+
+
+class ConfigRejected(ValueError):
+    """The edge refuses this config. The message says why (never contains config values)."""
+
+
+def canonical_json(obj: Any) -> str:
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+
+
+def config_digest(routes: list, policies: list) -> str:
+    import hashlib
+    return hashlib.sha256(canonical_json({"routes": routes, "policies": policies}).encode()).hexdigest()
+
+
+def key_fingerprint(public_raw: bytes) -> str:
+    import hashlib
+    return hashlib.sha256(public_raw).hexdigest()[:16]
+
+
+def edge_public_raw(seed: bytes) -> bytes:
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    return Ed25519PrivateKey.from_private_bytes(seed).public_key().public_bytes(
+        serialization.Encoding.Raw, serialization.PublicFormat.Raw)
+
+
+def sign_config(seed: bytes, payload: dict) -> dict:
+    """Returns the envelope {"alg", "key_id", "payload" (JSON text), "signature" (base64)}."""
+    import base64
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    text = canonical_json(payload)
+    sig = Ed25519PrivateKey.from_private_bytes(seed).sign(text.encode())
+    return {"alg": "Ed25519", "key_id": key_fingerprint(edge_public_raw(seed)), "payload": text,
+            "signature": base64.b64encode(sig).decode()}
+
+
+def verify_config(envelope: Any, public_raw: bytes, tenant_id: str, edge_id: Optional[str], current_version: int = 0,
+                  current_digest: Optional[str] = None, now: Optional[float] = None) -> dict:
+    """Checks an envelope and returns its payload. Raises ConfigRejected for: a missing or bad signature, a payload
+    that is not valid, another tenant or edge, an expired config, a config issued in the future, a version older
+    than the one applied, or the same version with different content."""
+    import base64
+    import time
+    from cryptography.exceptions import InvalidSignature
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+    if not isinstance(envelope, dict) or not envelope.get("signature") or not isinstance(envelope.get("payload"), str):
+        raise ConfigRejected("config is not signed")
+    try:
+        sig = base64.b64decode(envelope["signature"], validate=True)
+        Ed25519PublicKey.from_public_bytes(public_raw).verify(sig, envelope["payload"].encode())
+    except (InvalidSignature, ValueError, TypeError):
+        raise ConfigRejected("signature does not match")
+    try:
+        p = json.loads(envelope["payload"])
+    except ValueError:
+        raise ConfigRejected("payload is not JSON")
+    if not isinstance(p, dict):
+        raise ConfigRejected("payload is not an object")
+    for k in ("tenant_id", "edge_id", "version", "issued_at", "expires_at", "routes", "policies"):
+        if k not in p:
+            raise ConfigRejected(f"payload lacks '{k}'")
+    if not isinstance(p["version"], int) or isinstance(p["version"], bool):
+        raise ConfigRejected("version is not a number")
+    if p["tenant_id"] != tenant_id:
+        raise ConfigRejected("config is for another tenant")
+    if edge_id and p["edge_id"] != edge_id:
+        raise ConfigRejected("config is for another edge")
+    now = time.time() if now is None else now
+    try:
+        issued, expires = float(p["issued_at"]), float(p["expires_at"])
+    except (TypeError, ValueError):
+        raise ConfigRejected("bad timestamps")
+    if expires <= now:
+        raise ConfigRejected("config has expired")
+    if issued > now + EDGE_SKEW_S:
+        raise ConfigRejected("config is issued in the future")
+    if p["version"] < current_version:
+        raise ConfigRejected(f"version {p['version']} is older than the applied version {current_version}")
+    if (p["version"] == current_version and current_digest
+            and config_digest(p["routes"], p["policies"]) != current_digest):
+        raise ConfigRejected("same version but different content")
+    return p
