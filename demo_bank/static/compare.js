@@ -18,7 +18,7 @@
       $('#tiles-note').textContent = `Live from Bank B’s Aran Cloud workspace “${s.tenant.name}”.`;
     } catch (e) { $('#tiles-note').textContent = 'Bank B is not reachable at ' + L.bankB + '.'; }
   };
-  tiles(); setInterval(() => !document.hidden && tiles(), 3000);
+  tiles(); setInterval(() => (window.ARAN.ui && window.ARAN.ui.active ? window.ARAN.ui.active() : !document.hidden) && tiles(), 8000);
 
   $('#sample').onclick = async () => { try { const s = await K.api(L.bankB + '/api/sample-customer'); $('#s-name').value = s.name; $('#s-mobile').value = s.mobile; $('#s-aadhaar').value = s.aadhaar; $('#s-card').value = s.card; } catch (e) { U.toast('Could not load a sample'); } };
   $('#both').onsubmit = (e) => { e.preventDefault(); K.busy($('#send'), async () => {

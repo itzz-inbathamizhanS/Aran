@@ -61,6 +61,12 @@ window.ARAN = window.ARAN || {};
     let d = null; try { d = await r.json(); } catch (e) {}
     if (!r.ok) {
       const det = d && d.detail;
+      if (r.status === 429) {
+        /* too many requests: pause the background poll for as long as the server asks */
+        const wait = Math.min(120, Math.max(5, parseInt(r.headers.get('retry-after') || '30', 10) || 30));
+        A.pauseUntil = Date.now() + wait * 1000;
+        const err = new Error(typeof det === 'string' ? det : 'Too many requests. Waiting ' + wait + ' s before trying again.'); err.status429 = true; throw err;
+      }
       if (det == null && [502, 503, 504].includes(r.status)) throw new Error('The Aran server is waking up or restarting. Try again in a few seconds.');
       throw new Error(typeof det === 'string' ? det : Array.isArray(det) ? det.map((x) => x.msg).join('; ') : 'HTTP ' + r.status);
     }
@@ -76,6 +82,18 @@ window.ARAN = window.ARAN || {};
   const subs = {};
   A.on = (k, fn) => { (subs[k] = subs[k] || []).push(fn); return () => { subs[k] = subs[k].filter((f) => f !== fn); }; };
   const emit = (k) => (subs[k] || []).forEach((f) => { try { f(); } catch (e) {} });
+  const apply = {
+    stats: (d) => {
+      A.stats = d;
+      /* a new boot id means the server restarted between two polls: its demo data is new */
+      if (A.stats.boot && A.bootId && A.stats.boot !== A.bootId) { A.bootId = A.stats.boot; setTimeout(restartedNow); }
+      else if (A.stats.boot) A.bootId = A.stats.boot;
+    },
+    events: (d) => { A.events = d; },
+    customers: (d) => { A.customers = d; },
+    immune: (d) => { A.immune = d; A.alerts = d.alerts; },
+    merkle: (d) => { A.merkle = d; },
+  };
   const load = {
     config: async () => {
       const c = await A.api('/config'); A.config = c;
@@ -83,16 +101,11 @@ window.ARAN = window.ARAN || {};
       A.SAMPLES = {}; Object.keys(c.samples).forEach((k) => (A.SAMPLES[k] = [c.samples[k], c.sample_sources[k], c.sample_sinks[k]]));
       A.DRILLS = c.drills;
     },
-    stats: async () => {
-      A.stats = await A.api('/stats');
-      /* a new boot id means the server restarted between two polls: its demo data is new */
-      if (A.stats.boot && A.bootId && A.stats.boot !== A.bootId) { A.bootId = A.stats.boot; setTimeout(restartedNow); }
-      else if (A.stats.boot) A.bootId = A.stats.boot;
-    },
-    events: async () => { A.events = await A.api('/events?limit=40'); },
-    customers: async () => { A.customers = await A.api('/customers'); },
-    immune: async () => { A.immune = await A.api('/immune'); A.alerts = A.immune.alerts; },
-    merkle: async () => { A.merkle = await A.api('/merkle'); },
+    stats: async () => apply.stats(await A.api('/stats')),
+    events: async () => apply.events(await A.api('/events?limit=40')),
+    customers: async () => apply.customers(await A.api('/customers')),
+    immune: async () => apply.immune(await A.api('/immune')),
+    merkle: async () => apply.merkle(await A.api('/merkle')),
     results: async () => { A.results = mapResults(await A.api('/results')); },
   };
   /* every poll goes through refresh. A key that is still loading is skipped, so a slow server
@@ -117,9 +130,27 @@ window.ARAN = window.ARAN || {};
     await load.config();
     await A.refresh('stats', 'events', 'customers', 'immune', 'merkle', 'results');
   };
-  let pollT = [];
-  const stopPoll = () => { pollT.forEach(clearInterval); pollT = []; };
-  const startPoll = () => { stopPoll(); pollT = [setInterval(() => A.refresh('stats', 'events'), 3000), setInterval(() => A.refresh('immune'), 4000), setInterval(() => A.refresh('merkle', 'customers'), 8000)]; };
+  /* the background poll: ONE request (GET /api/live) every 5 s for stats, events and alerts,
+     with the Merkle log and customers added every 4th round (20 s). It was five separate
+     requests every 3 to 8 s per open tab, which on the hosted links (Vercel in front of Render)
+     added up to "too many requests". A hidden or idle tab (see ui.js U.active) sends nothing, and a
+     429 from any server makes the poll wait for its Retry-After before trying again. */
+  A.pauseUntil = 0;
+  A.refreshLive = async (keys) => {
+    if (busy.live || Date.now() < A.pauseUntil) return;
+    busy.live = true;
+    try {
+      const d = await A.api('/live?parts=' + keys.join(','));
+      keys.forEach((k) => { if (d[k] !== undefined) { apply[k](d[k]); emit(k); } });
+      fails = 0;
+    } catch (e) {
+      if (!e.status429 && ++fails >= 2 && A.conn !== 'reconnecting') reconnect();
+    } finally { busy.live = false; }
+  };
+  let pollT = 0, round = 0;
+  const pollOnce = () => { if (!A.ui.active()) return; round++; A.refreshLive(round % 4 === 0 ? ['stats', 'events', 'immune', 'merkle', 'customers'] : ['stats', 'events', 'immune']); };
+  const stopPoll = () => { clearInterval(pollT); pollT = 0; };
+  const startPoll = () => { stopPoll(); pollT = setInterval(pollOnce, 5000); };
   /* connection lost: stop the normal polls and ask /health, slower each time (3 s up to 15 s).
      When it answers with a different boot id the server restarted and its demo data is new. */
   let recT = 0;
@@ -146,10 +177,12 @@ window.ARAN = window.ARAN || {};
     /* a hidden tab polls nothing; coming back refreshes at once */
     if (!A.poll.wired) {
       A.poll.wired = true;
+      const back = () => { if (A.conn === 'reconnecting') return; A.refreshLive(['stats', 'events', 'immune', 'merkle', 'customers']); startPoll(); };
       document.addEventListener('visibilitychange', () => {
         if (A.conn === 'reconnecting') return;
-        if (document.hidden) stopPoll(); else { A.refresh('stats', 'events', 'customers', 'immune', 'merkle'); startPoll(); }
+        if (document.hidden) stopPoll(); else back();
       });
+      A.ui.onWake(back);
     }
   };
 

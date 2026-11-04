@@ -438,7 +438,7 @@
     get('/v1/counters').then((d) => { S.counters = d; }).catch(() => {});
     get('/v1/dashboard').then((d) => { wsName = d.tenant.name + ' · ' + d.tenant.id; $('#ws').textContent = wsName; }).catch(() => {});
     enter(true); openStream();
-    timer = setInterval(() => { if (!document.hidden) refresh(true); }, 5000);
+    timer = setInterval(() => { if ((window.ARAN.ui && window.ARAN.ui.active ? window.ARAN.ui.active() : !document.hidden)) refresh(true); }, 15000);
   }
 
   /* ---------------------------------------------------------------- actions (one delegated listener, no inline handlers) */
@@ -521,6 +521,6 @@
     });
   });
 
-  health(); setInterval(health, 10000);
+  health(); setInterval(() => (window.ARAN.ui && window.ARAN.ui.active ? window.ARAN.ui.active() : !document.hidden) && health(), 30000);
   if (!key) gate(); else start();
 })(window.ARAN);

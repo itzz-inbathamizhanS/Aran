@@ -321,6 +321,7 @@ The team is new to this technology, so read these in order before starting any b
 - [BanksAndCloud branch audit](artifacts/Branch%20audits/Aran%20-%20BanksAndCloud%20Branch%20Audit.md): review of the Aran Cloud, demo bank, SDK and persistence branch against main, with test results and fixes needed before merging.
 - [Artifacts index](artifacts/README.md): every artifact by thread, with live links. Older Markdown and PDF copies of the first docs are in [artifacts/Data-flow firewall research](artifacts/Data-flow%20firewall%20research/).
 - [Obsidian vault home](Home.md): open the repo folder as a vault; thread notes are in [notes/threads](notes/threads/), indexed in [notes/Threads.md](notes/Threads.md).
+- [Fewer requests on the live links](artifacts/Fewer%20requests/): the hosted pages were sending more than one request a second per open tab through Vercel to Render, all day. The console now makes one combined `/api/live` call every 5 s, every page stops polling when its tab is hidden or nobody has touched it for 10 minutes, a 429 answer makes it wait as long as the server asks, the bank and Cloud pages poll 2 to 3 times less often, and the keep-awake job no longer pings Vercel. About 6 times fewer requests from an open console, zero from an idle one. [Write-up](artifacts/Fewer%20requests/Aran%20-%20Too%20Many%20Requests%20Fix.md) and [Learn 31](artifacts/Fewer%20requests/Aran%20Learn%2031%20-%20Polling%20and%20Rate%20Limits.md).
 
 ## Regulations addressed
 

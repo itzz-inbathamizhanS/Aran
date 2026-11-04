@@ -35,7 +35,8 @@ jobs:
             echo "run=yes" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Ping back ends and front ends
+      # Only the Render back ends: Vercel never sleeps, and pinging its links only adds requests.
+      - name: Ping back ends
         if: steps.gate.outputs.run == 'yes'
         run: |
           urls=(
@@ -44,10 +45,6 @@ jobs:
             https://aran-apps.onrender.com/cloud/v1/health
             https://aran-apps.onrender.com/bank-a/api/config
             https://aran-apps.onrender.com/bank-b/api/config
-            https://aran-console.vercel.app/
-            https://aran-cloud.vercel.app/
-            https://aran-bank-a.vercel.app/
-            https://aran-bank-b.vercel.app/
           )
           fail=0
           for u in "${urls[@]}"; do
