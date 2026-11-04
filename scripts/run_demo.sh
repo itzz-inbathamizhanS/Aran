@@ -130,3 +130,4 @@ echo "                     http://127.0.0.1:8100/dashboard#key=$DEMO_DASHBOARD_K
 echo "    -> Dashboard key (read only):    $DEMO_DASHBOARD_KEY"
 echo "    -> Admin key:                    $DEMO_ADMIN_KEY"
 echo "=========================================================="
+

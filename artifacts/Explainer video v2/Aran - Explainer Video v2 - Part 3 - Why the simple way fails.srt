@@ -166,3 +166,4 @@ And on top of these, Aran adds an AI layer, a normaliser, an immune layer, an AI
 00:05:02,533 --> 00:05:10,876
 Recap. Six gaps, closed by Aran's mechanisms, with extra layers on top. Now let us see how each one works.
 
+

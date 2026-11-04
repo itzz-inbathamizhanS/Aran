@@ -33,3 +33,4 @@ chmod 700 "$REPO_ROOT/data"
 
 echo "✔ Demo environment clean. Re-run scripts/run_demo.sh to start afresh."
 
+

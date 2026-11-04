@@ -86,3 +86,4 @@ export function mount(el, { camPos = [0, 4, 16], target = [0, 0, 0], fov = 45, a
     el.innerHTML = ''
   }
 }
+

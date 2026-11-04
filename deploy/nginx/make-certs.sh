@@ -14,3 +14,4 @@ rm -f client.csr
 chmod 644 server.key clients-ca.key client.key      # readable by the nginx container; these are throwaway keys
 echo "client certificate fingerprint (SHA-1):"
 openssl x509 -in client.crt -noout -fingerprint -sha1 | cut -d= -f2 | tr -d ':' | tr 'A-F' 'a-f'
+

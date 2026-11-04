@@ -161,3 +161,4 @@ Claude Design can export the design as a handoff bundle for Claude Code; the [Fr
 - W3C, *WCAG 2.2 at a glance*: https://www.w3.org/WAI/standards-guidelines/wcag/glance/
 - MDN, *prefers-reduced-motion*: https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion
 - Nielsen Norman Group, *Empty states in complex applications*: https://www.nngroup.com/articles/empty-state-interface-design/
+

@@ -6,3 +6,4 @@ fc = ''.join(f'[{i}:v]scale=640:360,drawtext=fontfile=/usr/share/fonts/truetype/
 lay = '|'.join(f'{(i%3)*640}_{(i//3)*360}' for i in range(9))
 fc += ''.join(f'[s{i}]' for i in range(9)) + f'xstack=inputs=9:layout={lay}'
 subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', *inp, '-filter_complex', fc, out], check=True)
+

@@ -1088,3 +1088,4 @@ This split follows the owner pairs; change it as the team prefers.
 | 100% → 0% | Erased values recovered after a simulated quantum break, classical vs hybrid |
 | ₹250 crore | Maximum DPDP penalty for failed safeguards |
 | 13 May 2027 | DPDP Rules duties begin |
+

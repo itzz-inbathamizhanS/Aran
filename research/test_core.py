@@ -43,3 +43,4 @@ def test_cc_tokens_never_pass_and_round_trip():
 def test_completion_counts():
     assert count_verhoeff_completions({}) == 8 * 10 ** 10  # all valid Aadhaar-shaped numbers
     assert count_luhn_completions({}) == 10 ** 15
+

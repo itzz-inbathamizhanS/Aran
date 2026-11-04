@@ -220,3 +220,4 @@ window.ARAN = window.ARAN || {};
 
   A.helpers = { rnd, pick, digits, group, verhoeffValid, luhnValid, mkAadhaar, mkCard, tokenFrom };
 })(window.ARAN);
+

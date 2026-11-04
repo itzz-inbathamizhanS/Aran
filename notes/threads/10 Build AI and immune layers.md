@@ -20,3 +20,4 @@ Report: `docs/research/ai-and-immune-layers.md` (numbers in `research/results_ai
 Weak spots it left: mobiles with no cue word, OTPs next to transaction words (fixed later in [[14 Normaliser and registries]]).
 
 Back to [[Threads]]
+

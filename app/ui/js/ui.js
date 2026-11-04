@@ -166,3 +166,4 @@ window.ARAN = window.ARAN || {};
   const startTagging = () => { tag(document); new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => { if (n.nodeType === 1) { if (n.matches(SCROLLERS)) tag(n.parentNode); tag(n); } }))).observe(document.body, { childList: true, subtree: true }); };
   if (typeof MutationObserver !== 'undefined' && document.querySelectorAll) { if (document.body) startTagging(); else document.addEventListener('DOMContentLoaded', startTagging); }
 })(window.ARAN);
+

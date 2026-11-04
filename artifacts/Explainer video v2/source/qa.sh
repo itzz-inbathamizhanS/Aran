@@ -9,3 +9,4 @@ print(' '.join(f'{a+(b-a)*i/8:.2f}' for i in range(9)))")
   files=$(for t in $ts; do echo qa/${id}_$t.png; done)
   python3 sheet9.py qa/$id.jpg $files && rm $files
 done
+

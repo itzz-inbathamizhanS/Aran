@@ -20,3 +20,4 @@ Headline results (16,000 unseen real log lines, 1,895 injected values):
 Report: `docs/research/normaliser-and-registries.md`, PDF in `artifacts/research/`.
 
 Back to [[Threads]]
+

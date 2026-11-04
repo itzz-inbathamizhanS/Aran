@@ -109,3 +109,4 @@
     A.boot((st, err) => { view.innerHTML = startScreen(st, err); }).then(async () => { await fontsIn; document.documentElement.dataset.conn = 'live'; $$('.env .live').forEach((b) => (b.textContent = t('LIVE'))); badge(); A.poll(); render(); });
   }
 })(window.ARAN);
+

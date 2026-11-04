@@ -100,3 +100,4 @@ scene('mapping', X => {
 
   X.recap(8, ['Six gaps, each closed by one mechanism', 'Evidence, failing tokens, a leakage ledger', 'A token per destination, a key per purpose, OTP memory', 'Extra layers on top, from AI to quantum-safe']);
 });
+

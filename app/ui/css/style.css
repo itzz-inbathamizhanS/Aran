@@ -521,3 +521,4 @@ html[data-conn="down"] .env b { color: var(--warning-color); }
   .kit-sub a, .kit-apps a { min-height: 40px; display: inline-flex; align-items: center; }
 }
 .stat .v .word { font-size: .62em; letter-spacing: -.03em; } /* a word (learning, watching) in a number tile */
+

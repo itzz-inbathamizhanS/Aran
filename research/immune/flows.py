@@ -112,3 +112,4 @@ class FlowFeaturizer:
             rows.append([max(min(z, 8), -8), max(min(rz, 8), -8), hd, novel, cn,
                          math.log1p(100 * x["detok_rate"]), x["cust_ratio"]])
         return np.array(rows)
+

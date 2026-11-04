@@ -29,3 +29,4 @@ export const ago = t => {
   const s = Math.max(0, Math.round(Date.now() / 1000 - t))
   return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)}m ago` : `${Math.round(s / 3600)}h ago`
 }
+

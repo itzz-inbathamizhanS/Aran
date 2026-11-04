@@ -410,3 +410,4 @@ Updating a guess with new evidence is exactly what Aran does with every number i
 00:11:36,405 --> 00:11:44,542
 Recap. Probability says how likely something is. Calibrated means honest. And new evidence changes the guess.
 
+

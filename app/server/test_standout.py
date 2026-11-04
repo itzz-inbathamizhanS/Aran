@@ -110,3 +110,4 @@ def test_health_and_stats_carry_the_same_boot_id(eng, monkeypatch):
     monkeypatch.setattr(main, "eng", lambda: eng)
     h, s = main.health(), main.stats()
     assert h["boot"] == s["boot"] == main.BOOT_ID and len(main.BOOT_ID) == 12
+

@@ -13,3 +13,4 @@ Project memory lives in this vault. Any new thread should read [[Workflow]], [[T
 - Every artifact is saved under `artifacts/<thread topic>/` by its own title, as Markdown **and** PDF, and listed in [[Artifacts]].
 - Every change is logged in today's note in `notes/daily`.
 - Learning docs come before any new plan.
+

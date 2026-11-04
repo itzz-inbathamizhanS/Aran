@@ -64,3 +64,4 @@ def test_retention_lock_blocks_kyc_erasure():
     with pytest.raises(PermissionError):
         v.erase("C1", "KYC")
     assert v.key_status("C1")[0]["alive"]
+

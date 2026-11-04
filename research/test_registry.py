@@ -120,3 +120,4 @@ def test_otp_registry_is_bound_to_trace_and_expires():
     assert fw.process("value 482913 ok", "auth", "logs", trace_id="trace-b")[0] == "value 482913 ok"
     now[0] += 61
     assert fw.process("value 482913 ok", "auth", "logs", trace_id="trace-a")[0] == "value 482913 ok"
+

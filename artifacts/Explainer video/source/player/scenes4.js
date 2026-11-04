@@ -381,3 +381,4 @@ scene('close', X => {
   X.text(960, 740, 'Thank you for watching', { size: 40, w: 700, anchor: 'middle', parent: F });
   X.show(F, 5, { type: 'pop' });
 });
+

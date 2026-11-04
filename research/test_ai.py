@@ -86,3 +86,4 @@ def test_firewall_tokenises_and_tokens_fail_checksums():
 
 def test_ece_is_zero_for_perfect_calibration():
     assert ece([0.0, 0.0, 1.0, 1.0], [0, 0, 1, 1]) == 0.0
+

@@ -150,3 +150,4 @@ What we did, and why it works:
 | LCP / CLS | When the main content appears / how much the page jumps while loading. |
 | Gzip | A way to compress text files sent over the network. |
 | Cache busting | Changing a file's address (`?v=N`) when it changes, so long caching is safe. |
+

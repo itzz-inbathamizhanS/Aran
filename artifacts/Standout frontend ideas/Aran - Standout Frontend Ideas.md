@@ -29,3 +29,4 @@ More 3D scenes or more chart types. The site already has two 3D scenes and a ful
 ## Suggested order
 
 1 then 2 then 3 (each is a page plus one or two thin endpoints over existing code), then 8 before any live event. Each new topic gets a beginner learning doc for the team before building, as with Learn 1 to 17.
+

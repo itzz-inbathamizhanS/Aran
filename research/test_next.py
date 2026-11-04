@@ -108,3 +108,4 @@ def test_ner_gate_and_cached_features():
     assert not may_have_entities("Sun Dec 04 04:47:44 2005 [error] mod_jk child workerEnv in error state 6")
     assert not may_have_entities("Receiving block blk_-1608999687919862906 src: /10.250.19.102:54106")
     assert dict(_base_feats("Ramesh")) == _word_feats_uncached("Ramesh", "")
+

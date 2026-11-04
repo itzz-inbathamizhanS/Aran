@@ -763,3 +763,4 @@ def verify_config(envelope: Any, public_raw: bytes, tenant_id: str, edge_id: Opt
             and config_digest(p["routes"], p["policies"]) != current_digest):
         raise ConfigRejected("same version but different content")
     return p
+

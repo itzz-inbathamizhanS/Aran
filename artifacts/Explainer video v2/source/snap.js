@@ -22,3 +22,4 @@ const path = require('path');
   console.log(errs.length ? errs.join('\n') : 'no errors');
   await b.close();
 })();
+

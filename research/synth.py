@@ -373,3 +373,4 @@ def make_train_corpus(n, seed=0, grammar_frac=0.3, part=None, hard_frac=0.08):
     rows += [hard_line(r, "train", part) for _ in range(n_hard)]
     random.Random(seed).shuffle(rows)
     return rows
+

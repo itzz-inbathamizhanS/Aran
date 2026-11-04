@@ -144,3 +144,4 @@ window.ARAN = window.ARAN || {};
   A.setLang = (l) => { if (!LANGS[l]) return; try { localStorage.setItem('aran-lang', l); } catch (e) {} location.reload(); };
   if (typeof document !== 'undefined' && document.documentElement && document.documentElement.setAttribute) document.documentElement.setAttribute('lang', lang);
 })(window.ARAN);
+

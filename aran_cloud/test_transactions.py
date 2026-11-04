@@ -548,3 +548,4 @@ def test_demo_seed_fills_the_dashboard_and_is_labelled(alpha):
     assert sum(1 for b in m["buckets"] if b["transactions"]) >= 6
     rows = requests.get(f"{CLOUD_URL}/v1/transactions?limit=5", headers=H(ws["dashboard_key"]), timeout=10).json()["transactions"]
     assert all(x["demo"] for x in rows)
+

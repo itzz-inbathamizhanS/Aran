@@ -170,3 +170,4 @@ All taken at 1440 by 900, with the device scale set to 2. The demo workspace is 
   - Demo mode (`ARAN_FAAS_ALLOW_PRIVATE_UPSTREAMS=1`) allows private addresses on purpose. Never set it in production.
   - The `X-Aran-Role` header on the AI gateway is chosen by the caller. It only puts back values from the same request.
   - Rate limits are kept in memory per instance. With two Cloud instances a key can get up to twice the limit.
+

@@ -195,3 +195,4 @@ def count_luhn_completions(known: dict, length: int = 16) -> int:
                 nxt[ns] = nxt.get(ns, 0) + cnt
         states = nxt
     return states.get(0, 0)
+

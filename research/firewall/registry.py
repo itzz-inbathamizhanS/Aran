@@ -196,3 +196,4 @@ def typo_neighbours(digits, typ):
             if valid(v) and not (typ == "AADHAAR" and v[0] in "01"):
                 out.add(v)
     return sorted(out)
+

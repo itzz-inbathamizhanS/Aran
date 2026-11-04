@@ -321,3 +321,7 @@ Every artifact, by topic, is listed in the [artifacts index](artifacts/README.md
 ## Regulations addressed
 
 DPDP Act 2023 and DPDP Rules 2025 (safeguards, 72-hour breach report, erasure), CERT-In Directions 2022 (6-hour reporting, 180-day logs), UIDAI Aadhaar Data Vault, RBI payment data and card tokenisation rules, and PCI DSS. Treating crypto-shredding as DPDP erasure still needs legal confirmation. Post-quantum: NIST FIPS 203 and 204 (ML-KEM, ML-DSA), and India's DST quantum-safe task force report (February 2026: banking fully migrated by 2033, CBOMs from 2027 to 2028).
+
+## License
+
+Aran is released under the [MIT License](LICENSE). Copyright (c) 2026 Inbathamizhan S, Aasif Ahmed A, SN Arun Vijay and Bharadhwaj M (Team Iravora Void, KARE).

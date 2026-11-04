@@ -552,3 +552,4 @@ def test_dashboard_usage_tab_shows_the_invoice_preview_without_a_payment_provide
     assert "/v1/billing/preview" in js and "us-bill" in js and "Invoice from usage" in js
     live = requests.get(f"{CLOUD_URL}/v1/billing/preview", headers={"X-API-Key": new_ws(CLOUD_URL, "Dash Bill")["admin_key"]}, timeout=10).json()
     assert "No payment provider is connected" in live["note"]
+

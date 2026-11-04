@@ -163,3 +163,4 @@ Suggested features per BGL line: hour of day, message length, count of digits, a
 - Dasgupta and Niño, "Immunological Computation" (CRC Press, 2008), chapters 1 to 3.
 - Liu, Ting and Zhou, "Isolation Forest" (ICDM 2008), for the baseline.
 - Khan Academy, "Adaptive immunity", for the biology of T-cells and the thymus.
+

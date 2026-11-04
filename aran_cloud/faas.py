@@ -1765,3 +1765,4 @@ def build_router(ctx: Ctx) -> APIRouter:
 
     _build_ai(ctx, router)
     return router
+

@@ -77,3 +77,4 @@ This document shows the exact code difference between **Bank A (Legacy Unprotect
 > 2. Format-preserving tokens preserve database column types and schemas without breaking downstream reporting.
 > 3. Scoped credentials ensure an application server compromise cannot decrypt tokens.
 
+

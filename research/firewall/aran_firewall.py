@@ -169,3 +169,4 @@ class AranFirewall:
         recs = self.flow_records()
         scores = self.ais.score(self.feat.transform(recs))
         return [(r, float(s)) for r, s in zip(recs, scores) if s > 0]
+

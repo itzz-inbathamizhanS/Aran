@@ -82,3 +82,4 @@ app = Starlette(routes=[
     Route("/", home), Route("/healthz", health),
     Route("/{app}", proxy, methods=METHODS), Route("/{app}/{rest:path}", proxy, methods=METHODS),
 ])
+

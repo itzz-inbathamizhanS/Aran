@@ -76,3 +76,4 @@ Run it after every change to a page heading or tour chapter.
 1. Switch to Tamil, open each tour chapter at phone width, and note any heading that overflows.
 2. Change one English page title in `pages.js`, run the check script, and watch it report the stale line. Fix it.
 3. Add a fourth language (Telugu, `te`): one dictionary in `i18n.js`, one entry in `LANGS`, then run the check.
+

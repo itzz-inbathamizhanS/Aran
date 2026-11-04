@@ -126,3 +126,4 @@ Banks are strict customers. Expect these questions:
 | Rate limit | The most calls a key may make in a time window. |
 | SLA | A written promise of uptime and support. |
 | Data localisation | Keeping data inside one country, as RBI requires for payment data. |
+

@@ -19,3 +19,4 @@ if URL:
         return _real_connect(path, *a, **kw)
 
     sqlite3.connect = _connect
+

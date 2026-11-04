@@ -97,3 +97,4 @@ The shapes did not change: the design's mock data was written from the API spec,
 3. A number is printed about every 3 seconds; after `off()` nothing more is printed for that subscription.
 4. `const run = async () => { try { const g = await ARAN.generate(); use(g.aadhaar) } catch (e) { show(e.message) } }`.
 5. The Immune page's `mount()` returns `() => { alive = false; clearInterval(timer) }`, which the router calls on navigation, so the requests stop.
+

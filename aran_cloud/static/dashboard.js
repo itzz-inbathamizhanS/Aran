@@ -682,3 +682,4 @@
   health(); setInterval(health, 10000);
   if (!key) gate(); else start();
 })(window.ARAN);
+

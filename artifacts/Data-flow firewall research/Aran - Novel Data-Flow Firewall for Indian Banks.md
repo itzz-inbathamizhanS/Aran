@@ -276,3 +276,4 @@ Regulation and incidents are linked inline in sections 3.1 and 3.2. Research wor
 - Pilán et al., The Text Anonymization Benchmark, Computational Linguistics 2022. Pinto, Thiran and Vetterli, Locating the source of diffusion in large-scale networks, Physical Review Letters 2012. Shah and Zaman, Rumors in a network: who's the culprit?, IEEE Trans. IT 2011.
 - Smith, On the foundations of quantitative information flow, FoSSaCS 2009. Sweeney, Simple demographics often identify people uniquely, CMU 2000. Tardos, Optimal probabilistic fingerprint codes, JACM 2008. Verhoeff, Error detecting decimal codes, 1969.
 - [Microsoft Presidio supported entities](https://github.com/microsoft/presidio). [Loghub](https://github.com/logpai/loghub), Zhu et al., ISSRE 2023.
+

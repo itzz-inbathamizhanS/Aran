@@ -459,3 +459,4 @@ Security in a bank is also a legal duty. Learn 7 maps each rule to Aran in detai
 - Cyber pair (Inbathamizhan, Aasif): Learn 3 (cryptography), Learn 6 (immune systems), Learn 14 (post-quantum).
 - AI/ML pair (Arun, Bharadhwaj): Learn 5 and 9 (detection models), then Learn 12 for the AI gateway and red team.
 - Everyone: Learn 7 (law), so you can answer "which rule does this satisfy?" in a pitch.
+

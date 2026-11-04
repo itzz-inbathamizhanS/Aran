@@ -251,3 +251,4 @@ def make_router(gateway):
         return {"verified": gateway.audit.verify(), "entries": gateway.audit.entries[-200:]}
 
     return router
+

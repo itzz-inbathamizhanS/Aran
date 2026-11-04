@@ -39,3 +39,4 @@ The whole project explained from zero: the problem, the research, how Aran works
 - All numbers on screen are real: the Loghub log lines, the FF1 token rounds, the hashes and the Merkle tree were computed, not typed in. All identifiers shown are generated test values with valid check digits, never real people's.
 
 [Learn 21](../../docs/learning/21-making-the-explainer-video.md) explains every step and how to change a line. The source is in [source/](source/): `script.txt` (the narration), `tts.py` (voice), `player/` (the animation), `render.js` (frames to video). The voice model files and the generated audio are not in the repo; To rebuild the voice, install `kokoro-onnx` and put `kokoro-v1.0.onnx` and `voices-v1.0.bin` (from the kokoro-onnx project's model-files-v1.0 release) in `source/models/`.
+

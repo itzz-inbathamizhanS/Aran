@@ -339,3 +339,4 @@ scene('ff1', X => {
 
   X.recap(12, ['FF1 scrambles digits into digits, with a key', 'It shuffles two halves, ten times', 'With the key, it can always be reversed']);
 });
+

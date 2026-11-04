@@ -39,3 +39,4 @@ No other errors: every console route, every Cloud and bank page, and every link 
 - `scripts/run_demo.sh` prints the addresses in the same order as the menu.
 
 How to keep it this way: [Learn 24 - Site Structure and Navigation](../../docs/learning/24-site-structure-and-navigation.md).
+

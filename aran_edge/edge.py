@@ -573,3 +573,4 @@ def __getattr__(name: str):
             _app = create_app(Settings())
         return _app
     raise AttributeError(name)
+

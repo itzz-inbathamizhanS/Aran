@@ -329,3 +329,4 @@ def acquire_lease(conn, name: str, holder: str, ttl: float, now: Optional[float]
 def release_lease(conn, name: str, holder: str):
     with conn:
         conn.execute("DELETE FROM leases WHERE name = ? AND holder = ?", (name, holder))
+

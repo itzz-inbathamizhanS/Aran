@@ -420,3 +420,4 @@ def test_same_identifier_at_two_banks_reveals_nothing(tenant_alpha, tenant_beta)
     assert r_tr.status_code in (200, 403)
     if r_tr.status_code == 200:
         assert r_tr.json().get("matched", 0) == 0, "Bank B must not trace Bank A's token"
+

@@ -399,3 +399,4 @@ class PurposeFirewall(AranFirewall):
 
     def is_own_token(self, digits, typ):
         return digits in self.vault.vault or super().is_own_token(digits, typ)
+

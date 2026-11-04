@@ -248,3 +248,4 @@ When the team finishes a design in Claude Design and exports it, do not throw aw
 3. Add `<th>Rule</th>` to the header row and `<td>{f.evidence.checksum === 1 ? 'checksum' : '–'}</td>` to each body row.
 4. `<p className="small muted">{res.items.filter(x => !x.sink).length} values matched no sink</p>` inside the result card.
 5. Any overflow fix is fine, as long as the page never scrolls sideways; wide tables already sit in a `.scroll` box.
+

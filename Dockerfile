@@ -30,3 +30,4 @@ COPY --chmod=755 scripts/apps_entry.sh /usr/local/bin/aran-apps
 WORKDIR /srv/app/server
 ENV PYTHONUNBUFFERED=1
 CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+

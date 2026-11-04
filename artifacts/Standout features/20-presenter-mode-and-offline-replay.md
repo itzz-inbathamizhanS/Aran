@@ -72,3 +72,4 @@ Service workers, like the microphone (Learn 18), only run in a secure context: `
 1. Rehearse once, then stop the server and click through again. Find which screens replay and which do not (a button you never pressed during rehearsal has nothing saved).
 2. Open the browser's DevTools, Application tab, and look at the recording and the service worker.
 3. Time yourself on the full path. Cut words until you finish in 3:00.
+

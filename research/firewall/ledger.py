@@ -163,3 +163,4 @@ class LeakageLedger:
 
     def nbytes(self):
         return len(self.shown) * (16 + 8 + 8)
+

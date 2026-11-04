@@ -82,3 +82,4 @@ scene('close', X => {
   const ty = X.text(960, 922, 'Thank you for watching', { size: 44, serif: true, italic: true, w: 500, anchor: 'middle', fill: C.teal });
   X.show(ty, 3, { type: 'fade', len: 1.4 });
 });
+

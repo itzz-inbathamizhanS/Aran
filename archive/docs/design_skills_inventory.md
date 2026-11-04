@@ -1372,3 +1372,4 @@ Here is the optimal, conflict-free starter set of **at most 8 skills** specifica
 3. **`matterjs`**: Physics rigid-body simulations make elements tumble and collide like toys or video game assets, severely undermining trust in an enterprise banking and zero-knowledge firewall platform.
 4. **`book-serif-index` / `editorial-portfolio-chapters` / `clean-minimal-beige-light-mode`**: Warm beige tones, literary serif fonts, and editorial magazine pacing clash directly with post-quantum security and modern cloud infrastructure.
 5. **`falling-leaves` / `fire-paper-loader` / `paper-cinder-transition`**: Playful/theatrical particle effects that read as novelty templates rather than a deterministic financial firewall.
+

@@ -57,3 +57,4 @@ jobs:
           done
           # A waking service answers 502/503 on the first ping; only flag it, never fail the run.
           echo "Not ready yet: $fail"
+

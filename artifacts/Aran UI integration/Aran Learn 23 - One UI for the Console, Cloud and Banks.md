@@ -123,3 +123,4 @@ The second hole was `POST /v1/internal/reset-limiters`, which anyone could call 
 | Trusted proxy | A proxy you run, whose `X-Forwarded-For` header you believe. |
 | Rate limit | A cap on requests per caller per time window; over it, the server answers 429. |
 | Static mount | Serving a whole folder of files under one URL path. |
+

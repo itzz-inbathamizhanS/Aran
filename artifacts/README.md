@@ -79,3 +79,4 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 Note: the Markdown copy replaces the embedded architecture diagram with a text placeholder; the PDF keeps it.
 
 Learn 1 to 7 were expanded on 15 Oct 2026 with fuller explanations, worked examples and practice solutions. The Markdown and PDF files in this folder and in the repo hold the expanded version; the live artifact links above still show the first, shorter version.
+

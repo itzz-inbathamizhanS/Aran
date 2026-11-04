@@ -236,3 +236,4 @@ scene('merkle', X => {
 
   X.recap(11, ['A Merkle tree joins fingerprints up to one root', 'Any change to a record changes the root', 'Ravi\'s signed receipt proves his erasure']);
 });
+

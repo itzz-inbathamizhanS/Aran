@@ -45,3 +45,4 @@ for si,sc in enumerate(scenes):
 full=np.concatenate(track); sf.write("narration.wav",full,SR)
 json.dump(dict(total=round(t,3),scenes=timing),open("timing.json","w"),indent=1,ensure_ascii=False)
 print("TOTAL",round(t,1),"s")
+

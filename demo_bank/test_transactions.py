@@ -563,3 +563,4 @@ def test_money_helpers():
     assert bank_txn.luhn_ok(CARD_PAYEE) and not bank_txn.luhn_ok("4111111111111112")
     a = "2" + "34567890123"
     assert bank_txn.verhoeff_ok(a + str(verhoeff_digit(a)))
+

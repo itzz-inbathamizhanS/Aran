@@ -720,3 +720,4 @@ Only if there is time; each needs server work first, so mark them `[needs endpoi
 | Post-quantum | CBOM table and Mosca priority table | Serve `research/results_pqc.json` and `python -m pqc.cbom` output |
 | Settings | Sink thresholds, customer count, LLM URL | Write endpoints for config (none today) |
 | Results E13 to E19 | Ledger, gateway, red team, speed, post-quantum tables | Add those result files to `RESULT_FILES` in `engine.py` |
+

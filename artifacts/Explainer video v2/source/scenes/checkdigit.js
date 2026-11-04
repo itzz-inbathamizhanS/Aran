@@ -98,3 +98,4 @@ scene('checkdigit', X => {
   X.recap(9, ['The check digit is a lock', 'The other eleven digits are the key', 'One wrong digit: the lock stays shut']);
   X.term(8, 'Checksum', 'Testing a number by redoing the check-digit\nrecipe and seeing if the answer matches.', { until: 9 });
 });
+

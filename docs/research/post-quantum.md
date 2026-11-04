@@ -138,3 +138,4 @@ The OTP's 1 year in the 2032 column is an artefact of the formula: a quantum bre
 - H. Kuwakado and M. Morii, "Quantum distinguisher between the 3-round Feistel cipher and the random permutation", ISIT 2010 (Simon's algorithm on Feistel ciphers, superposition-query model).
 - G. Brassard, P. Høyer, A. Tapp, "Quantum cryptanalysis of hash and claw-free functions", LATIN 1998 (collision search, 2^(n/3)).
 - CycloneDX 1.6, cryptographic bill of materials.
+

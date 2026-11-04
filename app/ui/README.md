@@ -81,3 +81,4 @@ Server errors (for example the 503 while models load, or the 423 KYC retention l
 - The phone arena needs the server on the network (`--host 0.0.0.0`) and the phone on the same Wi-Fi or hotspot. Speech input needs https or localhost; on a phone over plain http, use the keyboard's microphone key.
 - The 3D hero needs WebGL; without it the grey panel and the headline still show.
 - The design-review boards (`#components`, `#states`) still use a few generated example values to show every component state; the eight real pages and the tour do not.
+

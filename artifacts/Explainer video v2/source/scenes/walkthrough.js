@@ -267,3 +267,4 @@ scene('walkthrough', X => {
     { k: 9, x: LX, y: 560, s: 1, len: 1.8 }
   ]);
 });
+

@@ -566,3 +566,4 @@ And the 2016 card malware? Harmful software inside a payment system that needs r
 00:19:30,892 --> 00:19:39,238
 Recap. Most of these leaks came through side doors that Aran guards. And where Aran cannot help, it says so plainly.
 
+

@@ -20,3 +20,4 @@ Every new git branch gets a row here when it is created.
 | claude/project-thread-qjb4zp | 2026-10-16 | main | Post-quantum upgrade ([[17 Post-quantum cryptography]]) | merged into main (tip `ee08fa6`) |
 
 All feature branches are fully merged; they can be deleted from GitHub whenever convenient.
+

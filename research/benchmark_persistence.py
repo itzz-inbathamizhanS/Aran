@@ -90,3 +90,4 @@ def run_benchmark(n=1000):
 
 if __name__ == "__main__":
     run_benchmark(1000)
+

@@ -54,3 +54,4 @@ Nothing that already worked on `main` is broken by the code changes.
 ## Suggested next step
 
 Ask Arun to push a cleanup commit that covers items 1 to 6 and 14 at a minimum: remove `.venv`, the databases and the `.pyc` files from the branch, lock down the two cloud endpoints and the forwarded-header trust, fix tenant isolation, make compose build, and fix the links. Then re-run the four suites above and merge. The persistence store, the scoped keys, the audit chain and the bank compare demo are solid work and worth keeping.
+

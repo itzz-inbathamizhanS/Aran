@@ -812,3 +812,4 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 ARAN_UI_DIR = os.environ.get("ARAN_UI_DIR", os.path.join(HERE, "..", "app", "ui"))
 if os.path.isdir(ARAN_UI_DIR):
     app.mount("/aran", StaticFiles(directory=ARAN_UI_DIR), name="aran-ui")
+

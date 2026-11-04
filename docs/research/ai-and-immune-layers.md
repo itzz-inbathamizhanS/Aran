@@ -158,3 +158,4 @@ pip install cryptography numpy scikit-learn sklearn-crfsuite pytest
 python3 -m pytest test_core.py test_ai.py
 python3 experiment_ai.py      # about 20 minutes on a laptop CPU, writes results_ai.json
 ```
+
