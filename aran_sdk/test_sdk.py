@@ -284,3 +284,11 @@ def test_verify_webhook_signature():
     old_sig = "sha256=" + hmac.new(secret.encode(), old.encode() + b"." + body, hashlib.sha256).hexdigest()
     assert verify_webhook(secret, old, body, old_sig) is False               # replayed after an hour
     assert verify_webhook(secret, old, body, old_sig, tolerance=None) is True
+
+
+def test_ai_base_url():
+    c = Aran("k", base_url="http://cloud.test:8100/")
+    assert c.ai_base_url() == "http://cloud.test:8100/v1/ai"
+    assert c.ai_base_url("openai") == "http://cloud.test:8100/v1/ai/v1"
+    with pytest.raises(ValueError):
+        c.ai_base_url("other")

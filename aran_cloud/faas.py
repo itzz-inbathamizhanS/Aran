@@ -27,7 +27,7 @@ from typing import Any, Callable, Dict, List, Optional
 from urllib.parse import quote, urlsplit
 
 import requests
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
@@ -712,6 +712,301 @@ def parse_since(v: Optional[str]) -> float:
 
 
 # ---------------------------------------------------------------- the router
+# ---------------------------------------------------------------- drop-in AI gateway
+AI_SINK, AI_PURPOSE, AI_ROUTE = "llm-gateway", "Service", "ai-gateway"
+AI_MAX_BYTES = 1024 * 1024
+ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
+# which identifier types each role may see in clear in an answer (same roles as the core's gateway)
+AI_ROLES = {
+    "kyc-officer": {"AADHAAR", "CARD", "MOBILE", "PAN", "UPI", "PER", "ADDR"},
+    "customer-care": {"MOBILE", "UPI", "PER", "ADDR"},
+    "analyst": set(),
+}
+
+
+class _Jobs:
+    """The text leaves of one request body: each is cleaned and written back where it came from."""
+
+    def __init__(self):
+        self.slots: list = []                    # (container, key)
+
+    def add(self, container, key):
+        if isinstance(container[key], str) and container[key]:
+            self.slots.append((container, key))
+
+    def blocks(self, container, key):
+        """container[key] is a string, or a list of content blocks; only text is cleaned."""
+        v = container[key]
+        if isinstance(v, str):
+            self.add(container, key)
+        elif isinstance(v, list):
+            for b in v:
+                if not isinstance(b, dict):
+                    continue
+                if b.get("type") in (None, "text"):
+                    self.add(b, "text")
+                elif b.get("type") == "tool_result" and "content" in b:
+                    self.blocks(b, "content")
+
+
+def _ai_jobs(fmt: str, body: dict) -> _Jobs:
+    jobs = _Jobs()
+    if fmt == "anthropic" and "system" in body:
+        jobs.blocks(body, "system")
+    for m in body["messages"]:
+        if isinstance(m, dict) and "content" in m:
+            jobs.blocks(m, "content")
+    return jobs
+
+
+def _ai_check(fmt: str, body: Any):
+    if not isinstance(body, dict):
+        raise HTTPException(400, "the body must be a JSON object")
+    if body.get("stream"):
+        raise HTTPException(400, "stream=true is not supported by the Aran AI gateway yet; send stream=false")
+    msgs = body.get("messages")
+    if not isinstance(msgs, list) or not msgs or not all(isinstance(m, dict) for m in msgs):
+        raise HTTPException(400, "messages must be a non-empty list of {role, content}")
+    for m in msgs:
+        if not isinstance(m.get("content", ""), (str, list)):
+            raise HTTPException(400, "message content must be a string or a list of content blocks")
+    if fmt == "anthropic" and not body.get("max_tokens"):
+        raise HTTPException(400, "max_tokens is required")
+
+
+def _last_user_text(fmt: str, body: dict) -> str:
+    for m in reversed(body["messages"]):
+        if m.get("role") != "user":
+            continue
+        c = m.get("content")
+        if isinstance(c, str):
+            return c
+        return " ".join(b.get("text", "") for b in c or [] if isinstance(b, dict) and b.get("type") in (None, "text"))
+    return ""
+
+
+def _echo(fmt: str, body: dict) -> dict:
+    """The offline answer: says what the gateway would have sent to a model. Holds only the cleaned text."""
+    n = len(body["messages"])
+    last = _last_user_text(fmt, body)
+    text = f"Aran gateway local echo: {n} message(s) received. Last user message: {last[:400]}"
+    model = str(body.get("model") or "aran-echo")
+    tin, tout = max(1, len(last) // 4), max(1, len(text) // 4)
+    if fmt == "anthropic":
+        return {"id": "msg_" + secrets.token_hex(12), "type": "message", "role": "assistant", "model": model,
+                "content": [{"type": "text", "text": text}], "stop_reason": "end_turn", "stop_sequence": None,
+                "usage": {"input_tokens": tin, "output_tokens": tout}}
+    return {"id": "chatcmpl-" + secrets.token_hex(12), "object": "chat.completion", "created": int(time.time()), "model": model,
+            "choices": [{"index": 0, "message": {"role": "assistant", "content": text}, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": tin, "completion_tokens": tout, "total_tokens": tin + tout}}
+
+
+def _restore(text: str, tokens: Dict[str, tuple], allowed: set) -> str:
+    for tok, (typ, val) in tokens.items():
+        if typ in allowed and tok in text:
+            text = text.replace(tok, val)
+    return text
+
+
+def _restore_reply(fmt: str, reply: dict, tokens: Dict[str, tuple], allowed: set):
+    if fmt == "anthropic":
+        for b in reply.get("content") or []:
+            if isinstance(b, dict) and isinstance(b.get("text"), str):
+                b["text"] = _restore(b["text"], tokens, allowed)
+    else:
+        for c in reply.get("choices") or []:
+            m = c.get("message") or {}
+            if isinstance(m.get("content"), str):
+                m["content"] = _restore(m["content"], tokens, allowed)
+
+
+def _ai_upstream(ctx: Ctx, fmt: str, body: dict, headers: Dict[str, str]) -> Optional[tuple]:
+    """Sends the cleaned body to a real model when one is configured. Returns (status, json) or None for the local
+    echo. The server's own key is read from the environment here and nowhere else; the caller's Aran key is never sent."""
+    if fmt == "anthropic":
+        key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+        if not key:
+            return None
+        url = ANTHROPIC_URL
+        up = {"x-api-key": key, "anthropic-version": headers.get("anthropic-version", "2023-06-01"), "content-type": "application/json"}
+    else:
+        base = os.environ.get("ARAN_AI_OPENAI_UPSTREAM", "").strip().rstrip("/")
+        if not base:
+            return None
+        try:
+            check_upstream(ctx, base)
+        except fw_core.UpstreamBlocked:
+            raise HTTPException(502, "the AI upstream is not allowed")
+        url = base + "/chat/completions"
+        up = {"content-type": "application/json"}
+        okey = os.environ.get("ARAN_AI_OPENAI_API_KEY", "").strip()
+        if okey:
+            up["authorization"] = "Bearer " + okey
+    try:
+        r = requests.post(url, headers=up, data=json.dumps(body), timeout=(3.0, 60.0), allow_redirects=False)
+        return r.status_code, r.json()
+    except (requests.exceptions.RequestException, ValueError):
+        raise HTTPException(502, "the AI upstream did not answer")
+
+
+def _build_ai(ctx: Ctx, router: APIRouter):
+    def authed(request: Request, x_api_key: Optional[str] = Header(None), authorization: Optional[str] = Header(None)) -> dict:
+        key = x_api_key
+        if not key and authorization and authorization.lower().startswith("bearer "):
+            key = authorization[7:]
+        tenant = ctx.get_tenant(x_api_key=key)
+        if "admin" not in tenant.get("scopes", []) and "gateway" not in tenant.get("scopes", []):
+            raise HTTPException(403, "this key lacks the 'gateway' scope")
+        return tenant
+
+    def policy_rules(conn, tenant_id: str, name: Optional[str]):
+        """The active version of the named policy, or else the policy of the tenant's 'ai-gateway' route, or none."""
+        if name:
+            row = conn.execute("SELECT rules_json FROM policies WHERE tenant_id=? AND name=? AND active=1", (tenant_id, name)).fetchone()
+            if not row:
+                raise HTTPException(404, "policy not found")
+            return json.loads(row["rules_json"])
+        r = conn.execute("SELECT policy_id FROM routes WHERE tenant_id=? AND name=? AND disabled=0", (tenant_id, AI_ROUTE)).fetchone()
+        return ctx_rules(conn, tenant_id, r["policy_id"]) if r and r["policy_id"] else None
+
+    def ctx_rules(conn, tenant_id: str, policy_id: str):
+        row = conn.execute("SELECT name, rules_json FROM policies WHERE id=? AND tenant_id=?", (policy_id, tenant_id)).fetchone()
+        if not row:
+            return None
+        act = conn.execute("SELECT rules_json FROM policies WHERE tenant_id=? AND name=? AND active=1", (tenant_id, row["name"])).fetchone()
+        return json.loads((act or row)["rules_json"])
+
+    def meter(conn, tenant_id, usage, cust, status="ok"):
+        now = time.time()
+        with conn:
+            conn.execute(
+                """INSERT INTO usage_events (tenant_id, at, endpoint, sink, purpose, protected_count, unprotected_count, ignored_count,
+                                             by_type, latency_ms, customer_ref, status)
+                   VALUES (?, ?, '/v1/ai', ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (tenant_id, now, AI_SINK, AI_PURPOSE, usage["protected"], usage["unprotected"], usage["ignored"],
+                 json.dumps(usage["by_type"]), usage["latency_ms"], cust, status))
+            ctx.record_tokens(conn, tenant_id, usage["findings"], cust, AI_PURPOSE, AI_SINK, now)
+
+    def handle(fmt: str, tenant: dict, body: Any, headers: Dict[str, str]) -> Response:
+        t0 = time.perf_counter()
+        tenant_id = tenant["id"]
+        _ai_check(fmt, body)
+        role = headers.get("x-aran-role")
+        if role is not None and role not in AI_ROLES:
+            raise HTTPException(400, "X-Aran-Role is kyc-officer, customer-care or analyst")
+        cust = headers.get("x-aran-customer-ref")
+        cust = cust if cust and CUSTOMER_RE.match(cust) else None
+        conn = ctx.get_db()
+        try:
+            rules = policy_rules(conn, tenant_id, headers.get("x-aran-policy"))
+            body = json.loads(json.dumps(body))                 # our own copy to write the cleaned text into
+            jobs = _ai_jobs(fmt, body)
+
+            def clean_one(slot):
+                container, key = slot
+                original = container[key]
+                out = ctx.protect_text(tenant_id, original, cust, AI_PURPOSE, AI_SINK)
+                findings = out["res"].get("findings", [])
+                text, decisions = fw_core.apply_policy(original, findings, rules)
+                toks = {}
+                for f in findings:
+                    a, b, tok = f.get("start"), f.get("end"), f.get("token")
+                    if f.get("protected") and tok and a is not None and b is not None and tok in text \
+                            and fw_core.action_for(rules, f.get("type", "")) in ("tokenise", "alert"):
+                        toks[tok] = (f.get("type", ""), original[a:b])
+                return text, decisions, out, findings, toks
+
+            try:
+                results = list(_core_pool.map(clean_one, jobs.slots))
+            except HTTPException:
+                raise
+            except Exception:
+                return JSONResponse({"error": "aran_unavailable", "detail": "the firewall could not clean the prompt, nothing was sent to a model"}, status_code=503)
+            usage = {"protected": 0, "unprotected": 0, "ignored": 0, "by_type": {}, "findings": [], "latency_ms": 0.0}
+            actions: Dict[str, int] = {}
+            block_types, alert_types, tokens = set(), set(), {}
+            for text, decisions, out, findings, toks in results:
+                for d in decisions:
+                    actions[d["action"]] = actions.get(d["action"], 0) + 1
+                    if d["action"] == "block":
+                        block_types.add(d["type"])
+                    elif d["action"] == "alert":
+                        alert_types.add(d["type"])
+                for t, n in out["by_type"].items():
+                    usage["by_type"][t] = usage["by_type"].get(t, 0) + n
+                usage["unprotected"] += out["unprotected"]
+                usage["ignored"] += out["ignored"]
+                usage["findings"] += findings
+                usage["latency_ms"] = max(usage["latency_ms"], out["latency_ms"] or 0.0)
+                tokens.update(toks)
+            usage["protected"] = sum(n for a, n in actions.items() if a != "allow")
+            usage["latency_ms"] = usage["latency_ms"] or round((time.perf_counter() - t0) * 1000, 2)
+            for (container, key), r in zip(jobs.slots, results):
+                container[key] = r[0]
+
+            if alert_types:
+                emit_event(tenant_id, "alert", {"route": AI_ROUTE, "types": sorted(alert_types)})
+            if block_types:
+                emit_event(tenant_id, "block", {"route": AI_ROUTE, "types": sorted(block_types)})
+                meter(conn, tenant_id, usage, cust, "blocked")
+                return JSONResponse({"blocked": True, "types": sorted(block_types),
+                                     "detail": "the policy refuses prompts that carry these identifiers"}, status_code=403)
+
+            up = _ai_upstream(ctx, fmt, body, headers)
+            if up is None:
+                status, reply = 200, _echo(fmt, body)
+            else:
+                status, reply = up
+            if status == 200 and isinstance(reply, dict) and role and tokens:
+                _restore_reply(fmt, reply, tokens, AI_ROLES[role])
+            meter(conn, tenant_id, usage, cust, "ok" if status < 400 else "upstream_error")
+            resp = JSONResponse(reply, status_code=status)
+            resp.headers["X-Aran-Protected"] = str(usage["protected"])
+            resp.headers["X-Aran-Gateway"] = "echo" if up is None else "upstream"
+            return resp
+        finally:
+            conn.close()
+
+    async def run(fmt: str, request: Request, tenant: dict):
+        cl = request.headers.get("content-length")
+        if cl and cl.isdigit() and int(cl) > AI_MAX_BYTES:
+            raise HTTPException(413, "request body too large (1 MB at most)")
+        raw = await request.body()
+        if len(raw) > AI_MAX_BYTES:
+            raise HTTPException(413, "request body too large (1 MB at most)")
+        try:
+            body = json.loads(raw or b"null")
+        except ValueError:
+            raise HTTPException(400, "the body is not valid JSON")
+        headers = {k.lower(): v for k, v in request.headers.items()}
+        return await run_in_threadpool(handle, fmt, tenant, body, headers)
+
+    @router.post("/v1/ai/v1/messages")
+    async def ai_messages(request: Request, tenant: dict = Depends(authed)):
+        return await run("anthropic", request, tenant)
+
+    @router.post("/v1/ai/v1/chat/completions")
+    async def ai_chat(request: Request, tenant: dict = Depends(authed)):
+        return await run("openai", request, tenant)
+
+    @router.get("/v1/ai/stats")
+    def ai_stats(request: Request, tenant: dict = Depends(ctx.get_tenant)):
+        if not ({"admin", "gateway", "dashboard"} & set(tenant.get("scopes", []))):
+            raise HTTPException(403, "this key lacks the 'gateway' or 'dashboard' scope")
+        conn = ctx.get_db()
+        try:
+            since = time.time() - 86400
+            r = conn.execute("""SELECT COUNT(*) AS calls, COALESCE(SUM(protected_count),0) AS protected,
+                                       COALESCE(SUM(status='blocked'),0) AS blocked
+                                FROM usage_events WHERE tenant_id=? AND endpoint='/v1/ai' AND at>=?""", (tenant["id"], since)).fetchone()
+        finally:
+            conn.close()
+        base = str(request.base_url).rstrip("/")
+        return {"base_url": base + "/v1/ai", "openai_base_url": base + "/v1/ai/v1", "calls_24h": r["calls"],
+                "protected_24h": r["protected"], "blocked_24h": r["blocked"],
+                "upstream": "anthropic" if os.environ.get("ANTHROPIC_API_KEY") else "local echo"}
+
+
 def build_router(ctx: Ctx) -> APIRouter:
     global _ctx
     _ctx = ctx
@@ -1427,4 +1722,5 @@ def build_router(ctx: Ctx) -> APIRouter:
     async def fw_root(route_name: str, request: Request, tenant: dict = Depends(caller)):
         return await proxy(route_name, request, "", tenant)
 
+    _build_ai(ctx, router)
     return router

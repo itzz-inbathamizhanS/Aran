@@ -1078,3 +1078,130 @@ def test_export_scope_and_isolation(alpha, beta, up):
     assert requests.get(f"{CLOUD_URL}/v1/events/export", headers=H(weak), timeout=10).status_code == 403
     mine = requests.get(f"{CLOUD_URL}/v1/events/export?format=json", headers=H(kb), timeout=10)
     assert mine.status_code == 200 and route["name"] not in mine.text and alpha["tenant_id"] not in mine.text
+
+
+# ================================================================ phase 4: drop-in AI gateway
+AI_MSG = f"{CLOUD_URL}/v1/ai/v1/messages"
+AI_CHAT = f"{CLOUD_URL}/v1/ai/v1/chat/completions"
+
+
+@pytest.fixture(scope="module")
+def aiws():
+    # own workspace: the per-key rate limit is shared by every call made with one key
+    return new_workspace("Faas Ai")
+
+
+def ai_post(url, key, body, **headers):
+    h = {"x-api-key": key} if url == AI_MSG else {"Authorization": f"Bearer {key}"}
+    h.update(headers)
+    return requests.post(url, headers=h, json=body, timeout=30)
+
+
+def reply_text(r):
+    j = r.json()
+    return j["content"][0]["text"] if "content" in j else j["choices"][0]["message"]["content"]
+
+
+def test_ai_gateway_anthropic_shape_and_cleaning(aiws):
+    key = aiws["admin_key"]
+    ids = sample_ids()
+    body = {"model": "claude-test", "max_tokens": 50, "system": f"Officer note: card {ids['card']}",
+            "messages": [{"role": "user", "content": f"Aadhaar {ids['aadhaar']} please"},
+                         {"role": "user", "content": [{"type": "text", "text": f"call {ids['mobile']}"}]}]}
+    r = ai_post(AI_MSG, key, body)
+    assert r.status_code == 200, r.text
+    j = r.json()
+    assert j["type"] == "message" and j["role"] == "assistant" and j["stop_reason"] == "end_turn"
+    assert j["id"].startswith("msg_") and j["usage"]["input_tokens"] >= 1
+    assert j["content"][0]["type"] == "text"
+    text = reply_text(r)
+    assert ids["mobile"] not in text and ids["aadhaar"] not in text       # the echo shows what a model would have seen
+    assert int(r.headers["X-Aran-Protected"]) == 3 and r.headers["X-Aran-Gateway"] == "echo"
+
+
+def test_ai_gateway_openai_shape_and_cleaning(aiws):
+    key = aiws["admin_key"]
+    ids = sample_ids()
+    body = {"model": "gpt-test", "messages": [{"role": "system", "content": f"card {ids['card']}"},
+                                               {"role": "user", "content": [{"type": "text", "text": f"aadhaar {ids['aadhaar']} here"}]},
+                                               {"role": "user", "content": f"mobile {ids['mobile']}"}]}
+    r = ai_post(AI_CHAT, key, body)
+    assert r.status_code == 200, r.text
+    j = r.json()
+    assert j["object"] == "chat.completion" and j["choices"][0]["message"]["role"] == "assistant"
+    assert j["choices"][0]["finish_reason"] == "stop" and j["usage"]["total_tokens"] >= 2
+    assert ids["mobile"] not in reply_text(r)
+    assert int(r.headers["X-Aran-Protected"]) == 3
+
+
+def test_ai_gateway_role_restore_or_keep_tokens(aiws):
+    key = aiws["admin_key"]
+    ids = sample_ids()
+    body = {"model": "m", "max_tokens": 50, "messages": [{"role": "user", "content": f"Aadhaar {ids['aadhaar']} mobile {ids['mobile']}"}]}
+    none = reply_text(ai_post(AI_MSG, key, body))
+    assert ids["aadhaar"] not in none and ids["mobile"] not in none            # no role: tokens stay
+    kyc = reply_text(ai_post(AI_MSG, key, body, **{"X-Aran-Role": "kyc-officer"}))
+    assert ids["aadhaar"] in kyc and ids["mobile"] in kyc
+    care = reply_text(ai_post(AI_CHAT, key, {"model": "m", "messages": body["messages"]}, **{"X-Aran-Role": "customer-care"}))
+    assert ids["mobile"] in care and ids["aadhaar"] not in care                # care sees mobiles, not Aadhaar
+    ana = reply_text(ai_post(AI_MSG, key, body, **{"X-Aran-Role": "analyst"}))
+    assert ids["aadhaar"] not in ana and ids["mobile"] not in ana
+    assert ai_post(AI_MSG, key, body, **{"X-Aran-Role": "root"}).status_code == 400
+
+
+def test_ai_gateway_policy_block_and_alert(aiws):
+    key = aiws["admin_key"]
+    ids = sample_ids()
+    name = pname()
+    make_policy(key, name, [{"type": "AADHAAR", "action": "block"}, {"type": "*", "action": "tokenise"}])
+    body = {"model": "m", "max_tokens": 20, "messages": [{"role": "user", "content": f"Aadhaar {ids['aadhaar']}"}]}
+    r = ai_post(AI_MSG, key, body, **{"X-Aran-Policy": name})
+    assert r.status_code == 403 and r.json()["blocked"] is True and "AADHAAR" in r.json()["types"]
+    assert ids["aadhaar"] not in r.text
+    ok = ai_post(AI_MSG, key, {"model": "m", "max_tokens": 20, "messages": [{"role": "user", "content": f"mobile {ids['mobile']}"}]},
+                 **{"X-Aran-Policy": name})
+    assert ok.status_code == 200
+    assert ai_post(AI_MSG, key, body, **{"X-Aran-Policy": "no-such-policy"}).status_code == 404
+    rows = db_rows("SELECT status FROM usage_events WHERE tenant_id=? AND endpoint='/v1/ai'", aiws["tenant_id"])
+    assert "blocked" in [x["status"] for x in rows]
+
+
+def test_ai_gateway_refuses_stream_and_bad_bodies(aiws):
+    key = aiws["admin_key"]
+    r = ai_post(AI_MSG, key, {"model": "m", "max_tokens": 5, "stream": True, "messages": [{"role": "user", "content": "hi"}]})
+    assert r.status_code == 400 and "stream" in r.text
+    assert ai_post(AI_CHAT, key, {"model": "m", "stream": True, "messages": [{"role": "user", "content": "hi"}]}).status_code == 400
+    assert ai_post(AI_CHAT, key, {"model": "m", "messages": []}).status_code == 400
+    assert ai_post(AI_MSG, key, {"model": "m", "messages": [{"role": "user", "content": "hi"}]}).status_code == 400   # no max_tokens
+    assert requests.post(AI_MSG, headers={"x-api-key": "bogus"}, json={}, timeout=10).status_code == 401
+    assert requests.post(AI_MSG, json={}, timeout=10).status_code == 401
+
+
+def test_ai_gateway_needs_the_gateway_scope(aiws):
+    weak = mint(aiws["admin_key"], "no-gateway", ["protect"])
+    r = ai_post(AI_MSG, weak, {"model": "m", "max_tokens": 5, "messages": [{"role": "user", "content": "hi"}]})
+    assert r.status_code == 403 and "gateway" in r.text
+    ok = mint(aiws["admin_key"], "gw-only", ["gateway"])
+    assert ai_post(AI_CHAT, ok, {"model": "m", "messages": [{"role": "user", "content": "hi"}]}).status_code == 200
+
+
+def test_ai_gateway_meters_without_raw_identifiers(aiws):
+    ws = new_workspace("Faas Ai Meter")
+    ids = sample_ids()
+    body = {"model": "m", "max_tokens": 20, "messages": [{"role": "user", "content": f"Aadhaar {ids['aadhaar']} card {ids['card']}"}]}
+    r = ai_post(AI_MSG, ws["admin_key"], body, **{"X-Aran-Role": "kyc-officer"})
+    assert r.status_code == 200
+    rows = db_rows("SELECT * FROM usage_events WHERE tenant_id=? AND endpoint='/v1/ai'", ws["tenant_id"])
+    assert len(rows) == 1 and rows[0]["sink"] == "llm-gateway" and rows[0]["protected_count"] == 2
+    stored = db_text(ws["tenant_id"])
+    for raw in (ids["aadhaar"], ids["card"]):
+        assert raw not in stored
+    stats = requests.get(f"{CLOUD_URL}/v1/ai/stats", headers=H(ws["admin_key"]), timeout=10).json()
+    assert stats["calls_24h"] == 1 and stats["protected_24h"] == 2 and stats["base_url"].endswith("/v1/ai")
+
+
+def test_ai_gateway_never_forwards_keys(aiws):
+    """The gateway code reads the provider key only from the server environment and never sends the Aran key."""
+    src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "faas.py")).read()
+    part = src[src.index("def _ai_upstream"):src.index("def _build_ai")]
+    assert 'up = {"x-api-key": key' in part and "headers.get(\"x-api-key\")" not in part and "authorization\")" not in part

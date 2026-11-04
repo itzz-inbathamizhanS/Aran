@@ -64,3 +64,19 @@ def receive(request):
 ```
 
 `verify_webhook` also rejects a timestamp older than 5 minutes (pass `tolerance=None` to skip that). Payloads hold identifier types and counts, never the values. Answer with any 2xx; Aran retries other answers after 1 s, 5 s, 30 s, 2 min and 10 min (5 attempts in all).
+
+## AI gateway: change the base URL only
+
+Point your AI client at Aran and use your Aran key as the API key. Prompts are cleaned (identifiers become tokens, under your policy) before they reach a model. Nothing else in your code changes.
+
+```python
+import anthropic
+from aran import Aran
+
+aran = Aran("aran_live_xxx", base_url="https://cloud.example.com")
+client = anthropic.Anthropic(api_key="aran_live_xxx", base_url=aran.ai_base_url())      # was: the default URL
+reply = client.messages.create(model="claude-sonnet-4-5", max_tokens=200,
+                               messages=[{"role": "user", "content": "Summarise the case of PAN ABCDE1234F"}])
+```
+
+For the OpenAI SDK use `base_url=aran.ai_base_url("openai")`. The key needs the `gateway` scope. Optional headers: `X-Aran-Policy` (a policy name), `X-Aran-Role` (`kyc-officer`, `customer-care` or `analyst`: tokens the role may see are restored in the answer; without it tokens stay), `X-Aran-Customer-Ref`. `stream=true` is not supported yet. Your Aran key is never sent to the model provider; the server holds the provider key. With no provider key configured the gateway answers with a local echo so you can try it offline.

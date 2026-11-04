@@ -147,6 +147,16 @@ class Aran:
         """Scans and redacts prompts sent to LLMs / AI agents."""
         return self._request("POST", "/v1/gateway", payload={"prompt": prompt, "role": role}, idempotent=False)
 
+    def ai_base_url(self, format: str = "anthropic") -> str:
+        """The base URL that makes an AI client go through Aran. Use your Aran key as the client's API key.
+
+        ``format="anthropic"`` (default) is for the Anthropic SDK, ``format="openai"`` for the OpenAI SDK. Nothing else
+        in your code changes. Needs the 'gateway' scope.
+        """
+        if format not in ("anthropic", "openai"):
+            raise ValueError("format is 'anthropic' or 'openai'")
+        return f"{self.base_url}/v1/ai" + ("/v1" if format == "openai" else "")
+
     def trace(self, dump: str) -> Dict[str, Any]:
         """Traces leaked tokens in a database/log dump to identify origin sink."""
         return self._request("POST", "/v1/trace", payload={"dump": dump}, idempotent=True)
