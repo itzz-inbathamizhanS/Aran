@@ -31,11 +31,15 @@ from pydantic import BaseModel, Field, field_validator
 import requests
 
 try:  # package layout (aran_cloud.main) and flat layout (run from inside aran_cloud/)
+    from . import db
     from . import faas
     from . import edge_plane
+    from . import prod
 except ImportError:
+    import db
     import faas
     import edge_plane
+    import prod
 
 # ---------------------------------------------------------------- configuration
 PORT = int(os.environ.get("PORT", 8100))
@@ -45,6 +49,7 @@ ARAN_ADMIN_TOKEN = os.environ.get("ARAN_ADMIN_TOKEN")
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(HERE, "static")
 DB_PATH = os.environ.get("ARAN_CLOUD_DB") or os.path.join(HERE, "cloud.db")  # a container keeps it on a volume
+DATABASE_URL = os.environ.get("ARAN_CLOUD_DATABASE_URL")  # postgresql://... switches from the SQLite file to Postgres
 
 VALID_SCOPES = {"admin", "protect", "gateway", "trace", "detokenise", "erase", "verify", "dashboard", "route", "policy", "webhook", "edge"}
 DEFAULT_ADMIN_SCOPES = "admin,protect,gateway,trace,detokenise,erase,verify,dashboard,route,policy,webhook,edge"
@@ -154,15 +159,14 @@ async def add_no_cache_headers(request: Request, call_next):
 
 # ---------------------------------------------------------------- storage
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL;")
-    return conn
+    return db.connect(DB_PATH, DATABASE_URL)
 
 
 def init_db():
     conn = get_db()
     with conn:
+        if DATABASE_URL:
+            conn.execute("BEGIN IMMEDIATE")   # Postgres: instances starting together take turns creating tables
         conn.execute("""
             CREATE TABLE IF NOT EXISTS tenants (
                 id TEXT PRIMARY KEY,
@@ -387,6 +391,7 @@ def init_db():
         """)
         faas.init_schema(conn)
         edge_plane.init_schema(conn)
+        prod.init_schema(conn)
     conn.close()
 
 
@@ -2218,6 +2223,13 @@ if os.path.isdir(ARAN_UI_DIR):
 _faas_ctx = faas.Ctx(get_db=get_db, get_tenant=get_current_tenant_and_key, require_scope=require_scope,
                      protect_text=protect_text, record_tokens=record_tokens, call_core=call_core,
                      core_url=ARAN_CORE_URL, port=PORT)
+_faas_ctx.plans = PLANS
+_faas_ctx.tenant_plan = lambda tid: tenant_plan(tid)
+_faas_ctx.plan_key = plan_key
+_faas_ctx.require_admin = require_admin_token
+_faas_ctx.postgres = db.is_postgres(DATABASE_URL)
+app.middleware("http")(faas.host_middleware)       # <route>.<tenant-slug>.fw.aran.local/... is /fw/<route>/...
 app.include_router(faas.build_router(_faas_ctx))
 app.include_router(edge_plane.build_router(_faas_ctx))
+app.include_router(prod.build_router(_faas_ctx))   # status page and billing
 app.router.on_startup.append(lambda: faas.start_sweeper(_faas_ctx))

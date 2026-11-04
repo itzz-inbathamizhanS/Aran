@@ -63,6 +63,15 @@ Indian banks care about this split because of **RBI data localisation** and its 
 | Status page and SLO | The bank can see uptime and latency promises being met |
 | Laws | DPDP Act 2023 (Aran is a *data processor*), CERT-In 6-hour incident reporting, RBI outsourcing |
 
+## 6b. Running it for real (the production base)
+
+- **Database.** Aran Cloud keeps its data in a SQLite file by default. Set `ARAN_CLOUD_DATABASE_URL=postgresql://...` and it uses Postgres instead (`aran_cloud/db.py` translates the few SQLite-only statements). Install `psycopg[binary]` for that.
+- **Two instances.** The `ha` compose profile starts Postgres, two Cloud instances and an nginx load balancer (`deploy/nginx/aran-cloud.conf`). The background jobs (retrying held requests, delivering webhooks) take a *lease*, a row with an expiry time in the database, so only one instance runs each job at a time. The rate limiter is in memory per instance, so with two instances a key can use up to twice its limit.
+- **Host names.** `<route>.<tenant-slug>.fw.aran.local` is served as `/fw/<route>/...`. The Aran key still decides the tenant; the name in the host is only a check.
+- **mTLS.** A route can set `require_client_cert` and a list of allowed certificate fingerprints. nginx checks the certificate (`ssl_verify_client`) and passes its fingerprint in `X-Client-Cert-Fingerprint`. Cloud believes that header only from a peer in `ARAN_TRUSTED_PROXIES`, and answers 403 on any mismatch.
+- **Status.** `/status` (page) and `/v1/status` (JSON) show whether the core and database answer, how many held requests and webhooks wait, and availability and p95 of the last 24 hours. No tenant data is on them.
+- **Billing.** `GET /v1/billing/preview` computes this month's invoice from the plan and usage. An operator closes a month with `POST /v1/billing/close-month`; closing twice returns the same invoice. No payment provider is connected: an invoice is only a record.
+
 ## 7. Practice
 
 1. Draw your college's Wi-Fi: where would a network firewall sit, and where would Aran sit?

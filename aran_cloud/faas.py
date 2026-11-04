@@ -19,6 +19,7 @@ import json
 import os
 import re
 import secrets
+import socket
 import sqlite3
 import threading
 import time
@@ -33,8 +34,10 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
 try:                       # package layout (docker: aran_cloud.main) and flat layout (cd aran_cloud; main:app)
+    from . import db
     from . import fw_core
 except ImportError:
+    import db
     import fw_core
 
 FAIL_MODES = ("hold", "open", "closed")
@@ -127,6 +130,15 @@ def init_schema(conn: sqlite3.Connection):
             conn.execute("ALTER TABLE route_events ADD COLUMN would_block INTEGER NOT NULL DEFAULT 0;")
         except sqlite3.OperationalError:
             pass
+    # mTLS: a route can demand a client certificate (checked by the proxy in front, see deploy/nginx)
+    rcols = {r[1] for r in conn.execute("PRAGMA table_info(routes);").fetchall()}
+    for col, ddl in (("require_client_cert", "INTEGER NOT NULL DEFAULT 0"), ("allowed_fingerprints", "TEXT NOT NULL DEFAULT ''")):
+        if col not in rcols:
+            try:
+                conn.execute(f"ALTER TABLE routes ADD COLUMN {col} {ddl};")
+            except sqlite3.OperationalError:
+                pass
+    db.init_leases(conn)
     # a policy version is one row; the active row of a name is the one in force
     conn.execute("""
         CREATE TABLE IF NOT EXISTS policies (
@@ -312,7 +324,8 @@ def _deliver_loop(ctx: "Ctx"):
         _wake.wait(timeout=float(os.environ.get("ARAN_FAAS_WEBHOOK_TICK_S", "1")))
         _wake.clear()
         try:
-            sweep_webhooks(ctx)
+            if holds_lease(ctx, "webhooks"):
+                sweep_webhooks(ctx)
         except Exception:
             pass
 
@@ -472,11 +485,25 @@ def start_sweeper(ctx: Ctx):
     threading.Thread(target=_deliver_loop, args=(ctx,), daemon=True, name="fw-webhooks").start()
 
 
+# Several Cloud instances can share one database. A sweeper runs only on the instance that holds its lease.
+HOLDER = f"{socket.gethostname()}:{os.getpid()}:{secrets.token_hex(4)}"
+LEASE_TTL_S = float(os.environ.get("ARAN_FAAS_LEASE_TTL_S", "15"))
+
+
+def holds_lease(ctx: "Ctx", name: str) -> bool:
+    conn = ctx.get_db()
+    try:
+        return db.acquire_lease(conn, name, HOLDER, LEASE_TTL_S)
+    finally:
+        conn.close()
+
+
 def _sweep_loop(ctx: Ctx):
     while True:
         time.sleep(float(os.environ.get("ARAN_FAAS_SWEEP_S", "5")))
         try:
-            sweep_outbox(ctx)
+            if holds_lease(ctx, "outbox"):
+                sweep_outbox(ctx)
         except Exception:
             pass
 
@@ -527,6 +554,8 @@ class RouteIn(BaseModel):
     fail_mode: str = "hold"
     mode: str = "monitor"
     policy_id: Optional[str] = None
+    require_client_cert: bool = False
+    allowed_fingerprints: List[str] = []
 
 
 class PolicyIn(BaseModel):
@@ -552,6 +581,8 @@ class RoutePatch(BaseModel):
     mode: Optional[str] = None
     policy_id: Optional[str] = None      # "" detaches the policy
     disabled: Optional[bool] = None
+    require_client_cert: Optional[bool] = None
+    allowed_fingerprints: Optional[List[str]] = None
 
 
 class WebhookIn(BaseModel):
@@ -904,7 +935,7 @@ def _build_ai(ctx: Ctx, router: APIRouter):
         try:
             since = time.time() - 86400
             r = conn.execute("""SELECT COUNT(*) AS calls, COALESCE(SUM(protected_count),0) AS protected,
-                                       COALESCE(SUM(status='blocked'),0) AS blocked
+                                       COALESCE(SUM(CASE WHEN status='blocked' THEN 1 ELSE 0 END),0) AS blocked
                                 FROM usage_events WHERE tenant_id=? AND endpoint='/v1/ai' AND at>=?""", (tenant["id"], since)).fetchone()
         finally:
             conn.close()
@@ -912,6 +943,69 @@ def _build_ai(ctx: Ctx, router: APIRouter):
         return {"base_url": base + "/v1/ai", "openai_base_url": base + "/v1/ai/v1", "calls_24h": r["calls"],
                 "protected_24h": r["protected"], "blocked_24h": r["blocked"],
                 "upstream": "anthropic" if os.environ.get("ANTHROPIC_API_KEY") else "local echo"}
+
+
+# ---------------------------------------------------------------- per-tenant host names and client certificates (mTLS)
+HOST_SUFFIX = os.environ.get("ARAN_FAAS_HOST_SUFFIX", "fw.aran.local").strip(".").lower()
+HOST_TENANT_HEADER = "x-aran-host-tenant"
+FINGERPRINT_RE = re.compile(r"^[0-9a-f]{40}$|^[0-9a-f]{64}$")
+
+
+def tenant_slug(name: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", (name or "").lower()).strip("-")[:40]
+
+
+def norm_fingerprint(v: str) -> str:
+    return (v or "").strip().lower().replace(":", "")
+
+
+def clean_fingerprints(values) -> List[str]:
+    out = []
+    for v in values or []:
+        f = norm_fingerprint(v)
+        if not FINGERPRINT_RE.match(f):
+            raise HTTPException(422, "a fingerprint is 40 (SHA-1) or 64 (SHA-256) hex characters, colons allowed")
+        if f not in out:
+            out.append(f)
+    return out
+
+
+def trusted_peers() -> set:
+    return {p.strip() for p in os.environ.get("ARAN_TRUSTED_PROXIES", "").split(",") if p.strip()}
+
+
+def check_client_cert(route, request: Request):
+    """A route with require_client_cert accepts a call only when the proxy in front verified a certificate whose
+    fingerprint is on the route's list. The header counts only from a peer in ARAN_TRUSTED_PROXIES."""
+    if not route["require_client_cert"]:
+        return
+    if not _env_flag("ARAN_FAAS_TRUST_CLIENT_CERT_HEADER"):
+        raise HTTPException(403, "this route needs a client certificate and this Cloud is not set up to verify one")
+    peer = request.client.host if request.client else ""
+    if peer not in trusted_peers():
+        raise HTTPException(403, "client certificate header refused: the caller is not a trusted proxy")
+    fp = norm_fingerprint(request.headers.get("x-client-cert-fingerprint", ""))
+    allowed = [f for f in (route["allowed_fingerprints"] or "").split(",") if f]
+    if not fp or not any(hmac.compare_digest(fp, a) for a in allowed):
+        raise HTTPException(403, "client certificate not allowed for this route")
+
+
+_HOST_RE = re.compile(r"^([a-z0-9][a-z0-9_-]{0,39})\.([a-z0-9][a-z0-9-]{0,62})\." + re.escape(HOST_SUFFIX) + r"$")
+
+
+async def host_middleware(request: Request, call_next):
+    """<route>.<tenant-slug>.fw.aran.local/<path> is served as /fw/<route>/<path>. The slug is only a check: the API key
+    still decides the tenant, and a key of another tenant gets 404. A client cannot set the slug header itself."""
+    scope = request.scope
+    scope["headers"] = [(k, v) for k, v in scope["headers"] if k != HOST_TENANT_HEADER.encode()]
+    host = request.headers.get("host", "").split(":")[0].lower()
+    m = _HOST_RE.match(host)
+    if m:
+        route, slug = m.groups()
+        scope["path"] = f"/fw/{route}" + scope["path"]
+        scope["raw_path"] = scope["path"].encode()
+        scope["headers"] = scope["headers"] + [(HOST_TENANT_HEADER.encode(), slug.encode())]
+    return await call_next(request)
 
 
 def build_router(ctx: Ctx) -> APIRouter:
@@ -960,6 +1054,8 @@ def build_router(ctx: Ctx) -> APIRouter:
     def view(row, stats: Optional[dict] = None) -> dict:
         d = {k: row[k] for k in ("id", "name", "upstream_url", "sink", "purpose", "fail_mode", "mode", "policy_id", "created_at")}
         d["disabled"] = bool(row["disabled"])
+        d["require_client_cert"] = bool(row["require_client_cert"])
+        d["allowed_fingerprints"] = [f for f in (row["allowed_fingerprints"] or "").split(",") if f]
         d["path"] = f"/fw/{row['name']}/"
         d["stats_24h"] = stats or {"calls": 0, "protected": 0, "would_protect": 0, "blocked": 0, "would_block": 0, "failed": 0, "held_pending": 0}
         return d
@@ -998,6 +1094,9 @@ def build_router(ctx: Ctx) -> APIRouter:
         if not ROUTE_NAME_RE.match(body.name):
             raise HTTPException(422, "name must be 1 to 40 characters: lowercase letters, digits, dash, underscore")
         check_fields(body.purpose, body.fail_mode, body.mode, body.upstream_url, body.sink)
+        fps = clean_fingerprints(body.allowed_fingerprints)
+        if body.require_client_cert and not fps:
+            raise HTTPException(422, "require_client_cert needs at least one allowed fingerprint")
         rid = "rt_" + secrets.token_hex(8)
         conn = ctx.get_db()
         try:
@@ -1006,15 +1105,18 @@ def build_router(ctx: Ctx) -> APIRouter:
             with conn:
                 try:
                     conn.execute(
-                        """INSERT INTO routes (id, tenant_id, name, upstream_url, sink, purpose, fail_mode, mode, policy_id, created_at, disabled)
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)""",
+                        """INSERT INTO routes (id, tenant_id, name, upstream_url, sink, purpose, fail_mode, mode, policy_id, created_at, disabled,
+                                               require_client_cert, allowed_fingerprints)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)""",
                         (rid, tenant["id"], body.name, body.upstream_url.strip(), body.sink or body.name, body.purpose,
-                         body.fail_mode, body.mode, body.policy_id or None, time.time()))
-                except sqlite3.IntegrityError:
+                         body.fail_mode, body.mode, body.policy_id or None, time.time(),
+                         1 if body.require_client_cert else 0, ",".join(fps)))
+                except db.IntegrityError:
                     raise HTTPException(409, f"a route named '{body.name}' already exists")
                 audit_config(conn, tenant, "route.create", "route", rid,
                              {"name": body.name, "mode": body.mode, "fail_mode": body.fail_mode, "purpose": body.purpose,
-                              "upstream_host": host_of(body.upstream_url.strip()), "policy_id": body.policy_id or None})
+                              "upstream_host": host_of(body.upstream_url.strip()), "policy_id": body.policy_id or None,
+                              "require_client_cert": bool(body.require_client_cert)})
             row = own_route(conn, tenant["id"], rid)
         finally:
             conn.close()
@@ -1027,7 +1129,8 @@ def build_router(ctx: Ctx) -> APIRouter:
         try:
             rows = conn.execute("SELECT * FROM routes WHERE tenant_id=? ORDER BY created_at", (tenant["id"],)).fetchall()
             stats = stats_for(conn, tenant["id"])
-            return {"routes": [view(r, stats.get(r["id"])) for r in rows]}
+            return {"routes": [view(r, stats.get(r["id"])) for r in rows], "tenant_slug": tenant_slug(tenant.get("name", "")),
+                    "host_suffix": HOST_SUFFIX}
         finally:
             conn.close()
 
@@ -1068,9 +1171,20 @@ def build_router(ctx: Ctx) -> APIRouter:
         if body.disabled is not None:
             sets.append("disabled=?")
             args.append(1 if body.disabled else 0)
+        fps = clean_fingerprints(body.allowed_fingerprints) if body.allowed_fingerprints is not None else None
+        if fps is not None:
+            sets.append("allowed_fingerprints=?")
+            args.append(",".join(fps))
+        if body.require_client_cert is not None:
+            sets.append("require_client_cert=?")
+            args.append(1 if body.require_client_cert else 0)
         conn = ctx.get_db()
         try:
             before = own_route(conn, tenant["id"], route_id)
+            now_req = body.require_client_cert if body.require_client_cert is not None else bool(before["require_client_cert"])
+            now_fps = fps if fps is not None else [f for f in (before["allowed_fingerprints"] or "").split(",") if f]
+            if now_req and not now_fps:
+                raise HTTPException(422, "require_client_cert needs at least one allowed fingerprint")
             if "policy_id" in body.model_fields_set and body.policy_id is not None:
                 if body.policy_id:
                     own_policy(conn, tenant["id"], body.policy_id)       # 404 for a policy of another tenant
@@ -1084,6 +1198,10 @@ def build_router(ctx: Ctx) -> APIRouter:
                         changes[col] = {"from": before[col], "to": v or None}
                 if body.upstream_url is not None and body.upstream_url.strip() != before["upstream_url"]:
                     changes["upstream_host"] = {"from": host_of(before["upstream_url"]), "to": host_of(body.upstream_url.strip())}
+                if body.require_client_cert is not None and bool(body.require_client_cert) != bool(before["require_client_cert"]):
+                    changes["require_client_cert"] = {"from": bool(before["require_client_cert"]), "to": bool(body.require_client_cert)}
+                if fps is not None and ",".join(fps) != (before["allowed_fingerprints"] or ""):
+                    changes["allowed_fingerprints"] = {"count": len(fps)}
                 if body.disabled is not None and bool(body.disabled) != bool(before["disabled"]):
                     changes["disabled"] = {"from": bool(before["disabled"]), "to": bool(body.disabled)}
                 with conn:
@@ -1341,7 +1459,7 @@ def build_router(ctx: Ctx) -> APIRouter:
             if webhook_id:
                 sql += " AND webhook_id=?"
                 args.append(webhook_id)
-            rows = conn.execute(sql + " ORDER BY at DESC, rowid DESC LIMIT ?", [*args, limit]).fetchall()
+            rows = conn.execute(sql + " ORDER BY at DESC, id DESC LIMIT ?", [*args, limit]).fetchall()
             return {"deliveries": [{"id": r["id"], "webhook_id": r["webhook_id"], "event_id": r["event_id"], "event_type": r["event_type"],
                                     "at": r["at"], "attempts": r["attempts"], "status_code": r["status_code"], "state": r["state"],
                                     "next_at": r["next_at"] if r["state"] == "pending" else None, "error": r["last_error"],
@@ -1602,6 +1720,9 @@ def build_router(ctx: Ctx) -> APIRouter:
     async def proxy(route_name: str, request: Request, path: str, tenant: dict):
         if not ROUTE_NAME_RE.match(route_name):
             raise HTTPException(404, "route not found")
+        slug = request.headers.get(HOST_TENANT_HEADER)       # set by host_middleware from the Host name, never by a client
+        if slug and slug not in (tenant_slug(tenant.get("name", "")), tenant["id"].lower()):
+            raise HTTPException(404, "route not found")
         conn = ctx.get_db()
         try:
             row = conn.execute("SELECT * FROM routes WHERE tenant_id=? AND name=? AND disabled=0", (tenant["id"], route_name)).fetchone()
@@ -1609,6 +1730,7 @@ def build_router(ctx: Ctx) -> APIRouter:
             conn.close()
         if not row:
             raise HTTPException(404, "route not found")
+        check_client_cert(row, request)
         cl = request.headers.get("content-length")
         if cl and cl.isdigit() and int(cl) > fw_core.MAX_BODY_BYTES:
             raise HTTPException(413, "request body too large (1 MB at most)")
