@@ -589,3 +589,20 @@ def test_transfer_to_a_customer_of_the_same_bank_lands_in_their_account(world):
     assert rv.status_code == 200 and world.account(payee)["balance_paise"] == rs(100)
     bad = world.pay(payer, rail="NEFT", payee="999999999999", ifsc=to["ifsc"], rupees=10)
     assert bad.json()["status"] == "failed" and "No open account" in bad.json()["fail_reason"]
+
+
+def test_pages_send_a_content_security_policy(world):
+    # both banks now send the console's security headers (SECURITY_AUDIT gap: no CSP on the banks)
+    r = world.c.get("/")
+    csp = r.headers.get("content-security-policy", "")
+    assert "script-src 'self'" in csp and "object-src 'none'" in csp
+    assert "https://aran-bank-a.vercel.app" in csp and "frame-ancestors" in csp  # the side-by-side page frames both banks
+    assert r.headers.get("x-content-type-options") == "nosniff"
+    assert "camera=()" in r.headers.get("permissions-policy", "")
+
+
+def test_test_identity_cards_use_a_real_card_network_prefix(bank_b):
+    # a Luhn-valid number outside every card range is not taken as a card, so Bank B stored it raw
+    for _ in range(60):
+        card = bank_b.c.get("/api/sample-customer").json()["card"]
+        assert len(card) == 16 and luhn_complete(card[:-1]) == card and re.match(r"4|5[1-5]", card)

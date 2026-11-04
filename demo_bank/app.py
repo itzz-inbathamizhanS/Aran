@@ -147,11 +147,33 @@ app.add_middleware(
 )
 
 
+# Security headers, the same policy as the console. Pages load scripts only from this server
+# and fonts from Google Fonts. The compare page calls both banks, so connect-src also lists the
+# other bank, Aran Cloud and the console (hosted, or on localhost ports when run locally), and it
+# shows both banks side by side in frames, so the same origins may frame and be framed; add more
+# origins with ARAN_CONNECT_SRC (space separated) if the apps run elsewhere.
+CONNECT_SRC = " ".join(["'self'", "https://aran-console.vercel.app", "https://aran-cloud.vercel.app",
+                        "https://aran-bank-a.vercel.app", "https://aran-bank-b.vercel.app",
+                        "http://localhost:*", "http://127.0.0.1:*", os.environ.get("ARAN_CONNECT_SRC", "")]).strip()
+CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+       "font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; "
+       f"connect-src {CONNECT_SRC}; frame-src {CONNECT_SRC}; frame-ancestors {CONNECT_SRC}; base-uri 'self'; form-action 'self'; object-src 'none'")
+SECURITY_HEADERS = {
+    "Content-Security-Policy": CSP,
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+    "Cross-Origin-Opener-Policy": "same-origin",
+}
+
+
 @app.middleware("http")
 async def basic_security_headers(request: Request, call_next):
     response = await call_next(request)
-    response.headers.setdefault("X-Content-Type-Options", "nosniff")
-    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    for k, v in SECURITY_HEADERS.items():
+        if k == "Content-Security-Policy" and request.url.path in ("/docs", "/redoc"):
+            continue  # FastAPI's API docs load their scripts from a CDN
+        response.headers.setdefault(k, v)
     return response
 
 
@@ -306,7 +328,10 @@ def get_sample_customer():
     mobile) made fresh on every call, so they belong to no one. Nobody should type a real Aadhaar here."""
     aad = str(2 + secrets.randbelow(8)) + "".join(str(secrets.randbelow(10)) for _ in range(10))
     aad += str(bank_txn.verhoeff_digit(aad))
-    card = bank_txn.luhn_complete(secrets.choice("45") + "".join(str(secrets.randbelow(10)) for _ in range(14)))
+    # a real Visa (4) or Mastercard (51 to 55) prefix: "58..." passes Luhn but is no card network's
+    # range, so Aran rightly left it alone and Bank B stored it raw about one sign-up in four
+    iin = secrets.choice(["4", "51", "52", "53", "54", "55"])
+    card = bank_txn.luhn_complete(iin + "".join(str(secrets.randbelow(10)) for _ in range(15 - len(iin))))
     mobile = str(6 + secrets.randbelow(4)) + "".join(str(secrets.randbelow(10)) for _ in range(9))
     return {"name": f"{secrets.choice(TEST_FIRST)} {secrets.choice(TEST_LAST)}", "aadhaar": aad, "card": card, "mobile": mobile,
             "note": "A test identity: the numbers pass their checksums but belong to no one."}
