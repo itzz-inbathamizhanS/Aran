@@ -11,11 +11,11 @@ Roadmap items 5 and 2, built and measured. This closes the two Tier 1 items the 
 | Tests (no downloads needed) | [`research/test_registry.py`](../../research/test_registry.py) | all |
 | Experiments E10 to E12 and raw results | [`research/experiment_registry.py`](../../research/experiment_registry.py), [`results_registry.json`](../../research/results_registry.json) | all |
 
-Read first: [Learn 3](../learning/03-cryptography-basics.md) section 2.6 (HMAC), [Learn 4](../learning/04-probability-for-detection.md) sections 4.2 and 4.3 (Bloom and cuckoo filters) and the Bayes section, [Learn 2](../learning/02-identifiers-and-check-digits.md) (why Verhoeff catches every single typo).
+Read first: [Learn 3](../../docs/learning/03-cryptography-basics.md) section 2.6 (HMAC), [Learn 4](../../docs/learning/04-probability-for-detection.md) sections 4.2 and 4.3 (Bloom and cuckoo filters) and the Bayes section, [Learn 2](../../docs/learning/02-identifiers-and-check-digits.md) (why Verhoeff catches every single typo).
 
 ## 1. Headline results
 
-Same data and splits as the [AI and immune layers report](ai-and-immune-layers.md): 16,000 real log lines from 8 Loghub systems the models never saw, with 1,895 generated sensitive values injected into 1,110 of them. Nothing here uses a real person's identifier.
+Same data and splits as the [AI and immune layers report](../../docs/research/ai-and-immune-layers.md): 16,000 real log lines from 8 Loghub systems the models never saw, with 1,895 generated sensitive values injected into 1,110 of them. Nothing here uses a real person's identifier.
 
 | Test | Before (detector only) | After (normaliser and registries) |
 | --- | --- | --- |

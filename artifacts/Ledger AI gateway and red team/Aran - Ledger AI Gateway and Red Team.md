@@ -4,7 +4,7 @@
 
 **Owners:** Bharadhwaj M and SN Arun Vijay (item 3, AI gateway, NER speed); Inbathamizhan S and Aasif Ahmed A (ledger, red team, gateway access control and audit log).
 
-**Read first:** [Learn 12: Leakage Ledger, AI Gateway and Red-Teaming](../learning/12-ledger-ai-gateway-and-red-teaming.md).
+**Read first:** [Learn 12: Leakage Ledger, AI Gateway and Red-Teaming](../../docs/learning/12-ledger-ai-gateway-and-red-teaming.md).
 
 **Data.** Real logs are the 16 Loghub systems (models train on 8, every test uses the other 8) and the UCI SMS corpus; NER corpora are CoNLL-2003, HiNER and Hinglish tweets. Every Aadhaar, card, mobile, PAN, OTP and UPI ID is generated (valid checksums, belongs to no one). Raw numbers are in `research/results_ai.json`, `results_registry.json` and `results_next.json`; the code is `research/experiment_next.py`.
 

@@ -238,7 +238,7 @@ python experiment_registry.py        # E10 to E12
 python experiment_next.py            # E13 ledger, E14 AI gateway, E15 red team, E16 speed
 ```
 
-Results land in `results_ai.json`, `results_registry.json` and `results_next.json`, and the report is [Ledger, AI gateway and red team](../research/ledger-gateway-redteam.md).
+Results land in `results_ai.json`, `results_registry.json` and `results_next.json`, and the report is [Ledger, AI gateway and red team](../../docs/research/ledger-gateway-redteam.md).
 
 ## Sources
 

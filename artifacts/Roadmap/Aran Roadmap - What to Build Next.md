@@ -6,7 +6,7 @@ This is a prioritised list of what Aran still needs, based on a read of the curr
 
 Built and tested: checksum-complement tokens (M1), per-sink tokens and leak attribution on token dumps (M3), the calibrated detector with NER and the OTP/UPI classifier (M2, partly), the immune flow monitor, and a firewall that runs as a Python script over log files.
 
-Designed in the [research document](aran-research.md) but not yet in code:
+Designed in the [research document](../../docs/research/aran-research.md) but not yet in code:
 
 | Promised in the research doc | Status in `research/` |
 | --- | --- |
@@ -18,7 +18,7 @@ Designed in the [research document](aran-research.md) but not yet in code:
 | Normaliser for URL, base64, JSON escapes and split fields | Not built |
 | Choke points: API proxy, log transform, AI gateway | Not built. The firewall is a function called from an experiment script |
 
-Measured weak spots ([AI and immune layers, section 7](ai-and-immune-layers.md)): mobiles with no cue word (68% recall), English OTPs next to transaction words (80%), names in English logs (87%), 299 lines per second, and the immune layer failing on line-level logs (AUROC 0.34 on BGL).
+Measured weak spots ([AI and immune layers, section 7](../../docs/research/ai-and-immune-layers.md)): mobiles with no cue word (68% recall), English OTPs next to transaction words (80%), names in English logs (87%), 299 lines per second, and the immune layer failing on line-level logs (AUROC 0.34 on BGL).
 
 A judge's first question will be "can I see it running?" and the second "is everything in your slides actually implemented?" Today the honest answer to both is "partly". The list below fixes that first, then adds the pieces that make Aran stand out.
 
@@ -68,9 +68,9 @@ If the team has about two weeks before a demo: items 5 and 2 first (they make ev
 
 Learn 1 to 7 already cover most of this. Three new beginner docs cover the rest:
 
-- [Learn 8: Web APIs and Proxies](../learning/08-web-apis-and-proxies.md). HTTP, JSON, FastAPI, reverse proxies and the chat API format. Needed for items 1 and 6.
-- [Learn 9: Transformers and Zero-Shot NER](../learning/09-transformers-and-zero-shot-ner.md). Embeddings, tokenisation of Indic scripts, attention, GLiNER and IndicNER, and distillation. Needed for items 7 and 8.
-- [Learn 10: OCR Basics](../learning/10-ocr-basics.md). Tesseract, measuring OCR accuracy, Verhoeff as an OCR check, and masking on images. Needed for item 10.
+- [Learn 8: Web APIs and Proxies](../../docs/learning/08-web-apis-and-proxies.md). HTTP, JSON, FastAPI, reverse proxies and the chat API format. Needed for items 1 and 6.
+- [Learn 9: Transformers and Zero-Shot NER](../../docs/learning/09-transformers-and-zero-shot-ner.md). Embeddings, tokenisation of Indic scripts, attention, GLiNER and IndicNER, and distillation. Needed for items 7 and 8.
+- [Learn 10: OCR Basics](../../docs/learning/10-ocr-basics.md). Tesseract, measuring OCR accuracy, Verhoeff as an OCR check, and masking on images. Needed for item 10.
 
 ## Sources
 

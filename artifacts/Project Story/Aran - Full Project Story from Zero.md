@@ -1001,7 +1001,7 @@ This split follows the owner pairs; change it as the team prefers.
 | [Design references](../UI%20design%20spec/Aran%20-%20Design%20References.md) | Human-designed sites matched to each page, anti-generic checklist |
 | [Standout frontend ideas](../Standout%20frontend%20ideas/Aran%20-%20Standout%20Frontend%20Ideas.md) | The eight demo features, ranked |
 | [Console README](../../app/ui/README.md) | Which endpoint feeds each screen |
-| [Site research](../../site-research/README.md) | The five reference websites studied for your design |
+| [Site research](../../archive/site-research/README.md) | The five reference websites studied for your design |
 | [Artifacts index](../README.md) | Every artifact by thread |
 | [Obsidian home](../../Home.md), [threads index](../../notes/Threads.md) | The vault |
 

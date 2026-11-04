@@ -221,7 +221,7 @@ The design survives review, but eleven attacks forced changes; the fixes below a
 
 ### 7.1 Results on real data
 
-All four experiments ran on real, public, unsanitised production logs: the Loghub 2k samples from 16 systems (HDFS, Hadoop, Spark, OpenStack, Linux, Windows, Mac, Android, OpenSSH, Apache and others), 32,000 lines in total ([Loghub](https://github.com/logpai/loghub), Zhu et al., ISSRE 2023). These logs contain no Indian identifiers, so every hit is a false alarm. No real person's identifier was used; values injected in E2 and E3 are generated with valid checksums. Code and raw numbers are on the [research branch](https://github.com/itzz-inbathamizhans/aran/tree/claude/project-thread-wm33w9/research); FF1 passes the NIST SP 800-38G sample vectors.
+All four experiments ran on real, public, unsanitised production logs: the Loghub 2k samples from 16 systems (HDFS, Hadoop, Spark, OpenStack, Linux, Windows, Mac, Android, OpenSSH, Apache and others), 32,000 lines in total ([Loghub](https://github.com/logpai/loghub), Zhu et al., ISSRE 2023). These logs contain no Indian identifiers, so every hit is a false alarm. No real person's identifier was used; values injected in E2 and E3 are generated with valid checksums. Code and raw numbers are on the [research branch](https://github.com/itzz-inbathamizhans/aran/tree/main/research); FF1 passes the NIST SP 800-38G sample vectors.
 
 | Experiment | Baseline result | Aran result |
 | --- | --- | --- |
