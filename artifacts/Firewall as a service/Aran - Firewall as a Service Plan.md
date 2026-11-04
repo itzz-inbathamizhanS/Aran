@@ -1,5 +1,7 @@
 # Aran as a Firewall as a Service: Plan
 
+**Status:** built. All six phases are in the `FaaS` branch. See the [build write-up](Aran%20-%20Firewall%20as%20a%20Service%20Build.md).
+
 **Read first:** [Learn 30 Firewall as a Service](../../docs/learning/30-firewall-as-a-service.md), then Learn 26 (SaaS) and Learn 8 (proxies).
 
 ## 1. The answer in one paragraph
