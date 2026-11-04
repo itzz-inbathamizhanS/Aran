@@ -73,6 +73,7 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Learning | Aran Learn 30 - Firewall as a Service | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/30-firewall-as-a-service.md |
 | Main branch cleanup | Aran - Main Branch Cleanup (what moved to archive/, what stayed and why, dead links fixed; backup branch Pre_copy_of_main) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Main%20branch%20cleanup/Aran%20-%20Main%20Branch%20Cleanup.md |
 | Learning | Aran Learn 32 - Repo Structure and a Clean Main Branch | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/32-repo-structure-and-a-clean-main.md |
+| Pitch deck | Aran - BuildX Pitch Deck (12 slides, PowerPoint and PDF, team ID BX-062) | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/Pitch%20deck |
 
 Note: the Markdown copy replaces the embedded architecture diagram with a text placeholder; the PDF keeps it.
 
