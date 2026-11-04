@@ -48,7 +48,7 @@ d.text((40, 300), "7260 1815 9082", font=big, fill="black")
 img.save("card.png")
 ```
 
-![Specimen card](img/learn10-card.png)
+![Specimen card](../../docs/learning/img/learn10-card.png)
 
 The 12-digit number is a generated test value that passes Verhoeff (Learn 2) and belongs to no one.
 
@@ -85,7 +85,7 @@ On a clean image, OCR is perfect. From here, every one of Aran's text detectors 
 
 A phone photo of a card is small, slightly tilted, blurred and grainy. To measure what that does, we drew 200 specimen cards, each with a different generated Aadhaar number, and turned each into a fake phone photo: shrunk, tilted by up to 3 degrees, blurred, dimmed and given random noise. We did this at three sizes. Here is the smallest size:
 
-![Simulated small phone photo](img/learn10-photo-small.png)
+![Simulated small phone photo](../../docs/learning/img/learn10-photo-small.png)
 
 ```python
 def phone_photo(img, r, scale):
@@ -140,7 +140,7 @@ def preprocess(img):
     return Image.fromarray(b)
 ```
 
-![The same photo after pre-processing](img/learn10-photo-small-preprocessed.png)
+![The same photo after pre-processing](../../docs/learning/img/learn10-photo-small-preprocessed.png)
 
 We ran this on the same 600 photos:
 
@@ -189,7 +189,7 @@ for i in range(len(words) - 2):                       # three 4-digit groups in 
 img.save("masked.png")
 ```
 
-![Masked specimen card](img/learn10-masked.png)
+![Masked specimen card](../../docs/learning/img/learn10-masked.png)
 
 Running OCR on `masked.png` now reads the number line as `Ml EE 9082`: the black boxes come out as noise and none of the first 8 digits survive. The 4-pixel margin around each box matters: a box drawn exactly on the OCR outline can leave the edges of digits visible.
 

@@ -55,20 +55,24 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Explainer video | Aran Learn 21 - How the Explainer Video Is Made (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/21-making-the-explainer-video.md |
 | Cybersecurity concepts | Aran Learn 22 - Cybersecurity Concepts in Aran (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/22-cybersecurity-concepts-in-aran.md |
 | Branch audits | Aran - BanksAndCloud Branch Audit (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Branch%20audits/Aran%20-%20BanksAndCloud%20Branch%20Audit.md |
-| Aran UI integration | Aran Learn 23 - One UI for the Console, Aran Cloud and the Demo Banks (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/aran-ui-banks-cloud/docs/learning/23-one-ui-for-cloud-and-banks.md |
-| Aran UI integration | Screenshots: Aran Cloud landing, Quick connect, dashboard (overview, keys, audit), Bank A, Bank B, side by side, phone and light | https://github.com/itzz-inbathamizhans/aran/tree/aran-ui-banks-cloud/artifacts/Aran%20UI%20integration |
-| Aran UI integration | Shared design kit for the other Aran apps (kit.js, kit.css) | https://github.com/itzz-inbathamizhans/aran/tree/aran-ui-banks-cloud/app/ui/kit |
-| Site structure | Aran - Site Audit and Menu Order (7 problems found, the fixes, the 23-page order) | https://github.com/itzz-inbathamizhans/aran/blob/aran-ui-banks-cloud/artifacts/Site%20structure/Aran%20-%20Site%20Audit%20and%20Menu%20Order.md |
-| Site structure | Aran Learn 24 - Site Structure and Navigation (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/aran-ui-banks-cloud/docs/learning/24-site-structure-and-navigation.md |
-| Site structure | Screenshots: menu on desktop, menu search, menu inside Aran Cloud, workspace summary, section bar, menu on a phone | https://github.com/itzz-inbathamizhans/aran/tree/aran-ui-banks-cloud/artifacts/Site%20structure |
-| Site structure | The one site map every menu reads (sitemap.js) | https://github.com/itzz-inbathamizhans/aran/blob/aran-ui-banks-cloud/app/ui/kit/sitemap.js |
+| Aran UI integration | Aran Learn 23 - One UI for the Console, Aran Cloud and the Demo Banks (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/23-one-ui-for-cloud-and-banks.md |
+| Aran UI integration | Screenshots: Aran Cloud landing, Quick connect, dashboard (overview, keys, audit), Bank A, Bank B, side by side, phone and light | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/Aran%20UI%20integration |
+| Aran UI integration | Shared design kit for the other Aran apps (kit.js, kit.css) | https://github.com/itzz-inbathamizhans/aran/tree/main/app/ui/kit |
+| Site structure | Aran - Site Audit and Menu Order (7 problems found, the fixes, the 23-page order) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Site%20structure/Aran%20-%20Site%20Audit%20and%20Menu%20Order.md |
+| Site structure | Aran Learn 24 - Site Structure and Navigation (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/24-site-structure-and-navigation.md |
+| Site structure | Screenshots: menu on desktop, menu search, menu inside Aran Cloud, workspace summary, section bar, menu on a phone | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/Site%20structure |
+| Site structure | The one site map every menu reads (sitemap.js) | https://github.com/itzz-inbathamizhans/aran/blob/main/app/ui/kit/sitemap.js |
 | Site improvements | Aran - Whole Site Improvements (accessibility scan of all 23 pages, 50 fixes in 8 rounds, tenant isolation, Docker Compose, live-connection handling, interaction check, speed and polish, security headers, working design boards) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Site%20improvements/Aran%20-%20Whole%20Site%20Improvements.md |
-| Site improvements | Aran Learn 25 - Accessibility, Tenant Isolation and Containers (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/aran-ui-banks-cloud/docs/learning/25-accessibility-tenants-and-containers.md |
+| Site improvements | Aran Learn 25 - Accessibility, Tenant Isolation and Containers (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/25-accessibility-tenants-and-containers.md |
 | SaaS platform | Aran - SaaS for Bank Transactions (Design): design, build plan and what shipped for Aran Cloud, Bank A and Bank B, with screenshots | https://github.com/itzz-inbathamizhanS/Aran/blob/main/artifacts/SaaS%20platform/Aran%20-%20SaaS%20for%20Bank%20Transactions%20(Design).md |
 | Learning | Aran Learn 26 - SaaS and Multi-Tenancy (Markdown and PDF) | https://github.com/itzz-inbathamizhanS/Aran/blob/main/docs/learning/26-saas-and-multi-tenancy.md |
 | Learning | Aran Learn 27 - Bank Transactions for Beginners (Markdown and PDF) | https://github.com/itzz-inbathamizhanS/Aran/blob/main/docs/learning/27-bank-transactions-basics.md |
 | Learning | Aran Learn 28 - Dashboards and Metrics (Markdown and PDF) | https://github.com/itzz-inbathamizhanS/Aran/blob/main/docs/learning/28-dashboards-and-metrics.md |
-| Site improvements | Screenshots: customer list and Bank A on a phone, workspace summary in light mode, erase buttons, results | https://github.com/itzz-inbathamizhans/aran/tree/aran-ui-banks-cloud/artifacts/Site%20improvements |
+| Site improvements | Screenshots: customer list and Bank A on a phone, workspace summary in light mode, erase buttons, results | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/Site%20improvements |
+| Firewall as a service | Aran - Firewall as a Service Plan and Build (six phases: routes, policies and monitor mode, webhooks and SIEM export, AI gateway, edge data plane, production base), security review and screenshots | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/Firewall%20as%20a%20service |
+| Learning | Aran Learn 30 - Firewall as a Service | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/30-firewall-as-a-service.md |
+| Main branch cleanup | Aran - Main Branch Cleanup (what moved to archive/, what stayed and why, dead links fixed; backup branch Pre_copy_of_main) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Main%20branch%20cleanup/Aran%20-%20Main%20Branch%20Cleanup.md |
+| Learning | Aran Learn 32 - Repo Structure and a Clean Main Branch | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/32-repo-structure-and-a-clean-main.md |
 
 Note: the Markdown copy replaces the embedded architecture diagram with a text placeholder; the PDF keeps it.
 

@@ -2,18 +2,28 @@
 
 > An algebraic data-flow firewall for Indian banks. It detects Aadhaar, PAN, card numbers, UPI IDs and OTPs in APIs, logs and AI tools, protects them before they are stored or shared, traces any leak back to its source, and supports DPDP-compliant erasure.
 
-**Live site:** [aran-console.onrender.com](https://aran-console.onrender.com) (the full console and the real Aran server, redeployed from `main` on every push; the first visit after a quiet spell can take about a minute to wake up).
-
-**Vercel link:** [aran-console.vercel.app](https://aran-console.vercel.app) (the same console pages served fast from Vercel, from `app/ui` with `app/ui/vercel.json`; every `/api` call is passed to the Render server above).
-
-**Kept awake until 19 Nov 2026:** [a scheduled job](.github/workflows/keep-alive.yml) pings every back end and front end every 5 minutes, 06:30 to 23:30 IST, so visitors in that window never wait for a cold start.
-
-**New to Aran? Start here:** [The full project story, from zero to now](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.md) ([PDF](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.pdf)): every technical word explained, the research and papers used, how the solution was derived, what was built, every result, and what comes next.
-
-**Prefer to watch?** [The full explainer course (76 min, 6 parts)](artifacts/Explainer%20video%20v2/README.md): Aran from zero in plain words, with an everyday example before every technical term, real leaks from India and the world, animated characters, and a recap after every chapter. Start with [Part 1: The problem](artifacts/Explainer%20video%20v2/Aran%20-%20Explainer%20Video%20v2%20-%20Part%201%20-%20The%20problem.mp4). Short on time? The [24-minute quick tour](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.mp4) ([subtitles](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.srt)). How they are made: [Learn 21](docs/learning/21-making-the-explainer-video.md).
-
 **Domain:** Banking, Financial Services & FinTech
 **Team (KARE, Kalasalingam Academy of Research and Education):** Inbathamizhan S (lead, cybersecurity), Aasif Ahmed A (cybersecurity), Bharadhwaj M (AI/ML), SN Arun Vijay (AI/ML)
+
+## Try it live
+
+Everything below runs from this `main` branch and redeploys on every push.
+
+| What | Link | Runs on |
+| --- | --- | --- |
+| Firewall console (the main demo) | [aran-console.vercel.app](https://aran-console.vercel.app) | Vercel serves `app/ui`; every `/api` call goes to the Render server |
+| Firewall console, direct | [aran-console.onrender.com](https://aran-console.onrender.com) | Render, from the `Dockerfile` |
+| Aran Cloud (SaaS and firewall as a service) | [aran-cloud.vercel.app](https://aran-cloud.vercel.app) | Vercel front door to the Render `aran-apps` service |
+| Bank A (legacy, stores raw identifiers) | [aran-bank-a.vercel.app](https://aran-bank-a.vercel.app) | same |
+| Bank B (protected by Aran) | [aran-bank-b.vercel.app](https://aran-bank-b.vercel.app) | same |
+
+The Render servers sleep when idle, so the first visit after a quiet spell can take about a minute. Until 19 Nov 2026 [a scheduled job](.github/workflows/keep-alive.yml) pings them every 5 minutes, 06:30 to 23:30 IST. How the front doors work: [deploy/vercel](deploy/vercel/README.md) and [docs/deploy.md](docs/deploy.md).
+
+## Start here
+
+- **Read:** [The full project story, from zero to now](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.md) ([PDF](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.pdf)). Every technical word explained, the research used, how the solution was derived, what was built and every result.
+- **Watch:** [The full explainer course (76 min, 6 parts)](artifacts/Explainer%20video%20v2/README.md), starting with [Part 1: The problem](artifacts/Explainer%20video%20v2/Aran%20-%20Explainer%20Video%20v2%20-%20Part%201%20-%20The%20problem.mp4). Short on time? The [24-minute quick tour](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.mp4) ([subtitles](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.srt)).
+- **Learn:** the [learning path](#learning-path-for-the-team) below, one beginner doc per topic.
 
 ## Problem statement: Prevent Sensitive Data Leakage
 
@@ -132,147 +142,131 @@ Most of Aran is symmetric (FF1 on AES, AES-256-GCM, HMAC, SHA-256 Merkle log) an
 
 New finding: crypto-shredding (M5) only erases if the destroyed key never travelled under quantum-breakable key exchange; otherwise an attacker who recorded that traffic can un-erase the customer later. `python -m pqc.cbom` (from `research/`) writes a CycloneDX cryptographic bill of materials, which India's quantum-safe task force asks vendors for from 2027 to 2028.
 
-## Live console
 
-`app/` is a working website that runs Aran's real code. Its main console (at `/`) is the team's own design from `ui-design`, a Trionn-style dark 3D look with a hold-to-blast WebGL hero, smooth scroll, word reveals and optional sound, now wired so every number, token, receipt and alert comes from the live server; how each screen maps to its endpoint is in [app/ui/README.md](app/ui/README.md) and how the wiring works in [Learn 17](docs/learning/17-wiring-a-design-to-a-live-api.md). Screenshots: [artifacts/Live console (team design)](artifacts/Live%20console%20(team%20design)/). The earlier React console, with the 3D firewall and 3D immune scenes, stays at `/classic`. Both open on an **animated guided tour**: thirteen short chapters, each a moving picture of a real server response with only a headline and one line of text. Requests flow as packets through the firewall and come out as tokens; 300 real log lines light up as false alarms for plain filters but not for Aran; Verhoeff and Luhn maths runs digit by digit on a dial; a token is built through the ten real FF1 rounds and checked against what the live firewall issued; detection clues fill bars and swing a probability gauge; twelve disguises of one Aadhaar flip to caught; a leaked file travels to the dark web and a trace beam names its source; an erasure shatters the purpose key and your browser re-checks the Merkle receipt itself; the immune layer draws each traffic window on a radar against the normal range it learned, and drills show up as alerts; and an AI-chatbot chapter shows what the model provider sees (placeholders only) and what each staff role gets back. The rest of the console lets you send any request, trace any dump, erase customers, run attack drills and run the test suite. No value on it is hard-coded; only the customers' identifiers are generated, because real ones must never be used.
+## What is built
 
-| Part | What it is |
+Aran has three parts that share one design system (`app/ui/kit/`) and one menu (`app/ui/kit/sitemap.js`).
+
+| Part | Folder | Port | What it does |
+| --- | --- | --- | --- |
+| Aran core and console | `app/` | 8000 | The real firewall, vault and immune layer behind a FastAPI server, plus the console website |
+| Aran Cloud | `aran_cloud/` | 8100 | The SaaS: workspaces, scoped API keys, rate limits, metering, plans, team roles, audit, dashboard, and the firewall-as-a-service features below |
+| Demo banks | `demo_bank/` | 9001, 9002 | Bank A stores and sends raw identifiers; Bank B sends every copy through Aran Cloud. `:9002/compare` shows both side by side |
+| Edge data plane | `aran_edge/` | | A self-hosted Docker image that cleans traffic inside a bank's own network and reports only counts to Cloud |
+| SDK | `aran_sdk/` | | The small Python client the banks use to call Aran Cloud |
+
+### The console
+
+The console at `/` is the team's own design (source in `ui-design/`), wired so that every number, token, receipt and alert comes from the live server. No value on it is hard-coded; only the customers' identifiers are generated, because real ones must never be used. How each screen maps to its endpoint: [app/ui/README.md](app/ui/README.md) and [Learn 17](docs/learning/17-wiring-a-design-to-a-live-api.md).
+
+- **Guided tour:** thirteen animated chapters, each drawn from a real server response: requests flowing through the firewall as packets, false alarms on 300 real log lines, Verhoeff and Luhn maths digit by digit, the ten FF1 rounds of a real token, twelve disguises of one Aadhaar, a leak traced back to its source, an erasure with a Merkle receipt your browser re-checks, the immune layer's radar, and what an AI model provider sees. Two chapters are 3D scenes built with three.js ([Learn 16](docs/learning/16-3d-graphics-with-threejs.md)).
+- **Console pages:** send any request, trace any dump, erase customers, run attack drills and run the test suite.
+- **Demo features:** Beat the firewall from your phone by QR code (`#arena-live`), Without Aran versus with Aran (`#versus`), the leakage ledger (`#ledger`), card photo scan with OCR (`#scan`), post-quantum keys (`#quantum`) and the customer's own view (`#me`). Ideas: [Standout frontend ideas](artifacts/Standout%20frontend%20ideas/Aran%20-%20Standout%20Frontend%20Ideas.md).
+- **Tamil and Hindi** through the top-bar switch ([Learn 19](docs/learning/19-translating-a-website.md)), and a **presenter mode** (`?present=1`) with clicker keys and an offline replay ([Learn 20](docs/learning/20-presenter-mode-and-offline-replay.md)).
+- The earlier React console (`app/web/`) stays at `/classic`.
+- Set `ARAN_LLM_URL`, `ARAN_LLM_KEY` and `ARAN_LLM_MODEL` to point the AI chapter at a real OpenAI-compatible model; without them it uses an echo stand-in and no data leaves the machine.
+
+| Core file | What it is |
 | --- | --- |
-| `app/server/engine.py` | Detector + normaliser + registries + firewall in vault mode + purpose vault + immune layer on live flow windows + real-log replay |
-| `app/server/main.py` | FastAPI routes the console calls (`/api/...`; interactive docs at `/docs`) |
-| `app/server/build_models.py` | Trains the detector once (same training as E5 to E7) and saves `app/server/models/detector.pkl` |
-| `research/firewall/shredder.py` | Purpose-bound crypto-shredding (M5): per-customer per-purpose AES-256-GCM keys, vault tokens that fail their checksum, RFC 6962 Merkle log, erasure receipts signed with Ed25519 + ML-DSA-65 (post-quantum), KYC retention lock. Tests in `research/test_shredder.py` |
-| `app/ui/` | Main console from the team's design: plain HTML, CSS and JavaScript, no build step; `js/data.js` is the live API layer, `js/tour.js` the 13-chapter tour, `js/pages.js` the seven console pages; GSAP, Lenis and three.js are vendored in `vendor/` |
-| `app/web/` | Earlier React + Vite console at `/classic`: animated guided tour (`src/pages/Tour.jsx`, scenes in `src/viz.jsx`, 3D scenes in `src/three/`) plus seven console pages |
-| `Dockerfile` | Builds the frontend and serves everything from one container |
+| `app/server/engine.py` | Detector, normaliser, registries, firewall in vault mode, purpose vault, immune layer on live flow windows, real-log replay |
+| `app/server/main.py` | The FastAPI routes the console calls (`/api/...`; interactive docs at `/docs`) |
+| `app/server/build_models.py` | Trains the detector once and saves `app/server/models/detector.pkl` |
+| `research/firewall/shredder.py` | Purpose-bound crypto-shredding (M5): per-customer per-purpose AES-256-GCM keys, RFC 6962 Merkle log, receipts signed with Ed25519 + ML-DSA-65 |
 
-**Demo features that make the console stand out** (ideas: [Standout frontend ideas](artifacts/Standout%20frontend%20ideas/Aran%20-%20Standout%20Frontend%20Ideas.md); screenshots: [artifacts/Standout features](artifacts/Standout%20features/)): **Beat the firewall** (`#arena-live`): judges scan a QR code and try, from their own phones, to type, paste or speak a hidden Aadhaar, card or mobile past the live firewall, scored honestly against a challenge number on a live board ([Learn 18](docs/learning/18-phone-arena-qr-and-speech.md)); **Without Aran / with Aran** (`#versus`): the same real requests play side by side, then one sink is breached: raw identifiers and the DPDP penalty on the left, tokens and a trace naming the leaking sink on the right; **Leakage ledger** (`#ledger`): first 6 digits to one Acme system and last 4 to another leave 100,000 candidates, and the ledger refuses the second disclosure; **Card photo scan** (`#scan`): Tesseract reads a sample ID card picture (or webcam photo) on the server and the identifiers are covered with tokens on the image; **Post-quantum** (`#quantum`): a live key backup wrapped with X25519 and with X25519 + ML-KEM-768, a simulated Shor attack opens only the classical one, plus Mosca's rule and the CBOM; **My data** (`#me`): the customer's own phone view of where their data went, with erasure and a receipt re-checked on the phone. The console also speaks **Tamil and Hindi** (top-bar switch; English stays the source and fallback, checked by `node app/ui/tools/check-i18n.js`, [Learn 19](docs/learning/19-translating-a-website.md)), and has a **presenter mode** (`?present=1`): a 3-minute path with clicker keys and an offline replay of recorded server answers if the server fails ([Learn 20](docs/learning/20-presenter-mode-and-offline-replay.md)).
+### Aran Cloud and the demo banks
 
-The tour also has two 3D scenes built with three.js, both drawn from live server data and loaded only when opened: chapter 1 shows real requests flying from bank systems into the Aran shield and leaving as tokens (with a 2D map toggle, the default on phones), and chapter 10 shows the immune layer's real feature space in 3D, with the normal zone, the learned traffic, every detector cut to the unit cube, and the latest scored windows, on any three of its seven features. Screenshots: [artifacts/3D tour](artifacts/3D%20tour/). How it is built: [Learn 16](docs/learning/16-3d-graphics-with-threejs.md). Screenshots of the animated tour: [artifacts/Animated tour](artifacts/Animated%20tour/) (packets through the firewall, token rounds, false alarms, erasure receipt, immune radar, AI gateway). How the animations are built: [Learn 13](docs/learning/13-animation-and-visual-explainers.md). Set `ARAN_LLM_URL`, `ARAN_LLM_KEY` and `ARAN_LLM_MODEL` to point the AI-chatbot chapter at a real OpenAI-compatible model; without them it uses the gateway's echo stand-in and no data leaves the machine.
+A bank signs up on Aran Cloud, gets a scoped key and calls `/v1/protect` or `/v1/transactions/protect` through the SDK. Bank A and Bank B have accounts, payments on UPI, IMPS, NEFT and cards, a double-entry ledger and a fraud desk, and every copy Bank B makes (logs, fraud, analytics, SMS, chat) holds tokens instead of raw identifiers. The payment itself never waits for Aran. How it fits together: [Learn 23](docs/learning/23-one-ui-for-cloud-and-banks.md), [Learn 26](docs/learning/26-saas-and-multi-tenancy.md) and [Learn 27](docs/learning/27-bank-transactions-basics.md).
 
-Run it locally (details in [Learn 11](docs/learning/11-frontend-basics.md)):
+### Firewall as a service
+
+Aran Cloud can also sit in the data path, so a bank changes a URL instead of its code ([Learn 30](docs/learning/30-firewall-as-a-service.md), [build write-up](artifacts/Firewall%20as%20a%20service/Aran%20-%20Firewall%20as%20a%20Service%20Build.md)).
+
+| Feature | What it does |
+| --- | --- |
+| Routes (`/fw/<route>/...`) | A reverse proxy that cleans a request and forwards it to the bank's real destination. Starts in monitor mode (counts only), then switched to enforce. Fail open, closed or hold per route. Bank B's analytics copy uses one |
+| Policies | Per identifier type: tokenise, mask, allow, alert or block. Every change is versioned, can be rolled back and is recorded in a hash-chained audit |
+| Webhooks and SIEM export | HMAC-signed alerts to the bank's own systems; `/v1/events/export` gives JSON or CEF |
+| AI gateway (`/v1/ai/...`) | Accepts the common chat API formats, so a bank changes only the base URL |
+| Edge data plane | `aran_edge/` pulls Ed25519-signed config from Cloud and keeps raw data inside the bank (RBI localisation) |
+| Production base | Postgres option, two instances behind nginx with leases (`ha` compose profile), mTLS per route, `/status` page, monthly invoices |
+
+## Run it
+
+All four services on your computer:
 
 ```
-cd research && ./fetch_data.sh && cd ..
-pip install -r app/server/requirements.txt
-cd app/server && uvicorn main:app --port 8000       # API + console at http://localhost:8000
-cd app/web && npm install && npm run build          # optional: the classic React console at /classic
-```
-
-## Aran Cloud and the demo banks
-
-Aran also runs as a small product made of four services, all in the same Aran UI as the console: the **Aran core** (`app/server`, port 8000, the console at `/`), **Aran Cloud** (`aran_cloud/`, port 8100: workspaces, scoped API keys, metering, a dashboard and Quick connect), **Bank A** (`demo_bank/` in legacy mode, port 9001: stores and sends raw identifiers) and **Bank B** (`demo_bank/` in Aran mode, port 9002: everything goes through Aran Cloud), plus a **side-by-side page** (`:9002/compare`) that signs one customer up at both banks at once. Aran Cloud and the bank serve the console's own `app/ui` folder at `/aran`, so the tokens, components and the shared kit in `app/ui/kit/` are one copy for every app. The services come from Arun's BanksAndCloud work; the Aran UI and the wiring are on the `aran-ui-banks-cloud` branch. How it fits together: [Learn 23](docs/learning/23-one-ui-for-cloud-and-banks.md). Every page of every app sits in one menu drawn from `app/ui/kit/sitemap.js`: [Learn 24](docs/learning/24-site-structure-and-navigation.md). Screenshots: [artifacts/Aran UI integration](artifacts/Aran%20UI%20integration/).
-
-**Routes, policies and the firewall in the path.** Besides the SDK calls, Aran Cloud can sit in the data path. A **route** (`/fw/<route>/...`) is a web address on Aran Cloud that forwards a request to the bank's real destination after cleaning it. It starts in monitor mode, which only counts, and is switched to enforce mode when the counts look right. A **policy** decides, per identifier type, whether to tokenise, mask, allow, alert or block, and every change is versioned. **Webhooks** send signed alerts to the bank's own systems, and `/v1/events/export` gives a SIEM tool the same events as JSON or CEF. The **AI gateway** (`/v1/ai/...`) accepts the common chat API formats, so a bank changes only the base URL. **aran_edge** (`aran_edge/`) is a self-hosted data plane: it runs inside the bank's network, cleans traffic with the bank's own core, and reports counts only to Cloud. **`/status`** is a public health page that shows no customer data. Plan and phases: [artifacts/Firewall as a service](artifacts/Firewall%20as%20a%20service/Aran%20-%20Firewall%20as%20a%20Service%20Plan.md).
-
-```
-python -m venv .venv && source .venv/bin/activate
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r app/server/requirements.txt
 ./scripts/run_demo.sh      # starts all four and prints every address and the demo keys
 ```
 
-Or with Docker, no Python setup needed (secrets and Bank B's workspace are made on first start; see [Learn 25](docs/learning/25-accessibility-tenants-and-containers.md)):
+Or with Docker, no Python setup needed ([Learn 25](docs/learning/25-accessibility-tenants-and-containers.md)):
 
 ```
 docker compose up --build  # console :8000, Aran Cloud :8100, Bank A :9001, Bank B :9002
 ```
 
-## Repository layout
+Only the core and console: `cd app/server && uvicorn main:app --port 8000`, then open http://localhost:8000 ([Learn 11](docs/learning/11-frontend-basics.md)).
+
+Reproduce the research results (E1 to E19):
 
 ```
-docs/
-  research/        Research document, AI and immune layers report, roadmap
-  learning/        Fifteen beginner learning docs (Markdown, open in Obsidian or GitHub)
-artifacts/
-  learning/        PDF copies of the learning docs, for printing or offline reading
-  website/         Website design-system prompt
-  Frontend with Claude Design/  Frontend guide and dashboard prompts
-  research/        PDF results reports
-aran_cloud/       Aran Cloud: workspaces, keys, routes, policies, webhooks, AI gateway, billing, /status
-aran_edge/        Self-hosted data plane (one Docker image): cleans traffic inside the bank's network
-app/
-  server/          FastAPI server running the real firewall, vault and immune layer
-  web/             React console (seven pages)
-notes/             Obsidian notes: threads, daily notes, artifacts and branches indexes
-templates/         Obsidian templates
-research/
-  aran_core.py     Verhoeff, Luhn, NIST SP 800-38G FF1, checksum-complement tokens, min-entropy counting
-  test_core.py     Tests, including the NIST FF1 sample vectors
-  experiment.py    Experiments E1 to E4 on real logs
-  results.json     Raw results
-  fetch_data.sh    Downloads the Loghub samples
-  synth.py         Generated test identifiers and bank log lines (checksum-valid, belong to no one)
-  ai/              NER, OTP/UPI context classifier, calibrated detector (Bharadhwaj, Arun)
-  immune/          Artificial immune system and data-flow simulation (Inbathamizhan, Aasif)
-  firewall/        The wired firewall, normaliser, customer and OTP registries, leakage ledger (Inbathamizhan, Aasif)
-  gateway/         AI gateway for LLM prompts: placeholders, role-based detokenising, hash-chained audit log
-  experiment_ai.py Experiments E5 to E9
-  results_ai.json  Raw results
-  test_ai.py       Tests for the AI, immune and firewall layers
-  fetch_ai_data.sh Downloads CoNLL-2003, HiNER, Hinglish NER, UCI SMS and labelled BGL logs
-  experiment_registry.py  Experiments E10 to E12 (normaliser, registries, typo repair)
-  results_registry.json   Raw results
-  test_registry.py        Tests for the normaliser and registries
-  experiment_next.py      Experiments E13 to E16 (ledger, AI gateway, red team, speed) and E13b
-  results_next.json       Raw results
-  test_next.py            Tests for the ledger, AI gateway, red-team normaliser, NER gate and item 3 features
-  pqc/             Post-quantum upgrade: hybrid signatures and key sealing (hybrid.py), CBOM scanner (cbom.py)
-  experiment_pqc.py       Experiments E17 to E19 (un-erasure, cost, CBOM and Mosca table)
-  results_pqc.json        Raw results
-  test_pqc.py             Tests for the post-quantum upgrade
-```
-
-## Run it
-
-```
-git clone https://github.com/itzz-inbathamizhans/aran.git
-cd aran/research
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install cryptography numpy pytest
-./fetch_data.sh                                     # Windows: run in Git Bash
-python -m pytest test_core.py
-python experiment.py                                # about 3 minutes
-
-# AI and immune layers
-pip install scikit-learn sklearn-crfsuite
-./fetch_ai_data.sh
-python -m pytest test_ai.py
-python experiment_ai.py                             # about 20 minutes
-
-# Normaliser and registries
-python -m pytest test_registry.py
-python experiment_registry.py                       # about 15 minutes after experiment_ai.py
-
-# Ledger, AI gateway, red team and speed
-pip install fastapi httpx
-python -m pytest test_next.py
-python experiment_next.py                           # about 15 minutes after experiment_ai.py
-
-# Post-quantum upgrade (needs cryptography 50 or newer)
-python -m pytest test_pqc.py test_shredder.py
-python experiment_pqc.py                            # about 1 minute
-python -m pqc.cbom ..                               # cryptographic bill of materials
+cd research
+pip install cryptography numpy pytest scikit-learn sklearn-crfsuite fastapi httpx
+./fetch_data.sh && ./fetch_ai_data.sh               # Windows: run in Git Bash
+python -m pytest test_core.py test_ai.py test_registry.py test_next.py test_pqc.py test_shredder.py
+python experiment.py            # E1 to E4, about 3 minutes
+python experiment_ai.py         # E5 to E9, about 20 minutes
+python experiment_registry.py   # E10 to E12, about 15 minutes, after experiment_ai.py
+python experiment_next.py       # E13 to E16, about 15 minutes, after experiment_ai.py
+python experiment_pqc.py        # E17 to E19, about 1 minute (needs cryptography 50 or newer)
+python -m pqc.cbom ..           # cryptographic bill of materials
 ```
 
 Step-by-step Windows setup, with fixes for common errors, is in [Learn 1](docs/learning/01-python-and-tools.md).
 
+## Repository layout
+
+```
+app/
+  server/          FastAPI server running the real firewall, vault and immune layer
+  ui/              Main console (plain HTML, CSS, JS) and the shared kit used by every app
+  web/             Earlier React console, served at /classic
+aran_cloud/        Aran Cloud: workspaces, keys, routes, policies, webhooks, AI gateway, billing, /status
+aran_edge/         Self-hosted data plane (one Docker image)
+aran_sdk/          Python client for Aran Cloud
+demo_bank/         Bank A (legacy) and Bank B (Aran) demo banks
+research/          Core maths, AI, immune, firewall, gateway and post-quantum code, experiments E1 to E19 and their results
+deploy/            nginx (load balancer, mTLS) and the Vercel front doors
+scripts/           Start scripts (run_demo.sh, the Render entry apps_entry.sh), seeding and smoke tests
+Dockerfile, docker-compose.yml   Container builds (profiles: edge, ha)
+docs/
+  research/        Research documents and the roadmap
+  learning/        Beginner learning docs, one per topic
+  brand.md, deploy.md
+artifacts/         Write-ups, PDFs, screenshots and videos, indexed in artifacts/README.md
+ui-design/         Source of the console design
+Home.md, notes/, templates/, .obsidian/   The Obsidian vault
+archive/           Old side projects and finished plans, kept for history (see archive/README.md)
+```
+
+The repo as it was before this cleanup is on the branch `Pre_copy_of_main` ([Learn 32](docs/learning/32-repo-structure-and-a-clean-main.md)).
+
 ## Documents
 
-- [Explainer video v2, the full course (76 min, 6 parts, 1080p)](artifacts/Explainer%20video%20v2/README.md): 61 animated chapters with voice-over and subtitles, plain words and everyday examples for every term, real incidents, a recap after every chapter. Source in [artifacts/Explainer video v2/source](artifacts/Explainer%20video%20v2/source/).
-- [Explainer video v1, the quick tour (MP4, 24 min, 1080p)](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.mp4) with [English subtitles](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.srt): the whole project explained from zero with animation and voice-over. Source (script, voice and animation code) in [artifacts/Explainer video/source](artifacts/Explainer%20video/source/).
-- [The full project story, from zero to now](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.md) ([PDF](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.pdf)): one long explainer for the whole team. A technical foundation (every term in plain words), the story in order from the first message, the research and how each paper was used, how the solution was derived, the architecture, every experiment (E1 to E19), the live console, what is not done, and how to explain Aran to judges.
 - [Research document](docs/research/aran-research.md): problem analysis, baseline, literature survey, research gaps, novel design with theorems, critical review, results, plan and sources.
-- [AI and immune layers](docs/research/ai-and-immune-layers.md): NER, OTP/UPI classifier, calibrated detector, artificial immune system and firewall wiring, with results on real data and the weak spots.
-- [Normaliser, registries and typo repair](docs/research/normaliser-and-registries.md): roadmap items 2 and 5, built and measured (E10 to E12). [PDF](artifacts/research/Aran%20-%20Normaliser%20Registries%20and%20Typo%20Repair.pdf)
-- [Ledger, AI gateway and red team](docs/research/ledger-gateway-redteam.md): roadmap items 3, 6 and 9, the M4 leakage ledger and a first speed-up, built and measured (E13 to E16). [PDF](artifacts/research/Aran%20-%20Ledger%20AI%20Gateway%20and%20Red%20Team.pdf)
-- [Post-quantum upgrade](docs/research/post-quantum.md): what a quantum computer breaks in Aran, retroactive un-erasure (E17), hybrid receipts and key sealing, cost (E18), CBOM and Mosca priority table (E19), plan. [PDF](artifacts/research/Aran%20-%20Post-Quantum%20Upgrade.pdf)
-- [Standout frontend ideas](artifacts/Standout%20frontend%20ideas/Aran%20-%20Standout%20Frontend%20Ideas.md): eight features that make the console stand out at a demo (judges attack it from their phones, a with/without Aran split screen, the leakage ledger page), top three first.
-- [Roadmap: what to research and build next](docs/research/aran-roadmap.md): what is designed but not yet built, and a prioritised list of 13 additions with effort, owners and the learning docs to read first.
+- [AI and immune layers](docs/research/ai-and-immune-layers.md): NER, OTP/UPI classifier, calibrated detector, artificial immune system and firewall wiring, with results and weak spots.
+- [Normaliser, registries and typo repair](docs/research/normaliser-and-registries.md) (E10 to E12, [PDF](artifacts/research/Aran%20-%20Normaliser%20Registries%20and%20Typo%20Repair.pdf)).
+- [Ledger, AI gateway and red team](docs/research/ledger-gateway-redteam.md) (E13 to E16, [PDF](artifacts/research/Aran%20-%20Ledger%20AI%20Gateway%20and%20Red%20Team.pdf)).
+- [Post-quantum upgrade](docs/research/post-quantum.md) (E17 to E19, [PDF](artifacts/research/Aran%20-%20Post-Quantum%20Upgrade.pdf)).
+- [Roadmap: what to research and build next](docs/research/aran-roadmap.md).
 
 ### Learning path for the team
 
-The team is new to this technology, so read these in order before starting any build task. Each doc starts from zero, explains every idea in plain words, works through examples taken from Aran's own code and data (every number in them was checked by running the code), and ends with practice tasks and free further reading.
+The team is new to this technology, so read these in order before starting any build task. Each doc starts from zero, explains every idea in plain words, works through examples from Aran's own code and data, and ends with practice tasks.
 
+| # | Doc | Who | Time | What you will be able to do | PDF |
+| --- | --- | --- | --- | --- | --- |
 | # | Doc | Who | Time | What you will be able to do | PDF |
 | --- | --- | --- | --- | --- | --- |
 | 1 | [Python and Tools](docs/learning/01-python-and-tools.md) | Everyone, first | ~6 h | Set up the repo on Windows, use git as a team, read every file in `research/`, write a regex detector with tests | [PDF](artifacts/learning/Aran%20Learn%201%20-%20Python%20and%20Tools.pdf) |
@@ -304,29 +298,22 @@ The team is new to this technology, so read these in order before starting any b
 | 27 | [Bank Transactions for Beginners](docs/learning/27-bank-transactions-basics.md) | Everyone (Arun and Bharadhwaj first) | ~1 h | The life of a payment on UPI, IMPS, NEFT, RTGS and cards, double-entry ledgers, idempotency, and where Aran sits without ever stopping a payment | [PDF](artifacts/learning/Aran%20Learn%2027%20-%20Bank%20Transactions%20for%20Beginners.pdf) |
 | 28 | [Dashboards and Metrics](docs/learning/28-dashboards-and-metrics.md) | Everyone (Inbathamizhan first) | ~1 h | Counters, gauges, ratios and percentiles, time buckets, what the Aran Cloud dashboard should show, honest charts, SLOs and live updates | [PDF](artifacts/learning/Aran%20Learn%2028%20-%20Dashboards%20and%20Metrics.pdf) |
 | 30 | [Firewall as a Service](docs/learning/30-firewall-as-a-service.md) | Everyone (Aasif first) | ~1 h | Data-flow firewall versus network firewall and WAF, how traffic gets into a firewall (reverse proxy, base URL swap, forward proxy, sidecar), control plane and data plane, RBI localisation, policies, monitor mode, fail-open and fail-closed | [Markdown](artifacts/Firewall%20as%20a%20service/Aran%20Learn%2030%20-%20Firewall%20as%20a%20Service.md) |
+| 32 | [Repo Structure and a Clean Main Branch](docs/learning/32-repo-structure-and-a-clean-main.md) | Everyone | ~45 min | Know what each folder holds, why main shows only current facts, move instead of delete, find dead links, change main through a pull request | |
 
 ## Artifacts
 
-- [SaaS for bank transactions: design and build plan](artifacts/SaaS%20platform/Aran%20-%20SaaS%20for%20Bank%20Transactions%20(Design).md): turns Aran into a product banks subscribe to. Bank A and Bank B gain accounts, payments on UPI, IMPS, NEFT and cards, a double-entry ledger and a fraud desk; Aran Cloud gains a transaction API, live metrics, a streaming feed, team roles, plans and an 8-page dashboard. Built: banks with real payment rules and copies that never hold a raw identifier at Bank B, the cloud transaction API with live metrics and stream, and the dashboard. Read Learn 26 to 28 first.
-- [Explainer video v2 (6 parts, MP4 and SRT)](artifacts/Explainer%20video%20v2/README.md): 76.6 minutes, 61 chapters, the full course from zero, with its [source](artifacts/Explainer%20video%20v2/source/).
-- [Explainer video v1 (MP4)](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.mp4) and [subtitles (SRT)](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.srt): 24 minutes, 22 chapters, voice-over and animation for every technical word, with its [source](artifacts/Explainer%20video/source/).
-- [Full project story (Markdown)](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.md) and [PDF](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.pdf): the whole project from zero, for the team.
-- [Learning docs as PDFs](artifacts/learning/): print-ready copies of the learning docs above.
-- [Normaliser, registries and typo repair (PDF)](artifacts/research/Aran%20-%20Normaliser%20Registries%20and%20Typo%20Repair.pdf): results report for roadmap items 2 and 5.
-- [Ledger, AI gateway and red team (PDF)](artifacts/research/Aran%20-%20Ledger%20AI%20Gateway%20and%20Red%20Team.pdf): results report for roadmap items 3, 6, 9 and M4, with Learn 12, also kept by thread in [artifacts/Ledger AI gateway and red team](artifacts/Ledger%20AI%20gateway%20and%20red%20team/).
-- [Post-quantum upgrade (PDF)](artifacts/research/Aran%20-%20Post-Quantum%20Upgrade.pdf): results report for E17 to E19, with Learn 14, also kept by thread in [artifacts/Post-quantum cryptography](artifacts/Post-quantum%20cryptography/).
-- [Website design-system prompt for the website design tool](artifacts/website/Aran-Website-Design-System-Prompt.md): brand, colours, typography, components and page content for the Aran website.
-- [Frontend guide with Claude Design](artifacts/Frontend%20with%20Claude%20Design/Aran%20-%20Frontend%20Guide%20with%20Claude%20Design.md): step-by-step guide, design-system and console prompts for restyling the live console, and the live API it uses.
-- [UI design spec](artifacts/UI%20design%20spec/Aran%20-%20UI%20Design%20Spec.md) ([PDF](artifacts/UI%20design%20spec/Aran%20-%20UI%20Design%20Spec.pdf)): every page of the console with its sections, content, components, data, animations, states and the API endpoint behind each element, with colour placeholders (`{primary-color}`, `{input-color}`, `{leak-color}`) to fill in for a new design. Read [Learn 15](docs/learning/15-ui-design-specs-and-tokens.md) first.
-- [Design references](artifacts/UI%20design%20spec/Aran%20-%20Design%20References.md) ([PDF](artifacts/UI%20design%20spec/Aran%20-%20Design%20References.pdf)): real, human-designed sites to use as inspiration for the new UI, matched to each Aran page, with a checklist for avoiding generic AI-looking design.
-- Style mockups of the Overview page in three directions from those references: [A calm dark](artifacts/UI%20design%20spec/mockup-a-calm-dark.png), [B bank light](artifacts/UI%20design%20spec/mockup-b-bank-light.png), [C live data](artifacts/UI%20design%20spec/mockup-c-live-data.png) (sample numbers, for picking a direction).
-- [Aran UI integration](artifacts/Aran%20UI%20integration/): Aran Cloud (landing, Quick connect, dashboard), Bank A, Bank B and the side-by-side page rebuilt in the Aran UI and wired to the live services, with screenshots and [Learn 23](artifacts/Aran%20UI%20integration/Aran%20Learn%2023%20-%20One%20UI%20for%20the%20Console%2C%20Cloud%20and%20Banks.md) ([PDF](artifacts/Aran%20UI%20integration/Aran%20Learn%2023%20-%20One%20UI%20for%20the%20Console%2C%20Cloud%20and%20Banks.pdf)).
-- [Site structure](artifacts/Site%20structure/): a full audit of the site flow and the fix. The site opens on Overview, one numbered and searchable menu holds all 23 pages of the console, the demo banks and Aran Cloud in one order (Start, Firewall console, Live demos, Demo banks, Aran Cloud, Design review), and the Cloud dashboard's "Overview" is now "Workspace summary". [Audit](artifacts/Site%20structure/Aran%20-%20Site%20Audit%20and%20Menu%20Order.md), screenshots and [Learn 24](artifacts/Site%20structure/Aran%20Learn%2024%20-%20Site%20Structure%20and%20Navigation.md) ([PDF](artifacts/Site%20structure/Aran%20Learn%2024%20-%20Site%20Structure%20and%20Navigation.pdf)).
-- [Site improvements](artifacts/Site%20improvements/): every page checked on a computer and a phone, in dark and light, with an accessibility scanner. 25 serious problems fixed (contrast, keyboard access to wide tables, overlapping rows and a cut-off language picker on phones), heading levels corrected (zero problems left), three demo crashes fixed, a first-run Overview, Previous / Next links on every page, a side-by-side page that shows field by field what each bank stored, a live per-minute chart on Overview and live tiles on each bank page. On the live site the page now says **Reconnecting** instead of LIVE while the server sleeps or restarts, retries more slowly, stops polling in hidden tabs, and says when a restart reset the demo data. An interaction check (mouse wheel over every scrolling box, a click on every button, keyboard through the menu) fixed wheel traps, a top bar that let text show through, buttons swapped out under the mouse, and the menu's keyboard focus. A speed pass cut each page from about 680 KB to 280 KB (compression and caching), stopped pages jumping while fonts load, and added a wake-up screen, link previews, a helpful page-not-found and a print layout. One bank can no longer tell that a person banks elsewhere, and `docker compose up` now starts all four services. The server now sends browser security headers (a Content Security Policy and more), tap targets on phones are at least 44 px, and every specimen on the Components and States design boards really works, including full-screen state previews and a live server check. [Write-up](artifacts/Site%20improvements/Aran%20-%20Whole%20Site%20Improvements.md), screenshots and [Learn 25](artifacts/Site%20improvements/Aran%20Learn%2025%20-%20Accessibility%2C%20Tenant%20Isolation%20and%20Containers.md) ([PDF](artifacts/Site%20improvements/Aran%20Learn%2025%20-%20Accessibility%2C%20Tenant%20Isolation%20and%20Containers.pdf)).
-- [BanksAndCloud branch audit](artifacts/Branch%20audits/Aran%20-%20BanksAndCloud%20Branch%20Audit.md): review of the Aran Cloud, demo bank, SDK and persistence branch against main, with test results and fixes needed before merging.
-- [Firewall as a service plan](artifacts/Firewall%20as%20a%20service/Aran%20-%20Firewall%20as%20a%20Service%20Plan.md): how to turn Aran Cloud from an API banks call into a firewall in the data path, with routes (reverse proxy), policies and monitor mode, alerts out, a drop-in AI gateway, a self-hosted data plane for RBI localisation and the production base, in six phases. Read [Learn 30](docs/learning/30-firewall-as-a-service.md) first. Built: see the [build write-up](artifacts/Firewall%20as%20a%20service/Aran%20-%20Firewall%20as%20a%20Service%20Build.md), the [security review](artifacts/Firewall%20as%20a%20service/SECURITY_REVIEW.md) and the [screenshots](artifacts/Firewall%20as%20a%20service/).
-- [Artifacts index](artifacts/README.md): every artifact by thread, with live links. Older Markdown and PDF copies of the first docs are in [artifacts/Data-flow firewall research](artifacts/Data-flow%20firewall%20research/).
-- [Obsidian vault home](Home.md): open the repo folder as a vault; thread notes are in [notes/threads](notes/threads/), indexed in [notes/Threads.md](notes/Threads.md).
+Every artifact, by topic, is listed in the [artifacts index](artifacts/README.md). The main ones:
+
+- [Full project story](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.md) ([PDF](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.pdf)).
+- [Explainer video v2](artifacts/Explainer%20video%20v2/README.md) (76 min, 6 parts, with [source](artifacts/Explainer%20video%20v2/source/)) and [v1](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.mp4) (24 min, with [source](artifacts/Explainer%20video/source/)).
+- [Firewall as a service](artifacts/Firewall%20as%20a%20service/): [plan](artifacts/Firewall%20as%20a%20service/Aran%20-%20Firewall%20as%20a%20Service%20Plan.md), [build write-up](artifacts/Firewall%20as%20a%20service/Aran%20-%20Firewall%20as%20a%20Service%20Build.md), [security review](artifacts/Firewall%20as%20a%20service/SECURITY_REVIEW.md) and screenshots.
+- [SaaS for bank transactions](artifacts/SaaS%20platform/Aran%20-%20SaaS%20for%20Bank%20Transactions%20(Design).md): the design of the banks' payments, ledger and fraud desk, and the Cloud transaction API and dashboard.
+- [Aran UI integration](artifacts/Aran%20UI%20integration/), [Site structure](artifacts/Site%20structure/) and [Site improvements](artifacts/Site%20improvements/Aran%20-%20Whole%20Site%20Improvements.md): one design for every app, one menu, and the accessibility, speed and phone fixes, with screenshots.
+- [UI design spec](artifacts/UI%20design%20spec/Aran%20-%20UI%20Design%20Spec.md), [Live console screenshots](artifacts/Live%20console%20(team%20design)/), [Animated tour](artifacts/Animated%20tour/), [3D tour](artifacts/3D%20tour/) and [Standout features](artifacts/Standout%20features/).
+- [Main branch cleanup](artifacts/Main%20branch%20cleanup/Aran%20-%20Main%20Branch%20Cleanup.md): what moved to `archive/`, what stayed and why, and the links fixed.
+- [BanksAndCloud branch audit](artifacts/Branch%20audits/Aran%20-%20BanksAndCloud%20Branch%20Audit.md).
+- [Learning docs as PDFs](artifacts/learning/) and [results reports as PDFs](artifacts/research/).
+- [Obsidian vault home](Home.md): open the repo folder as a vault; thread notes are in [notes/threads](notes/threads/).
 
 ## Regulations addressed
 
