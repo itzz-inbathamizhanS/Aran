@@ -77,6 +77,7 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Site improvements | Screenshots: customer list and Bank A on a phone, workspace summary in light mode, erase buttons, results | https://github.com/itzz-inbathamizhans/aran/tree/aran-ui-banks-cloud/artifacts/Site%20improvements |
 | Make every Aran site feature work for real | Aran - Every Feature Works for Real (Markdown and PDF, with screenshots) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Real%20data%2C%20no%20demo/Aran%20-%20Every%20Feature%20Works%20for%20Real.md |
 | Make every Aran site feature work for real | Aran Learn 29 - Real Data Paths, Not Demo Data (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/29-real-data-paths-not-demo-data.md |
+| Live check and weak spots | Aran - Live Link Check and Weak Spots (every hosted link tested on 4 Nov 2026, and the weak or unfinished parts in priority order; Markdown and PDF) | https://github.com/itzz-inbathamizhanS/Aran/blob/main/artifacts/Live%20check%20and%20weak%20spots/Aran%20-%20Live%20Link%20Check%20and%20Weak%20Spots.md |
 
 Note: the Markdown copy replaces the embedded architecture diagram with a text placeholder; the PDF keeps it.
 
