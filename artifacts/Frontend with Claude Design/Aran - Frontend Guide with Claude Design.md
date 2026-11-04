@@ -191,3 +191,4 @@ The console is already built and running on real data (`app/` in the repo; see [
 Built and live: the API server on the real firewall, crypto-shredding with Merkle receipts (roadmap item 4), and the console (roadmap item 1), on top of the normaliser and registries (items 2 and 5).
 
 Still to build: mobile and OTP recall fixes (item 3), the AI gateway for LLM prompts (item 6), the leakage ledger at runtime (M4), and restyling the console from your Claude Design references.
+

@@ -121,3 +121,4 @@ def tune_self_radius(X_self, X_val_normal, target_fpr=0.02, grid=(0.02, 0.03, 0.
         if fpr <= target_fpr:
             return rs, fpr, m
     return rs, fpr, m
+

@@ -126,3 +126,4 @@ GitHub refuses files over 100 MB, so the repository keeps the six part videos, a
 | H.264 / AAC | The most widely supported video and audio compression formats. |
 | CRF | ffmpeg's quality dial for H.264: lower is sharper and bigger. |
 | SRT | A plain-text subtitle file: number, start --> end time, text. |
+

@@ -10,3 +10,4 @@ status: done
 - Wrote one note per thread into `notes/threads/` with a [[Threads]] index, linked from [[Home]], and saved a matching Notion handoff.
 
 Back to [[Threads]]
+

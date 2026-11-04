@@ -550,3 +550,4 @@ def test_edge_forward_connects_to_the_checked_address(monkeypatch, tmp_path, wor
     port = up.server.server_address[1]
     status, _, _ = e.forward({"upstream_url": f"http://rebind.test:{port}"}, "GET", "x", "", {}, b"")
     assert status == 200 and calls["n"] == 1
+

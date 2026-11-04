@@ -689,3 +689,4 @@ class AranStore:
             self.data_conn.close()
         except Exception:
             pass
+

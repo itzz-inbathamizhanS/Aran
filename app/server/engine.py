@@ -990,3 +990,4 @@ def tour_immune_space(eng, axes=(0, 1, 3), max_self=400, max_det=250):
                     memory=[dict(c=r3(c[a]), r=round(float(r), 3)) for c, r in zip(im.ais.mem_C, im.ais.mem_R)][:100],
                     windows=[dict(at=w["at"], src=w["src"], sink=w["sink"], alert=w["alert"], score=w["score"], p=[w["z"][i] for i in a])
                              for w in list(im.recent)[:30]])
+

@@ -75,3 +75,4 @@ body.no-gl { background: radial-gradient(ellipse at 50% 60%, #2a1706, var(--bg) 
 @media (max-width: 860px) { .rail { display: none; } .count { display: none; } }
 @media (max-width: 560px) { .snd #snd-t { display: none; } .snd { padding: 0 14px; } .copy .lead { font-size: 1rem; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+

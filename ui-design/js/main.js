@@ -69,3 +69,4 @@
   document.addEventListener('keydown', (e) => { if (current && current.page === 'tour' && !e.target.closest('input, textarea, select') && !menu.classList.contains('open') && !$('.dialog-back.open')) { if (e.key === 'ArrowRight' && current.n < 12) location.hash = 'tour/' + (current.n + 1); if (e.key === 'ArrowLeft' && current.n > 0) location.hash = 'tour/' + (current.n - 1); } });
   render();
 })(window.ARAN);
+

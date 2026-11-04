@@ -331,3 +331,4 @@ def reliability(p, y, bins=10):
             rows.append(dict(bin=f"{lo:.1f}-{hi:.1f}", n=int(m.sum()), mean_p=round(float(p[m].mean()), 3),
                              frac_true=round(float(y[m].mean()), 3)))
     return rows
+

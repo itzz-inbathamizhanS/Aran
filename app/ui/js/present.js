@@ -54,3 +54,4 @@ window.ARAN = window.ARAN || {};
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('/sw.js').catch(() => {});
   A.present = { path: PATH, clear: () => { rec = {}; save(); draw(); } };
 })(window.ARAN);
+

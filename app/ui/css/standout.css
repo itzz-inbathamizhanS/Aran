@@ -97,3 +97,4 @@ html[lang="hi"] body { font-family: "Noto Sans Devanagari", var(--font-body); }
 .rank { grid-template-columns: minmax(70px, 150px) minmax(40px, 1fr) auto; } .rank > * { min-width: 0; }
 /* decorative corner marks and glows never widen the page on phones */
 .page { overflow-x: clip; }
+

@@ -235,3 +235,4 @@ description: Create a layered CSS progressive blur (top or bottom) using multipl
 - Should the blur start from the top or bottom?
 - How tall should the blur area be?
 - Is performance a concern on lower-end devices?
+

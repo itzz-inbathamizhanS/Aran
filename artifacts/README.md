@@ -74,7 +74,9 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Main branch cleanup | Aran - Main Branch Cleanup (what moved to archive/, what stayed and why, dead links fixed; backup branch Pre_copy_of_main) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Main%20branch%20cleanup/Aran%20-%20Main%20Branch%20Cleanup.md |
 | Learning | Aran Learn 32 - Repo Structure and a Clean Main Branch | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/32-repo-structure-and-a-clean-main.md |
 | Pitch deck | Aran - BuildX Pitch Deck (12 slides, PowerPoint and PDF, team ID BX-062) | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/Pitch%20deck |
+| BuildX submission | BX062_BMC.pdf (filled Business Model Canvas) and BX062_Deck.pdf (pitch deck renamed for submission) | https://github.com/itzz-inbathamizhans/aran/tree/main/artifacts/BuildX%20submission |
 
 Note: the Markdown copy replaces the embedded architecture diagram with a text placeholder; the PDF keeps it.
 
 Learn 1 to 7 were expanded on 15 Oct 2026 with fuller explanations, worked examples and practice solutions. The Markdown and PDF files in this folder and in the repo hold the expanded version; the live artifact links above still show the first, shorter version.
+

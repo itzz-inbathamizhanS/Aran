@@ -17,3 +17,4 @@ anthropic==2.3.0
 pytesseract==0.3.13
 pillow==12.3.0
 psycopg[binary]==3.3.8  # optional: only for ARAN_CLOUD_DATABASE_URL=postgresql://...
+

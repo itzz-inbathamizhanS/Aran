@@ -292,3 +292,4 @@ def test_ai_base_url():
     assert c.ai_base_url("openai") == "http://cloud.test:8100/v1/ai/v1"
     with pytest.raises(ValueError):
         c.ai_base_url("other")
+

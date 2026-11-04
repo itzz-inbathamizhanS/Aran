@@ -301,3 +301,4 @@ scene('erasure', X => {
 
   X.recap(12, ['Each customer has a key per purpose', 'Destroying the keys erases every copy at once', 'Keys the law requires are time-locked']);
 });
+

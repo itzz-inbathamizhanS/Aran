@@ -91,3 +91,4 @@ def test_cbom_finds_hybrids_and_no_128_bit_keys_in_product_code():
     assert weak == []
     doc = cbom.to_cyclonedx(found, weak)
     assert doc["bomFormat"] == "CycloneDX" and len(doc["components"]) == len(found)
+

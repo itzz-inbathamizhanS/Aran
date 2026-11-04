@@ -130,3 +130,4 @@ window.ARAN = window.ARAN || {};
   K.busy = async (btn, fn) => { btn && btn.classList.add('busy'); btn && (btn.disabled = true); try { return await fn(); } finally { btn && btn.classList.remove('busy'); btn && (btn.disabled = false); } };
   K.time = (t) => (t ? new Date(t * 1000).toLocaleTimeString() : '–');
 })(window.ARAN);
+

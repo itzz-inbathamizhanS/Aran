@@ -184,3 +184,4 @@ The most important finding is in the research doc: **crypto-shredding can be und
 - RBI Deputy Governor S. C. Murmu, remarks at Global FinTech Fest, 11 September 2026 (as reported at https://www.qnulabs.com/blog/rbi-quantum-proof-payment-systems-2026).
 - CycloneDX 1.6 specification, cryptographic bill of materials (CBOM).
 - Free reading: Cloudflare blog posts on post-quantum TLS; the Open Quantum Safe project (openquantumsafe.org).
+

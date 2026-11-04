@@ -238,3 +238,4 @@ The image becomes one more data flow, from the upload service to wherever the im
 - PaddleOCR and EasyOCR project pages on GitHub, as engines to compare against Tesseract.
 - openbharatocr (PyPI), an open-source project for reading Indian ID documents, as a reference for layouts and fields.
 - UIDAI, "Masked Aadhaar" (uidai.gov.in), for the masking format.
+

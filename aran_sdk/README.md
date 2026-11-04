@@ -80,3 +80,4 @@ reply = client.messages.create(model="claude-sonnet-4-5", max_tokens=200,
 ```
 
 For the OpenAI SDK use `base_url=aran.ai_base_url("openai")`. The key needs the `gateway` scope. Optional headers: `X-Aran-Policy` (a policy name), `X-Aran-Role` (`kyc-officer`, `customer-care` or `analyst`: tokens the role may see are restored in the answer; without it tokens stay), `X-Aran-Customer-Ref`. `stream=true` is not supported yet. Your Aran key is never sent to the model provider; the server holds the provider key. With no provider key configured the gateway answers with a local echo so you can try it offline.
+

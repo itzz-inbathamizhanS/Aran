@@ -123,3 +123,4 @@ The demo has two banks so people can see the difference side by side:
 | Idempotency key | A unique id that makes a retried request safe. |
 | Latency budget | The most time a step may add to a payment. |
 | Fail-safe | When a part fails, the important thing (the payment) still happens. |
+

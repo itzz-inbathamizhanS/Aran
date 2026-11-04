@@ -31,3 +31,4 @@ def test_sends_placeholders_and_returns_text(monkeypatch):
 def test_refusal_gives_a_plain_message(monkeypatch):
     _stub(monkeypatch, stop_reason="refusal", text="")
     assert "declined" in claude_upstream()([{"role": "user", "content": "hi"}])
+

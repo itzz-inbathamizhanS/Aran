@@ -185,3 +185,4 @@ Return:
 3) A choreography plan (timeline beats)
 4) Implementation notes (perf + reduced motion)
 5) A small code recipe (CSS or GSAP/Framer depending on stack)
+

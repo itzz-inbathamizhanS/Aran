@@ -117,3 +117,4 @@ Use the same container width as the line positions.
 - Lines remain subtle on light and dark backgrounds.
 - Mobile still has enough padding between the line and content.
 - Guides do not intercept clicks, hovers, or text selection.
+

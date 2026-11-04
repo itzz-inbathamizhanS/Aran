@@ -16,3 +16,4 @@ Wrote the roadmap `docs/research/aran-roadmap.md` (commit `4fea87d`): 13 items i
 Items 2 and 5 are now done ([[14 Normaliser and registries]]). Next: **4 crypto-shredding**, then **1 live gateway**.
 
 Back to [[Threads]]
+

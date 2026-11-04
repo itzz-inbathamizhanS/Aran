@@ -87,3 +87,4 @@ The checker is stronger than the live firewall on purpose. Number words are swit
 - **Secure context:** a page served over https or from localhost; browsers only allow the microphone and camera there.
 - **Polling:** asking the server again and again on a timer.
 - **Challenge:** the number a player must hide, so a try can be scored.
+

@@ -63,3 +63,4 @@ T = dict(total=round(t, 3), scenes=timing)
 json.dump(T, open("timing.json", "w"), indent=1, ensure_ascii=False)
 open("timing.js", "w").write("window.TIMING = " + json.dumps(T, ensure_ascii=False) + ";\n")
 print("TOTAL", round(t, 1), "s =", round(t / 60, 1), "min;", round(nw / (t / 60)), "words/min")
+

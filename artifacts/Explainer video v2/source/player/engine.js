@@ -739,3 +739,4 @@ function partScene(X, n, title, icons) {
     X.bob(ic.mid, { amp: 5, per: 2.6, ph: i });
   });
 }
+

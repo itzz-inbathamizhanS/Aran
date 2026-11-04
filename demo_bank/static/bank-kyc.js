@@ -99,3 +99,4 @@
   config().then(db).catch((err) => { if (!document.querySelector('.logo')) K.shell({ app: 'bankA', brand: 'Demo bank' }); $('#lede').textContent = 'Could not reach this bank’s server: ' + err.message; });
   setInterval(() => { if (!document.hidden) db().catch(() => {}); }, 5000);
 })(window.ARAN);
+

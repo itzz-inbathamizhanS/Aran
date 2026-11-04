@@ -10,3 +10,4 @@ Old side projects and finished plans. They were moved here from the top of the r
 | `docs/` | Plans that are now built: persistence lite, SaaS foundation, UI plan, integration diff, design skills inventory |
 
 The full repo as it was before the cleanup is on the branch `Pre_copy_of_main`. To bring one file back: `git checkout Pre_copy_of_main -- <path>`.
+

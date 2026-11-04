@@ -18,3 +18,4 @@ for (const [code, name] of Object.entries(A.LANGS)) {
   bad += missing.length;
 }
 process.exit(bad ? 1 : 0);
+

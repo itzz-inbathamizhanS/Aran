@@ -384,3 +384,4 @@ To call a real model instead of `fake_model`, replace it with an `httpx` POST of
 - OWASP API Security Top 10, 2023 edition (owasp.org), especially API3, Broken Object Property Level Authorization (which absorbed the older "excessive data exposure" item): an API returning more fields than the caller needs is exactly the problem Aran solves.
 - Envoy proxy, "What is Envoy" (envoyproxy.io), for how real banks run reverse proxies at scale.
 - OpenAI API reference, "Chat Completions" (platform.openai.com/docs/api-reference/chat), for the format in section 7.
+

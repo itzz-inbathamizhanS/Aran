@@ -338,3 +338,4 @@ It sits on the paths where data travels, and swaps every sensitive detail for a 
 00:10:44,795 --> 00:10:54,688
 Recap. The goal is to find sensitive data in traffic and logs, protect it before it is stored or shared, and be able to prove what happened.
 
+

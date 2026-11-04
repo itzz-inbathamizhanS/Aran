@@ -451,3 +451,4 @@ def pqc_cbom():
 def pqc_mosca(shelf: float = 10, migration: float = 3, crqc: float = 10):
     H = _pqc()
     return dict(exposed_years=H.mosca(shelf, migration, crqc), shelf=shelf, migration=migration, crqc=crqc)
+

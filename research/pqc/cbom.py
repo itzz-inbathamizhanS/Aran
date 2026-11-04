@@ -93,3 +93,4 @@ if __name__ == "__main__":
     for name, d in sorted(found.items(), key=lambda kv: kv[1]["quantum"]):
         print(f"{name:42s} {d['quantum']:22s} {len(d['occurrences'])} uses")
     print("128-bit keys generated at:", *weak, sep="\n  ")
+

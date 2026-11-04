@@ -110,3 +110,4 @@ Polling every 2 to 5 seconds is enough for a bank dashboard. Stop polling when t
 | SLI / SLO | What you measure / the target you promise. |
 | Error budget | How much the SLO may be missed. |
 | Server-Sent Events | A one-way open connection the server pushes updates over. |
+

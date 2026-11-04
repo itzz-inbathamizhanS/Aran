@@ -781,3 +781,4 @@ And each customer's data is locked under its own key, so erasing a customer is o
 196
 00:24:06,066 --> 00:24:09,515
 Aran: protection you can prove. Thank you for watching.
+

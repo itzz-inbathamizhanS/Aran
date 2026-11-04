@@ -41,3 +41,4 @@ Use an art-directed composition with one clear focal point, restrained supportin
 ## Remix prompt
 
 Use $animation-systems and keep the same implementation contract, but change the subject, copy, palette, and content hierarchy. Preserve the core technique, accessibility behavior, responsive rules, and performance constraints demonstrated by the reference.
+

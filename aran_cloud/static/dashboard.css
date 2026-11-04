@@ -85,3 +85,4 @@
 /* a wide table scrolls inside its card instead of widening the page */
 .grid > *, #body .card { min-width: 0; }
 @media (max-width: 760px) { .g2, .g3, .g4 { grid-template-columns: minmax(0, 1fr); } }
+

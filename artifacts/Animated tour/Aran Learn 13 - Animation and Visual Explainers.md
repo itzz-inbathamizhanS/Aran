@@ -125,3 +125,4 @@ If a scene needs data the server does not give yet, add it to the server first (
 3. `const { i, play } = useStepper(12)` and `digits.split('').reverse().map((d, n) => <span className={n < i ? 'done' : ''}>{d}</span>)`.
 4. `const r = await api('/tour/checksum', { digits: (await api('/tour/generate')).aadhaar })`, then render `r.steps.slice(0, i)`.
 5. With reduced motion, `useStepper` still advances, so cells change instantly instead of fading; nothing is lost.
+

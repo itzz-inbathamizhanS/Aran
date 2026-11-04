@@ -214,3 +214,4 @@ scene('law', X => {
 
   X.recap(8, ['DPDP Act: safeguards are required', 'Fines of up to ₹250 crore', 'People can ask for their data to be erased', 'Copies make erasure very hard']);
 });
+

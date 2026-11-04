@@ -22,3 +22,4 @@ function strings(A) {
 }
 module.exports = { load, strings };
 if (require.main === module) { const A = load(); console.log(JSON.stringify(strings(A), null, 1)); }
+

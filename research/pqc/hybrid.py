@@ -171,3 +171,4 @@ def mosca(shelf_life, migration_years, years_to_crqc):
     """Mosca's inequality. Returns years of exposure (> 0 means data will still matter
     after a quantum computer exists, while it was protected by breakable crypto)."""
     return shelf_life + migration_years - years_to_crqc
+

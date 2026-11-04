@@ -67,3 +67,4 @@ if __name__ == "__main__":
     if step in ("render", "all"): render()
     if step in ("parts", "all"): build_parts()
     if step in ("srt", "all"): build_srt()
+

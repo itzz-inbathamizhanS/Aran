@@ -50,3 +50,4 @@ Every project thread for Aran, oldest first.
 - [ ] Get a legal view on crypto-shredding as DPDP erasure (roadmap item 13).
 - [x] Post-quantum upgrade: hybrid receipts, hybrid key sealing, AES-256 FF1, CBOM ([[17 Post-quantum cryptography]]).
 - [ ] Hybrid TLS (X25519MLKEM768) in front of the proxy and AI gateway; SLH-DSA on Merkle roots.
+

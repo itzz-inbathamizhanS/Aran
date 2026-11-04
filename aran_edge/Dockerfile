@@ -15,3 +15,4 @@ VOLUME /srv/data
 EXPOSE 8200
 HEALTHCHECK --interval=10s --timeout=3s CMD curl -fs http://localhost:8200/edge/health || exit 1
 CMD ["python3", "-m", "uvicorn", "aran_edge.edge:app", "--host", "0.0.0.0", "--port", "8200", "--no-proxy-headers"]
+

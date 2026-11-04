@@ -79,3 +79,4 @@ All custom effects are gated behind `(min-width:768px) and (hover:hover) and (po
 
 ## Takeaways for your build
 Mono caps typography, near-black, tiny type, plus **three signature interactions**: the drag/warp video carousel, scroll-driven ribbon badges and the Esc effects overlay. All are built from standard libraries (Three, GSAP, Lenis, hls.js), so they can be rebuilt. Full copy of every page is in `raw/artemiilebedev/`.
+

@@ -96,3 +96,4 @@ td.num, th.num { text-align: right; white-space: nowrap; }
   input, select { min-height: 44px; }
 }
 @media (max-width: 760px) { .bk-view .btn.sm { min-height: 44px; } }
+

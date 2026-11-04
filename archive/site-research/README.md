@@ -33,3 +33,4 @@ Collected 2026-10-16 with the in-app browser, `curl`, and a read of each site's 
 - Pixel measurements were taken at the pane's width (about 468-1024px). Desktop-width values may differ; typography tokens are the reliable part.
 - Contact forms were not submitted (no data was sent to any site).
 - Trionn's and Artemii's exact shader math, and Vlad's rocket timeline, were not reverse-engineered.
+

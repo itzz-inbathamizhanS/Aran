@@ -2233,3 +2233,4 @@ app.include_router(faas.build_router(_faas_ctx))
 app.include_router(edge_plane.build_router(_faas_ctx))
 app.include_router(prod.build_router(_faas_ctx))   # status page and billing
 app.router.on_startup.append(lambda: faas.start_sweeper(_faas_ctx))
+

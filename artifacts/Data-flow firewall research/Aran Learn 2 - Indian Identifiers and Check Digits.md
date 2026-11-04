@@ -258,3 +258,4 @@ cc_detokenize_aadhaar(ff1, "552588173362", "crm")    # '234123412346'
 - J. Verhoeff, "Error Detecting Decimal Codes" (1969), the original.
 - Dihedral groups: Gallian, "Contemporary Abstract Algebra", chapter 1, or the free "Visual Group Theory" lectures by Nathan Carter.
 - The Aran research doc, section on Theorem 1.
+

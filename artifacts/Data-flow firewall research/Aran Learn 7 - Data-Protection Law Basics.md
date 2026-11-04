@@ -188,3 +188,4 @@ Prepare your own two-sentence version of each.
 - [UIDAI Aadhaar Data Vault, Khaitan & Co (10 Dec 2025)](https://www.khaitanco.com/sites/default/files/2025-12/ERGO%20-%20Aadhaar%20Data%20Vault%20-%2010%20December%202025.pdf)
 - [PCI SSC on 8-digit BINs](https://blog.pcisecuritystandards.org/8-digit-bins-and-pci-dss-what-you-need-to-know)
 - The official Act text is on the Ministry of Electronics and IT website (meity.gov.in); RBI circulars and master directions are at rbi.org.in.
+

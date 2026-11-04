@@ -71,3 +71,4 @@ export function Bar({ p, threshold }) {
 }
 
 export function ErrorNote({ error }) { return error ? <div className="err">{error}</div> : null }
+

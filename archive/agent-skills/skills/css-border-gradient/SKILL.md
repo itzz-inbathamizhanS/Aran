@@ -92,3 +92,4 @@ Use arbitrary properties for one-off surfaces.
 - Radius matches the surface exactly.
 - The gradient is visible at normal zoom but barely noticeable when scanning.
 - Focus states remain accessible and do not rely only on the gradient.
+

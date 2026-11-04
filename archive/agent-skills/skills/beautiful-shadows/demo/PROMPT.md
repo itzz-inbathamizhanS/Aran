@@ -45,3 +45,4 @@ Use $beautiful-shadows to recreate the design quality and behavior of **Auralis 
 ## Remix prompt
 
 Use $beautiful-shadows and the included Neuform demo as the quality bar, but replace the brand, subject, copy, palette, and content. Preserve the underlying layout logic, signature visual treatment, interaction choreography, responsive behavior, and performance constraints so the remix still clearly demonstrates the skill.
+

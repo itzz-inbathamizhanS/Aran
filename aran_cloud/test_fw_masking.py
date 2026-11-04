@@ -18,3 +18,4 @@ def test_identifiers_are_masked():
     assert fw_core.mask_text("aadhaar 2490 1748 7341") == "aadhaar XXXXXXXX7341"
     assert fw_core.mask_text("account 50104034160249") == "account XXXXXXXXXX0249"
     assert fw_core.mask_text("card 4111 1111 1111 1111") == "card XXXXXXXXXXXX1111"
+

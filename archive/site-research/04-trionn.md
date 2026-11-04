@@ -72,3 +72,4 @@ I confirmed that Three.js and shader code ship in the bundle and which assets an
 
 ## Takeaways for your build
 Dark `#040508`, three-font system (grotesk, neo-grotesque, mono, plus a serif accent), SplitText letter animation, a WebGL hero with sound, a depth-map lion, and a scanner interaction. The distinctive part is **sound design**: roughly 14 effects tied to interactions and a global sound toggle.
+

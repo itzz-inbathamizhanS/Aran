@@ -1320,3 +1320,4 @@ def test_deeply_nested_json_is_refused_not_a_server_error(sec, up, aiws):
         blk = {"type": "tool_result", "content": [blk]}
     r = ai_post(AI_MSG, aiws["admin_key"], {"model": "m", "max_tokens": 5, "messages": [{"role": "user", "content": [blk]}]})
     assert r.status_code == 400 and "nested" in r.text
+

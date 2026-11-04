@@ -10,3 +10,4 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(fetch(e.request).then((r) => { if (r.ok) { const c = r.clone(); caches.open(CACHE).then((k) => k.put(e.request, c)); } return r; })
     .catch(() => caches.match(e.request, { ignoreSearch: false }).then((r) => r || caches.match('/'))));
 });
+

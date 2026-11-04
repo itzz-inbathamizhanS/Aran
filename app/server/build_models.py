@@ -38,3 +38,4 @@ out = os.path.join(HERE, "models", "detector.pkl")
 with open(out, "wb") as fh:
     pickle.dump(det, fh)
 X.log("saved", out, os.path.getsize(out), "bytes in", round(time.time() - t0), "s")
+

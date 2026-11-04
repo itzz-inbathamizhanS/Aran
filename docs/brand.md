@@ -200,3 +200,4 @@ The following contrast ratios were calculated directly using the official WCAG 2
    *"Sequence matched digit pattern but failed Luhn/Verhoeff checksum. Passed through as non-identifier."*
 10. **Legal & Cryptographic Disclaimer**:  
     *"DPDP Section 12 cryptographic erasure is irreversible. Plaintext data cannot be reconstructed once the purpose key is destroyed."*
+

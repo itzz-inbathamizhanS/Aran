@@ -247,3 +247,4 @@ Results land in `results_ai.json`, `results_registry.json` and `results_next.jso
 - Reserve Bank of India, Framework for Responsible and Ethical Enablement of Artificial Intelligence (FREE-AI), August 2025.
 - OWASP, Top 10 for Large Language Model Applications (2025): LLM01 prompt injection, LLM02 sensitive information disclosure.
 - S. A. Crosby and D. S. Wallach, "Efficient Data Structures for Tamper-Evident Logging", USENIX Security 2009.
+

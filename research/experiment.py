@@ -147,3 +147,4 @@ if __name__ == "__main__":
     with open(os.path.join(HERE, "results.json"), "w") as fh:
         json.dump(res, fh, indent=1)
     print(json.dumps({k: v for k, v in res.items() if k != "e1_per_system"}, indent=1))
+

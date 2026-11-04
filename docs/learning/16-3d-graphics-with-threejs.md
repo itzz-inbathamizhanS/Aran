@@ -99,3 +99,4 @@ The immune layer measures seven features per traffic window (Learn 6). We cannot
 3. `const k = (t % 4) / 2; sphere.position.copy(curve.getPointAt(k <= 1 ? k : 2 - k))`.
 4. `const raw = ev.findings.some(f => f.protected); sphere.material.color.set(raw ? 0xc2362f : 0x888888)`.
 5. Each point `p` satisfies `0.1 <= p[i] <= 0.7` for the chosen axes, because the scaler maps the learning range there.
+

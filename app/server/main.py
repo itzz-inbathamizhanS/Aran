@@ -531,3 +531,4 @@ def ui(path: str, request: Request):
         cache = "public, max-age=31536000, immutable" if versioned else "no-cache"
         return FileResponse(f, headers={"Cache-Control": cache})
     return FileResponse(os.path.join(root, "index.html"), headers={"Cache-Control": "no-cache"})
+

@@ -1554,3 +1554,4 @@ def start_background(app: FastAPI, bank: Bank, register):
             threading.Thread(target=ensure_route, daemon=True).start()
 
     app.router.on_startup.append(go)
+

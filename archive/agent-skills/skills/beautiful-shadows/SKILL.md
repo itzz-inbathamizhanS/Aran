@@ -55,3 +55,4 @@ shadow-[0_2.8px_2.2px_rgba(0,_0,_0,_0.034),_0_6.7px_5.3px_rgba(0,_0,_0,_0.048),_
 - Applying `Beautiful lg` to dense lists or tiny controls.
 - Stacking multiple shadow utilities on one element.
 - Using these as a substitute for clear borders in very low-contrast layouts.
+

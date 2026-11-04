@@ -305,3 +305,4 @@ class Normaliser:
 def identity_views(line):
     n = len(line)
     return [View(line, list(range(n)), list(range(1, n + 1)), line)]
+

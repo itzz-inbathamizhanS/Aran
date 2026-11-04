@@ -60,3 +60,4 @@ python3 sheet9.py shots/<id>_sheet.jpg shots/<id>_<id>-0-0.85.png ...   # 3x3 co
 ```
 Look at the PNGs/contact sheets with the Read tool. Fix overlaps, cut-off text, empty-looking frames and errors. Also check a frame mid-way through a long line (frac 0.3) to see motion states. "no errors" must be printed.
 When several people draw chapters at once, each edits only their own `scenes/<id>.js` files; changes to engine.js, player.html or script.txt go through one person, and anything missing from the engine is first written inside the scene file.
+

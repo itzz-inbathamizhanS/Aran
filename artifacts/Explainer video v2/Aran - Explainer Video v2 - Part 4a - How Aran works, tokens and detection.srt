@@ -498,3 +498,4 @@ Without that tie, a random six-digit number would match some live OTP about 7 pe
 00:15:04,003 --> 00:15:13,415
 Recap. Aran checks numbers against fingerprints of the bank's own customers, and remembers each OTP together with its request.
 
+

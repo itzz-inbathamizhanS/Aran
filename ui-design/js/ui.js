@@ -108,3 +108,4 @@ window.ARAN = window.ARAN || {};
   /* download-safe SVG chip for the pipeline */
   U.svgChip = (cls, text, w) => `<g class="chip-svg ${cls}"><rect x="${-w / 2}" y="-11" width="${w}" height="22"/><text y="4">${esc(text)}</text></g>`;
 })(window.ARAN);
+

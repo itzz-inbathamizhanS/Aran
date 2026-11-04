@@ -111,3 +111,4 @@ window.ARAN = window.ARAN || {};
   };
   A.site = { menuHTML, wireMenu, menuFocus, pagerHTML, links, local, hasApps, groups: numbered, find, consolePages: () => GROUPS.filter((g) => g.pages.every((p) => p[2] === 'console')).flatMap((g) => g.pages.map(([id, label]) => [id, label])), first: 'overview' };
 })(window.ARAN);
+

@@ -286,3 +286,4 @@
   }
   boot().catch((err) => { $('#run-day-out').textContent = 'Could not reach this bank: ' + err.message; });
 })(window.ARAN);
+

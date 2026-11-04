@@ -238,3 +238,4 @@ scene('probability', X => {
 
   X.recap(8, ['Probability says how likely something is', 'Calibrated means honest', 'New evidence changes the guess']);
 });
+

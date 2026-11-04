@@ -57,3 +57,4 @@ Videos on `cdn.sanity.io/files/g94oo1l2/production/*.webm|mp4` (about 28 files, 
 
 ## Takeaways for your build
 Hierarchy through **colour per page, silence and spacing** rather than effects. A Next.js + Sanity + `motion` + muted-video recipe, no 3D. The 106-item catalog with filters is the one "system" piece worth copying.
+

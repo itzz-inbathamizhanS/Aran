@@ -109,3 +109,4 @@ A generated-looking site usually has most of these. Aran should have none of the
 5. Check each screen against the slop list in section 1 before you move on.
 
 All links were chosen as long-running, human-designed sites at the time of writing (October 2026). If one has changed, use the galleries in section 6 to find a replacement.
+

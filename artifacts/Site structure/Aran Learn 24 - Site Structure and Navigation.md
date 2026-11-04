@@ -82,3 +82,4 @@ Inside Aran Cloud and the banks, a **section bar** under the top bar shows "← 
 | Single source of truth | Keep a fact in one place so copies cannot disagree. |
 | Section bar | The bar of links to the pages in the current section. |
 | Landing page | The page a visitor sees first. |
+

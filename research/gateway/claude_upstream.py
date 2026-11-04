@@ -30,3 +30,4 @@ def claude_upstream(model=None, max_tokens=1024, timeout=30.0):
             return "The assistant declined to draft this reply. Please write it yourself."
         return "".join(b.text for b in resp.content if b.type == "text").strip()
     return call
+

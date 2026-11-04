@@ -162,3 +162,4 @@ reg.remove("AADHAAR", "4914 1777 6311")     # DPDP erasure
 ## 6. What this changes in the roadmap
 
 Items 2 and 5 are done. Item 3 (fixing the ML weak spots directly) is still useful for banks that cannot run a registry, since mobiles fall back to 69.8% and OTPs to 79.4% without one. The next Tier 1 steps are item 4 (crypto-shredding with erasure receipts) and item 1 (the live gateway and dashboard).
+

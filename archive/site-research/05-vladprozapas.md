@@ -52,3 +52,4 @@ Nappy Boy Network and Royal Village are client sites; this page does not link to
 
 ## Takeaways for your build
 A scroll-pinned 3D intro with lazily loaded Three.js and a tiny GLB, light/dark glow layers, a sealed "work I can't show" pattern, and a desktop/phone preview toggle. Closest match to "3D site" among the five, and the most reproducible with GSAP + Three.js + Lenis.
+

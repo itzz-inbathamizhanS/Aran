@@ -54,3 +54,4 @@ Work images: `O9pZw0ExMwFdOGniE63Ij0wFM4I.jpeg`, `PPvhIo9ycyen9fzyXYQ7TqMAAOQ.pn
 
 ## Takeaways for your build
 Pure typography-led brutalism: one font, black and white, enormous stacked name, a live clock, a video interlude, and a vertical stack of work cards. Easy to rebuild in plain HTML, CSS and GSAP, or in Framer.
+

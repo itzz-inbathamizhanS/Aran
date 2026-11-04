@@ -13,3 +13,4 @@ for s in train validation test; do get "https://raw.githubusercontent.com/cfiltn
 get "https://raw.githubusercontent.com/SilentFlame/Named-Entity-Recognition/master/Twitterdata/annotatedData.csv" hinglish_ner.csv
 get "https://raw.githubusercontent.com/mohitgupta-omg/Kaggle-SMS-Spam-Collection-Dataset-/master/spam.csv" sms_spam.csv
 get "https://raw.githubusercontent.com/logpai/loghub/master/BGL/BGL_2k.log_structured.csv" BGL_2k_structured.csv
+

@@ -237,3 +237,4 @@ Its tokens always fail the check digit, so anyone can prove whether a number is 
 Each destination gets different tokens, so a leaked file names its source.
 And each customer's data is locked under its own key, so erasing a customer is one key deletion, with a signed receipt.
 Aran: protection you can prove. Thank you for watching.
+

@@ -297,3 +297,4 @@ scene('sidedoors', X => {
 
   X.recap(8, ['Logs are side doors', 'Internal systems are side doors', 'AI chatbots are side doors', 'Even at the world\'s biggest companies']);
 });
+

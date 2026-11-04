@@ -23,6 +23,7 @@ The Render servers sleep when idle, so the first visit after a quiet spell can t
 
 - **Read:** [The full project story, from zero to now](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.md) ([PDF](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.pdf)). Every technical word explained, the research used, how the solution was derived, what was built and every result.
 - **Pitch:** [The BuildX pitch deck (PowerPoint)](artifacts/Pitch%20deck/Aran%20-%20BuildX%20Pitch%20Deck.pptx) ([PDF](artifacts/Pitch%20deck/Aran%20-%20BuildX%20Pitch%20Deck.pdf)): 12 slides on the BuildX template: problem, solution, how it works, results, firewall as a service, live demo, market, roadmap and team (team Iravora Void, team ID BX-062).
+- **Submit:** [BuildX Business Model Canvas (BX062_BMC.pdf)](artifacts/BuildX%20submission/BX062_BMC.pdf) ([preview](artifacts/BuildX%20submission/BX062_BMC-preview.png)) and [the pitch deck renamed for submission (BX062_Deck.pdf)](artifacts/BuildX%20submission/BX062_Deck.pdf). The canvas pitches Aran as a data-flow firewall for any organisation that holds personal data.
 - **Watch:** [The full explainer course (76 min, 6 parts)](artifacts/Explainer%20video%20v2/README.md), starting with [Part 1: The problem](artifacts/Explainer%20video%20v2/Aran%20-%20Explainer%20Video%20v2%20-%20Part%201%20-%20The%20problem.mp4). Short on time? The [24-minute quick tour](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.mp4) ([subtitles](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.srt)).
 - **Learn:** the [learning path](#learning-path-for-the-team) below, one beginner doc per topic.
 
@@ -320,3 +321,7 @@ Every artifact, by topic, is listed in the [artifacts index](artifacts/README.md
 ## Regulations addressed
 
 DPDP Act 2023 and DPDP Rules 2025 (safeguards, 72-hour breach report, erasure), CERT-In Directions 2022 (6-hour reporting, 180-day logs), UIDAI Aadhaar Data Vault, RBI payment data and card tokenisation rules, and PCI DSS. Treating crypto-shredding as DPDP erasure still needs legal confirmation. Post-quantum: NIST FIPS 203 and 204 (ML-KEM, ML-DSA), and India's DST quantum-safe task force report (February 2026: banking fully migrated by 2033, CBOMs from 2027 to 2028).
+
+## License
+
+Aran is released under the [MIT License](LICENSE). Copyright (c) 2026 Inbathamizhan S, Aasif Ahmed A, SN Arun Vijay and Bharadhwaj M (Team Iravora Void, KARE).

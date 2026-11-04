@@ -65,3 +65,4 @@ Things a real build must add that a static design cannot show: the 503 inline me
 - Spec section 16 optional pages (leakage ledger, AI gateway console, post-quantum, settings, results E13 to E19) need new endpoints and are not designed here.
 - The 3D hero needs WebGL; without it the grey panel and the headline still show.
 - The hold-to-blast timing, sounds and scroll reveals were reviewed by reading the code and spot-checking frames; the review browser throttled animation frames, so check the feel in a normal browser window.
+
