@@ -10,6 +10,8 @@
 
 **New to Aran? Start here:** [The full project story, from zero to now](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.md) ([PDF](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.pdf)): every technical word explained, the research and papers used, how the solution was derived, what was built, every result, and what comes next.
 
+**Pitching?** [The BuildX pitch deck (PowerPoint)](artifacts/Pitch%20deck/Aran%20-%20BuildX%20Pitch%20Deck.pptx) ([PDF](artifacts/Pitch%20deck/Aran%20-%20BuildX%20Pitch%20Deck.pdf)): 12 slides on the BuildX template that present Aran as a data firewall for any organisation that holds personal data: problem, solution, how it works, results, Firewall as a Service, live demo, market, roadmap and team.
+
 **Prefer to watch?** [The full explainer course (76 min, 6 parts)](artifacts/Explainer%20video%20v2/README.md): Aran from zero in plain words, with an everyday example before every technical term, real leaks from India and the world, animated characters, and a recap after every chapter. Start with [Part 1: The problem](artifacts/Explainer%20video%20v2/Aran%20-%20Explainer%20Video%20v2%20-%20Part%201%20-%20The%20problem.mp4). Short on time? The [24-minute quick tour](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.mp4) ([subtitles](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.srt)). How they are made: [Learn 21](docs/learning/21-making-the-explainer-video.md).
 
 **Domain:** Banking, Financial Services & FinTech
@@ -254,6 +256,7 @@ Step-by-step Windows setup, with fixes for common errors, is in [Learn 1](docs/l
 
 ## Documents
 
+- [BuildX pitch deck](artifacts/Pitch%20deck/Aran%20-%20BuildX%20Pitch%20Deck.pptx) ([PDF](artifacts/Pitch%20deck/Aran%20-%20BuildX%20Pitch%20Deck.pdf)): the 12-slide hackathon pitch on the BuildX template. Team ID on the title slide is still to be added.
 - [Explainer video v2, the full course (76 min, 6 parts, 1080p)](artifacts/Explainer%20video%20v2/README.md): 61 animated chapters with voice-over and subtitles, plain words and everyday examples for every term, real incidents, a recap after every chapter. Source in [artifacts/Explainer video v2/source](artifacts/Explainer%20video%20v2/source/).
 - [Explainer video v1, the quick tour (MP4, 24 min, 1080p)](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.mp4) with [English subtitles](artifacts/Explainer%20video/Aran%20-%20Explainer%20Video.srt): the whole project explained from zero with animation and voice-over. Source (script, voice and animation code) in [artifacts/Explainer video/source](artifacts/Explainer%20video/source/).
 - [The full project story, from zero to now](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.md) ([PDF](artifacts/Project%20Story/Aran%20-%20Full%20Project%20Story%20from%20Zero.pdf)): one long explainer for the whole team. A technical foundation (every term in plain words), the story in order from the first message, the research and how each paper was used, how the solution was derived, the architecture, every experiment (E1 to E19), the live console, what is not done, and how to explain Aran to judges.
