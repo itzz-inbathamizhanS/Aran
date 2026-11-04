@@ -113,6 +113,8 @@ def canonical(typ, value):
     """Registry key form: digits only for numbers (+91 and separators dropped), upper case for PAN."""
     if typ == "PAN":
         return value.strip().upper()
+    if typ == "PER":  # names: letter case and spacing do not matter
+        return " ".join(value.lower().split())
     d = "".join(c for c in value if c.isdigit())
     if typ == "MOBILE" and len(d) == 12 and d.startswith("91"):
         d = d[2:]
@@ -120,7 +122,7 @@ def canonical(typ, value):
 
 
 class CustomerRegistry:
-    TYPES = ("AADHAAR", "CARD", "MOBILE", "PAN")
+    TYPES = ("AADHAAR", "CARD", "MOBILE", "PAN", "PER")
 
     def __init__(self, key, capacity=1_000_000):
         self.key = key

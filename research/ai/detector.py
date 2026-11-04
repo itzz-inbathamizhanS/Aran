@@ -56,6 +56,21 @@ PERSON_CUE = re.compile(r"(customer|cust|name|holder|payer|payee|applicant|dear|
                         r"ग्राहक|नाम|जी|ji|bhai|madam|sir)\W*$", re.I)
 ADDR_CUE = re.compile(r"(address|addr|residing at|at|pickup|dispatch|पता|ghar)\W*$", re.I)
 TYPES = ["AADHAAR", "CARD", "MOBILE", "PAN", "OTP", "UPI", "PER", "ADDR"]
+# Structured fields whose value is a name or an address, whatever the model thinks of the
+# value itself: {"applicant": "Divya Reddy"}, customer=Divya Menon, addr="12, MG Road, ...".
+# The CRF tends to miss names inside JSON and to cut addresses into fragments, some below the
+# sink threshold; the field name is strong evidence on its own.
+PER_KEYS = (r"applicant|applicant_name|name|full_name|customer_name|customer|cust_name|account_holder|holder|"
+            r"payer_name|payee_name|beneficiary|beneficiary_name|nominee")
+ADDR_KEYS = r"address|addr|residential_address|permanent_address|mailing_address|delivery_address"
+KEYED_QUOTED = re.compile(r"[\"']?\b(" + PER_KEYS + "|" + ADDR_KEYS + r")\b[\"']?\s*[:=]\s*\"([^\"\n]{2,160})\"", re.I)
+KEYED_BARE = re.compile(r"\b(" + PER_KEYS + r")=([^\W\d_][^\s=,;&]*(?:\s+[^\W\d_][^\s=,;&]*){0,4}?)(?=\s+\w+=|[,;&\n]|$)", re.I)
+# a free-text address after a cue word: house number, comma-separated parts, a 6-digit PIN
+ADDR_FREE = re.compile(r"(?i:\b(?:address|addr|residing at|pata|पता)\b)\s*[:\-]?\s*(\d[\w/\-]*,\s*[^\n\"]{3,120}?\b[1-9]\d{5})\b")
+NAME_WORD = re.compile(r"^[^\W\d_][\w.'\-]*$")
+# two to four capitalised (or all-capital) words: candidates for the bank's own name registry
+NAME_RUN = re.compile(r"\b[A-Z][A-Za-z'\-]+(?:\s+[A-Z][A-Za-z'\-]+){1,3}\b")
+FIELD_LR = 500.0  # odds multiplier for a value sitting in a name or address field
 
 
 @dataclass
@@ -71,6 +86,21 @@ class Finding:
 def _kw(text, s, e, typ):
     rx = KEYWORDS.get(typ)
     return float(bool(rx and re.search(rx, text[max(0, s - 40):e + 20], re.I)))
+
+
+def _ner_evidence(text, s, e, typ, p):
+    """Model inputs for a name or address span (the PER and ADDR stackers are trained on these)."""
+    span, left = text[s:e], text[max(0, s - 24):s]
+    words = span.split() or [span]
+    ev = dict(ner=_logit(p), ntok=min(len(words), 8) / 8, digit=float(any(c.isdigit() for c in span)),
+              calendar=float(bool(CALENDAR.search(span))),
+              title=sum(w[:1].isupper() for w in words) / len(words),
+              deva=float(bool(re.search(r"[\u0900-\u097F]", span))),
+              cue=float(bool((PERSON_CUE if typ == "PER" else ADDR_CUE).search(left))))
+    if typ == "ADDR":
+        ev["pin"] = float(bool(re.search(r"\b[1-9]\d{5}\b", span)))
+        ev["comma"] = float("," in span)
+    return ev
 
 
 def _logit(p):
@@ -142,17 +172,54 @@ class Detector:
         if self.ner is not None and (gate is None or gate(text)):
             for s, e, typ, p in self.ner.entities(text):
                 if typ in ("PER", "ADDR"):
-                    span, left = text[s:e], text[max(0, s - 24):s]
-                    words = span.split()
-                    ev = dict(ner=_logit(p), ntok=min(len(words), 8) / 8, digit=float(any(c.isdigit() for c in span)),
-                              calendar=float(bool(CALENDAR.search(span))),
-                              title=sum(w[:1].isupper() for w in words) / len(words),
-                              deva=float(bool(re.search(r"[\u0900-\u097F]", span))),
-                              cue=float(bool((PERSON_CUE if typ == "PER" else ADDR_CUE).search(left))))
-                    if typ == "ADDR":
-                        ev["pin"] = float(bool(re.search(r"\b[1-9]\d{5}\b", span)))
-                        ev["comma"] = float("," in span)
-                    out.append(Finding(typ, s, e, evidence=ev))
+                    out.append(Finding(typ, s, e, evidence=_ner_evidence(text, s, e, typ, p)))
+        out += self._keyed(text)
+        out += self._known_names(text)
+        return out
+
+    def _keyed(self, text):
+        """Name and address fields (see KEYED_QUOTED): one finding for the whole value."""
+        if not ({"PER", "ADDR"} & set(self.stack)):
+            return []
+        out = []
+        for rx in (KEYED_QUOTED, KEYED_BARE):
+            for m in rx.finditer(text):
+                key, val = m.group(1).lower(), m.group(2)
+                typ = "ADDR" if re.fullmatch(ADDR_KEYS, key) else "PER"
+                s, e = m.start(2), m.end(2)
+                while e > s and text[e - 1] in " .,;":
+                    e -= 1
+                words = text[s:e].split()
+                if typ == "PER" and not (2 <= len(words) <= 5 and all(NAME_WORD.match(w) and not w[0].islower() for w in words)):
+                    continue  # customer=CUST-0001, name=nginx, "name": "null" and the like
+                if typ == "ADDR" and len(text[s:e]) < 8:
+                    continue
+                out.append(Finding(typ, s, e, evidence=_ner_evidence(text, s, e, typ, 0.5), meta=dict(field=key)))
+        for m in ADDR_FREE.finditer(text):
+            s, e = m.start(1), m.end(1)
+            out.append(Finding("ADDR", s, e, evidence=_ner_evidence(text, s, e, "ADDR", 0.5), meta=dict(field="address")))
+        return out
+
+    def _known_names(self, text):
+        """Names the bank already holds (its customers), looked up in the keyed registry in
+        any letter case, so SUNITA REDDY is caught as surely as Sunita Reddy."""
+        reg = self.registry
+        if reg is None or "PER" not in getattr(reg, "TYPES", ()) or "PER" not in self.stack:
+            return []
+        out = []
+        for m in NAME_RUN.finditer(text):
+            words = [(w.start(), w.end()) for w in re.finditer(r"\S+", m.group())]
+            # every sub-run of 2 or more words, longest first, so "Customer Divya Reddy" finds "Divya Reddy"
+            for n in range(len(words), 1, -1):
+                hit = None
+                for i in range(len(words) - n + 1):
+                    s, e = m.start() + words[i][0], m.start() + words[i + n - 1][1]
+                    if reg.contains("PER", text[s:e]):
+                        hit = (s, e)
+                        break
+                if hit:
+                    out.append(Finding("PER", *hit, evidence=_ner_evidence(text, *hit, "PER", 0.5), meta=dict(known_name=True)))
+                    break
         return out
 
     @staticmethod
@@ -196,6 +263,8 @@ class Detector:
         s = self.raw_score(f)
         iso = self.iso.get(f.type)
         p = float(iso.predict([s])[0]) if iso is not None else s
+        if f.meta.get("field"):
+            p = bayes(p, FIELD_LR)
         if value is None:
             return p
         if self.registry is not None and f.type in CustomerRegistry.TYPES:
