@@ -42,6 +42,7 @@ services:
       - ARAN_CORE_URL=http://core:8000
       - ARAN_CLOUD_DB=/srv/data/cloud.db
       - ARAN_DEMO_MODE=1
+      - ARAN_FAAS_ALLOW_PRIVATE_UPSTREAMS=1  # demo only: lets a route point at Bank B on the private network
       - PORT=8100
     ports:
       - "8100:8100"
@@ -87,6 +88,8 @@ services:
       - ARAN_URL=http://cloud:8100
       - BANK_DATA_DIR=/srv/data
       - ARAN_AUTO_WORKSPACE=1  # creates Bank B's workspace once and keeps its key on the volume
+      - ARAN_ANALYTICS_ROUTE=analytics  # the analytics copy goes out through Aran Cloud's /fw/analytics route
+      - ARAN_ANALYTICS_UPSTREAM=http://bank-b:9002/vendor/analytics
     ports:
       - "9002:9002"
     volumes:

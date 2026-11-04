@@ -27,7 +27,7 @@ from concurrent.futures import ThreadPoolExecutor, wait
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Union
 
-from fastapi import FastAPI, Header, HTTPException, Query
+from fastapi import FastAPI, Header, HTTPException, Query, Request
 from pydantic import BaseModel, StrictInt
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -60,6 +60,7 @@ SINK_LABEL = {"txn-log": "Transaction log", "fraud-desk": "Fraud-desk row", "ana
               "sms": "SMS text", "support-chat": "Support chat"}
 AI_TIMEOUT = float(os.environ.get("BANK_ARAN_TIMEOUT", "1.5"))
 BREAKER_SECONDS = 10.0
+_route_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="analytics-route")
 
 VPA_RE = re.compile(r"^[A-Za-z0-9._\-]{2,64}@[A-Za-z][A-Za-z0-9]{1,30}$")
 IFSC_RE = re.compile(r"^[A-Z]{4}0[A-Z0-9]{6}$")
@@ -302,6 +303,86 @@ class _NotFound(Exception):
     pass
 
 
+# ------------------------------------------------------------------ the analytics route
+class AnalyticsRoute:
+    """Sends the analytics copy through an Aran Cloud route (POST {cloud}/fw/{route}/ingest) when ARAN_ANALYTICS_ROUTE
+    is set. Aran cleans the row and forwards it to the analytics vendor; the vendor answers with what it received.
+    Same rules as the batch call: a short timeout, a circuit breaker, never raises into the payment."""
+
+    def __init__(self, get_clients, route: str, upstream: str, timeout: float = AI_TIMEOUT):
+        self.get_clients = get_clients
+        self.route = route
+        self.upstream = upstream
+        self.timeout = timeout
+        self.down_until = 0.0
+        self.last_error = ""
+        self._ensured = 0.0
+
+    def breaker_open(self) -> bool:
+        return time.time() < self.down_until
+
+    def _keys(self):
+        got = self.get_clients() if self.get_clients else (None, None, None)
+        app_client, admin = (got[0] if got else None), (got[2] if got else None)
+        if app_client is None:
+            raise AranDown("no Aran API key configured")
+        return app_client, admin
+
+    def ensure_route(self) -> bool:
+        """Creates the route in the workspace if it is not there yet (needs the admin key). Safe to call often."""
+        import requests
+        try:
+            app_client, admin = self._keys()
+            client = admin or app_client
+            h = {"X-API-Key": client.api_key, "Content-Type": "application/json"}
+            r = requests.get(client.base_url + "/v1/routes", headers=h, timeout=3)
+            if r.status_code == 200 and any(x.get("name") == self.route for x in r.json().get("routes", [])):
+                return True
+            r = requests.post(client.base_url + "/v1/routes", headers=h, timeout=3, json={
+                "name": self.route, "upstream_url": self.upstream, "sink": "analytics", "purpose": "Service",
+                "fail_mode": "hold", "mode": "enforce"})
+            return r.status_code in (201, 409)
+        except Exception:
+            return False
+
+    def send(self, row: dict, customer_ref: Optional[str]) -> dict:
+        """Returns {"status": "ok", "row": what the vendor received, "protected": n} or {"status": "held"}.
+        Raises AranDown when Aran did not take the row."""
+        if self.breaker_open():
+            raise AranDown("Aran Cloud unreachable (waiting before the next try)")
+        import requests
+        try:
+            app_client, _ = self._keys()
+            h = {"X-API-Key": app_client.api_key, "Content-Type": "application/json"}
+            if customer_ref:
+                h["X-Aran-Customer-Ref"] = customer_ref
+            r = requests.post(f"{app_client.base_url}/fw/{self.route}/ingest", headers=h, json=row,
+                              timeout=(min(self.timeout, 1.0), self.timeout))
+        except AranDown:
+            raise
+        except Exception as err:
+            self.last_error = f"{err.__class__.__name__}"
+            self.down_until = time.time() + BREAKER_SECONDS
+            raise AranDown(self.last_error)
+        if r.status_code == 404 and time.time() - self._ensured > 30:
+            self._ensured = time.time()
+            threading.Thread(target=self.ensure_route, daemon=True).start()
+        if r.status_code == 202:
+            return {"status": "held"}
+        if r.status_code != 200:
+            self.last_error = f"HTTP {r.status_code} from the analytics route"
+            self.down_until = time.time() + BREAKER_SECONDS
+            raise AranDown(self.last_error)
+        try:
+            got = r.json().get("received")
+        except Exception:
+            got = None
+        if not isinstance(got, dict):
+            raise AranDown("the analytics vendor sent no receipt")
+        self.down_until = 0.0
+        return {"status": "ok", "row": got, "protected": int(r.headers.get("X-Aran-Protected", "0") or 0)}
+
+
 # ------------------------------------------------------------------ the bank
 class Bank:
     def __init__(self, mode: str, get_db, db_dir: str, get_clients=None):
@@ -311,6 +392,12 @@ class Bank:
         self.get_db = get_db
         self.lock = threading.RLock()
         self.gateway = AranGateway(get_clients) if self.aran else None
+        self.analytics = None    # set when ARAN_ANALYTICS_ROUTE is on: the analytics copy goes through a route
+        if self.aran and os.environ.get("ARAN_ANALYTICS_ROUTE", "").strip():
+            port = os.environ.get("PORT", "9002")
+            self.analytics = AnalyticsRoute(
+                get_clients, os.environ["ARAN_ANALYTICS_ROUTE"].strip(),
+                os.environ.get("ARAN_ANALYTICS_UPSTREAM", f"http://127.0.0.1:{port}/vendor/analytics"))
         self.threshold = FRAUD_THRESHOLD
         self.now = lambda: datetime.now(IST)          # tests replace this to set the hour
         self._key = self._load_key(db_dir) if self.aran else b""
@@ -428,6 +515,14 @@ class Bank:
                 last_error TEXT,
                 created_at TEXT NOT NULL,
                 sent_at TEXT
+            );
+            CREATE TABLE IF NOT EXISTS vendor_received (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                path TEXT NOT NULL,
+                content_type TEXT,
+                body TEXT NOT NULL,
+                via_route TEXT,
+                at TEXT NOT NULL
             );
             CREATE INDEX IF NOT EXISTS ix_txn_cust ON transactions(customer_ref, ts);
             CREATE INDEX IF NOT EXISTS ix_ledger_txn ON ledger(txn_id);
@@ -777,6 +872,27 @@ class Bank:
         b["remarks"] = v.get("remarks", "")
         return b
 
+    def _analytics_row(self, r, raw: dict, smob: str) -> dict:
+        """The analytics row as it leaves the bank for the route. The core tokenises UPI ids and cards but not bare
+        account numbers, so those are masked here first: the vendor never gets a raw account number."""
+        v = {"payer_account": mask_text(raw.get("payer_account") or "")}
+        key = "card" if r["rail"] == "CARD" else "payee"
+        pay = raw.get(key) or ""
+        v[key] = pay if ("@" in pay or key == "card") else mask_text(pay)
+        return self._compose("analytics", r, v, smob)
+
+    def _route_copy(self, txn_id: str, r, raw: dict, smob: str) -> dict:
+        """One analytics copy through the route. Returns {"status": "ok"|"held"|"down", ...}. Never raises."""
+        try:
+            out = self.analytics.send(self._analytics_row(r, raw, smob), r["customer_ref"])
+            if out["status"] == "ok":
+                sweep = set(v for v in (raw.get("payer_account"), raw.get("payee"), raw.get("card")) if v)
+                row = {k: (self._sweep(x, sweep) if isinstance(x, str) else x) for k, x in out["row"].items()}
+                out["body"], out["guarded"] = row, row != out["row"]
+            return out
+        except AranDown as e:
+            return {"status": "down", "error": str(e)}
+
     def emit_copies(self, txn_id: str) -> dict:
         """Writes the copies of a payment. Bank A: raw. Bank B: through Aran, else masked + outbox. Never raises."""
         conn = self.get_db()
@@ -788,13 +904,19 @@ class Bank:
             raw, smob = info["raw"], info["stored_mobile"]
             entries = self._entries(r, raw)
             results, err, took = {}, "", 0
+            via_route = [e for e in entries if self.analytics and e["sink"] == "analytics"]
+            batch = [e for e in entries if e not in via_route]
+            route_fut = None
+            if via_route:    # in parallel with the batch call, so neither waits for the other
+                route_fut = _route_pool.submit(self._route_copy, txn_id, r, raw, smob)
             if self.aran:
                 t0 = time.time()
                 try:
-                    results = self.gateway.protect(entries)
+                    results = self.gateway.protect(batch)
                 except AranDown as e:
                     err = str(e)
                 took = int((time.time() - t0) * 1000)
+            route_out = route_fut.result() if route_fut else None
             sweep_set = set(v for v in (raw.get("payer_account"), raw.get("payee"), raw.get("card"), raw.get("mobile")) if v)
             sweep_set |= set(raw_identifiers(raw.get("remarks", "")))
             summary = {"sinks": {}, "aran_ms": took, "error": err}
@@ -802,8 +924,19 @@ class Bank:
                 for e in entries:
                     sink = e["sink"]
                     res = results.get((txn_id, sink))
-                    meta, state = {}, "raw"
-                    if not self.aran:
+                    meta, state, queue_it = {}, "raw", True
+                    body = None
+                    if route_out is not None and sink == "analytics":
+                        if route_out["status"] == "ok":
+                            body, state = route_out["body"], ("guarded" if route_out["guarded"] else "protected")
+                            meta = {"via": "route", "route": self.analytics.route, "protected": route_out["protected"], "raw": 0}
+                        elif route_out["status"] == "held":   # Aran holds a masked copy and delivers it: nothing to queue here
+                            vals, state, queue_it = {k: mask_text(x) for k, x in e["fields"].items()}, "masked", False
+                            meta = {"via": "route", "route": self.analytics.route, "held": True}
+                        else:
+                            vals, state = {k: mask_text(x) for k, x in e["fields"].items()}, "masked"
+                            err = err or route_out.get("error", "")
+                    elif not self.aran:
                         vals = dict(raw)
                     elif res is not None and all(k in (res.get("fields") or {}) for k in e["fields"]):
                         got = {k: str(res["fields"][k]) for k in e["fields"]}
@@ -814,12 +947,13 @@ class Bank:
                     else:
                         vals = {k: mask_text(x) for k, x in e["fields"].items()}
                         state = "masked"
-                    body = self._compose(sink, r, vals, smob)
+                    if body is None:
+                        body = self._compose(sink, r, vals, smob)
                     if state == "masked":
                         body = {k: mask_text(x) if isinstance(x, str) else x for k, x in body.items()}
                     cur = conn.execute("INSERT INTO sink_copies (txn_id, sink, body, state, meta, at) VALUES (?,?,?,?,?,?)",
                                        (txn_id, sink, json.dumps(body), state, json.dumps(meta), self._stamp()))
-                    if state == "masked":
+                    if state == "masked" and queue_it:
                         conn.execute("INSERT INTO outbox (txn_id, sink, copy_id, payload, tries, retry, last_error, created_at)"
                                      " VALUES (?,?,?,?,0,1,?,?)", (txn_id, sink, cur.lastrowid, json.dumps(body), err[:200], self._stamp()))
                     summary["sinks"][sink] = state
@@ -864,13 +998,37 @@ class Bank:
                 if ent:
                     todo.append((o, r, info, ent[0]))
             results = {}
-            if todo:
+            routed = {}   # analytics copies go back through the route
+            if self.analytics:
+                for o, r, info, ent in [t for t in todo if t[3]["sink"] == "analytics"]:
+                    out = self._route_copy(o["txn_id"], r, info["raw"], info["stored_mobile"])
+                    if out["status"] == "ok":
+                        routed[o["id"]] = out
+                    elif out["status"] == "down":
+                        err = out.get("error", err)
+                todo_gw = [t for t in todo if t[3]["sink"] != "analytics"]
+            else:
+                todo_gw = todo
+            if todo_gw:
                 try:
-                    results = self.gateway.protect([t[3] for t in todo], force=True)
+                    results = self.gateway.protect([t[3] for t in todo_gw], force=True)
                 except AranDown as e:
                     err = str(e)
             with self.lock, conn:
                 for o, r, info, ent in todo:
+                    if o["id"] in routed:
+                        out = routed[o["id"]]
+                        meta = {"via": "route", "route": self.analytics.route, "protected": out["protected"], "raw": 0, "from_outbox": True}
+                        conn.execute("UPDATE sink_copies SET body=?, state=?, meta=? WHERE id=?",
+                                     (json.dumps(out["body"]), "guarded" if out["guarded"] else "protected", json.dumps(meta), o["copy_id"]))
+                        conn.execute("UPDATE outbox SET retry=0, tries=tries+1, last_error=NULL, sent_at=?, payload=? WHERE id=?",
+                                     (self._stamp(), json.dumps(out["body"]), o["id"]))
+                        self._event(conn, o["txn_id"], "outbox", "analytics copy sent through the Aran route after a retry")
+                        sent += 1
+                        continue
+                    if self.analytics and ent["sink"] == "analytics":
+                        conn.execute("UPDATE outbox SET tries=tries+1, last_error=? WHERE id=?", ((err or "analytics route did not take it")[:200], o["id"]))
+                        continue
                     res = results.get((o["txn_id"], o["sink"]))
                     if res is None or not all(k in (res.get("fields") or {}) for k in ent["fields"]):
                         conn.execute("UPDATE outbox SET tries=tries+1, last_error=? WHERE id=?", ((err or "no result for this copy")[:200], o["id"]))
@@ -1281,6 +1439,35 @@ def install(app: FastAPI, bank: Bank, register=None):
         return {"bank_mode": bank.mode, "txn_id": txn_id, "items": items,
                 "stores": "tokens or masked text only" if bank.aran else "the real identifiers"}
 
+    # A tiny stand-in for the analytics vendor: it stores what it receives and says so back (it never sees a raw identifier
+    # when the copy comes through the Aran route). The body is whatever the vendor was sent.
+    @app.get("/vendor/analytics/received")
+    def vendor_received(limit: int = Query(50, ge=1, le=500)):
+        conn = bank.get_db()
+        try:
+            rows = conn.execute("SELECT * FROM vendor_received ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+            return {"received": [{"id": x["id"], "at": x["at"], "path": x["path"], "via_route": x["via_route"],
+                                  "body": json.loads(x["body"]) if x["content_type"] == "application/json" else x["body"]} for x in rows]}
+        finally:
+            conn.close()
+
+    @app.post("/vendor/analytics/{rest:path}")
+    async def vendor_ingest(rest: str, request: Request):
+        raw = (await request.body())[:200_000].decode("utf-8", "replace")
+        ct = (request.headers.get("content-type") or "").split(";")[0].strip()
+        conn = bank.get_db()
+        try:
+            with conn:
+                conn.execute("INSERT INTO vendor_received (path, content_type, body, via_route, at) VALUES (?,?,?,?,?)",
+                             ("/" + rest, ct, raw, request.headers.get("x-aran-route"), bank._stamp()))
+        finally:
+            conn.close()
+        try:
+            got = json.loads(raw) if ct == "application/json" else raw
+        except ValueError:
+            got = raw
+        return {"ok": True, "received": got}
+
     @app.get("/api/outbox")
     def outbox():
         return bank.outbox_rows()
@@ -1342,6 +1529,16 @@ def start_background(app: FastAPI, bank: Bank, register):
             except Exception:
                 pass
 
+    def ensure_route():
+        # make sure the workspace has the analytics route (created once, as the admin key)
+        for wait_s in (2, 5, 10, 20, 40, 60):
+            try:
+                if bank.analytics.ensure_route():
+                    return
+            except Exception:
+                pass
+            time.sleep(wait_s)
+
     def go():
         if os.environ.get("BANK_SEED", "1") != "0":
             threading.Thread(target=seeder, daemon=True).start()
@@ -1353,5 +1550,7 @@ def start_background(app: FastAPI, bank: Bank, register):
             threading.Thread(target=traffic, args=(rate,), daemon=True).start()
         if bank.aran:
             threading.Thread(target=flusher, daemon=True).start()
+        if bank.analytics:
+            threading.Thread(target=ensure_route, daemon=True).start()
 
     app.router.on_startup.append(go)

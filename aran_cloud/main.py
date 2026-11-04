@@ -30,6 +30,11 @@ import numpy as np
 from pydantic import BaseModel, Field, field_validator
 import requests
 
+try:  # package layout (aran_cloud.main) and flat layout (run from inside aran_cloud/)
+    from . import faas
+except ImportError:
+    import faas
+
 # ---------------------------------------------------------------- configuration
 PORT = int(os.environ.get("PORT", 8100))
 ARAN_CORE_URL = os.environ.get("ARAN_CORE_URL", "http://127.0.0.1:8000").rstrip("/")
@@ -39,8 +44,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(HERE, "static")
 DB_PATH = os.environ.get("ARAN_CLOUD_DB") or os.path.join(HERE, "cloud.db")  # a container keeps it on a volume
 
-VALID_SCOPES = {"admin", "protect", "gateway", "trace", "detokenise", "erase", "verify", "dashboard"}
-DEFAULT_ADMIN_SCOPES = "admin,protect,gateway,trace,detokenise,erase,verify,dashboard"
+VALID_SCOPES = {"admin", "protect", "gateway", "trace", "detokenise", "erase", "verify", "dashboard", "route", "policy", "webhook"}
+DEFAULT_ADMIN_SCOPES = "admin,protect,gateway,trace,detokenise,erase,verify,dashboard,route,policy,webhook"
 
 # Rate limiting settings (Item 5 & Hardening 1a)
 RATE_LIMIT_PER_KEY = int(os.environ.get("ARAN_RATE_LIMIT_PER_KEY", "300"))
@@ -378,6 +383,7 @@ def init_db():
                 updated_at TEXT
             );
         """)
+        faas.init_schema(conn)
     conn.close()
 
 
@@ -2201,3 +2207,11 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 ARAN_UI_DIR = os.environ.get("ARAN_UI_DIR", os.path.join(HERE, "..", "app", "ui"))
 if os.path.isdir(ARAN_UI_DIR):
     app.mount("/aran", StaticFiles(directory=ARAN_UI_DIR), name="aran-ui")
+
+
+# ---------------------------------------------------------------- firewall as a service (routes, /fw proxy)
+_faas_ctx = faas.Ctx(get_db=get_db, get_tenant=get_current_tenant_and_key, require_scope=require_scope,
+                     protect_text=protect_text, record_tokens=record_tokens, call_core=call_core,
+                     core_url=ARAN_CORE_URL, port=PORT)
+app.include_router(faas.build_router(_faas_ctx))
+app.router.on_startup.append(lambda: faas.start_sweeper(_faas_ctx))

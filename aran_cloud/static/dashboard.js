@@ -13,6 +13,7 @@
   const VIEWS = [
     ['overview', 'Overview', 'Is Aran working, is it protecting us, is it slowing payments? This workspace only.'],
     ['transactions', 'Transactions', 'Every payment copy sent through Aran, newest first. The cloud keeps the protected text and the counts, never the original values.'],
+    ['routes', 'Routes', 'Point a system at an Aran route and everything it sends passes through the firewall first. Monitor mode only counts; enforce mode forwards the cleaned request.'],
     ['datamap', 'Data map', 'Where identifiers go: the systems that call Aran, Aran itself, and the destinations that receive tokens.'],
     ['performance', 'Performance', 'How much time Aran adds to a payment, against the latency budget and the service objective.'],
     ['compliance', 'Compliance', 'Erasure receipts, who read real values back, and proof that the audit log was not edited.'],
@@ -34,7 +35,7 @@
   const S = {
     counters: null, m1h: null, mwin: null, win: '1h', txns: [], ftx: null, maxId: 0, keys: null, slo: null, settings: null, usage: null,
     team: null, dash: null, audit: null, lastOk: 0, err: '', stream: 'off', filters: { q: '', rail: '', sink: '' }, sel: null, paused: false,
-    fresh: {}, txLimit: 50, tick: 0, sinks: [],
+    fresh: {}, txLimit: 50, tick: 0, sinks: [], routes: null, rtEvents: null, rtSel: null,
   };
   let timer = null, es = null, esTimer = null, esRetry = 0, painted = null, wsName = '';
 
@@ -348,10 +349,36 @@
     once: true,
   };
 
+  /* ---- Routes (firewall as a service) ---- */
+  const routeUrl = (r) => location.origin + '/fw/' + r.name + '/';
+  const routeHost = (u) => { try { return new URL(u).host; } catch (e) { return u; } };
+  const OUTCOME = { forwarded: ['✓ forwarded', 'ok'], held: ['▲ held', 'warn'], blocked: ['✗ refused', 'danger'], failed_open: ['▲ failed open', 'warn'], failed_closed: ['✗ failed closed', 'danger'] };
+  V.routes = {
+    shell: () => `<section class="card"><h2 class="h3">Your routes</h2><div class="kit-scroll kit-gap-s" id="rt-list">${U.skeleton(120)}</div><div id="rt-out"></div></section>
+      <section class="card kit-gap-s" id="rt-curl-box" hidden><h2 class="h3">Use a route</h2><div id="rt-curl"></div></section>
+      <section class="card kit-gap-s"><h2 class="h3">Add a route</h2><p class="small muted">A new route starts in monitor mode: requests are forwarded untouched and Aran only counts what it would have protected. Flip it to enforce when the counts look right.</p>
+        <form class="kit-form" id="rt-form"><div class="kit-cols-4" style="grid-template-columns:1fr 2fr 1fr 1fr"><label class="field">Name<input id="rt-name" required pattern="[a-z0-9][a-z0-9_-]{0,39}" placeholder="analytics" autocomplete="off"></label><label class="field">Upstream URL<input id="rt-url" class="mono" required placeholder="https://vendor.example/ingest" autocomplete="off"></label><label class="field">Purpose<select id="rt-purpose"><option>Service</option><option>KYC</option><option>Loans</option><option>Marketing</option></select></label><label class="field">If Aran is down<select id="rt-fail"><option value="hold">hold (queue masked)</option><option value="open">open (send as is)</option><option value="closed">closed (refuse)</option></select></label></div><div class="kit-row"><button class="btn" type="submit"><span>Add route</span></button><span id="rt-form-out" role="status"></span></div></form></section>
+      <section class="card kit-gap-s"><h2 class="h3">Recent calls</h2><p class="small muted">Counts and outcomes only. The path shown is the cleaned one; no original value is stored.</p><div class="kit-scroll" id="rt-events">${U.skeleton(120)}</div></section>`,
+    load: () => [get('/v1/routes').then((d) => { S.routes = d.routes; }), get('/v1/route-events?limit=30').then((d) => { S.rtEvents = d.events; })],
+    paint: () => {
+      const rs = S.routes;
+      if (rs) {
+        set('rt-list', rs.length ? `<table class="tbl dense"><thead><tr><th>Name</th><th>Mode</th><th>If Aran is down</th><th>Upstream</th><th class="num">Calls, 24 h</th><th class="num">Protected</th><th class="num">Held</th><th></th></tr></thead><tbody>${rs.map((r) => {
+          const st = r.stats_24h, enf = r.mode === 'enforce';
+          return `<tr><td class="mono">${esc(r.name)}${r.disabled ? ' ' + U.pill('off', 'warn') : ''}</td><td>${U.pill(enf ? '● enforce' : '◌ monitor', enf ? 'ok' : 'warn')}</td><td>${esc(r.fail_mode)}</td><td class="mono small">${esc(routeHost(r.upstream_url))}</td><td class="num mono">${fmt(st.calls)}</td><td class="num mono">${enf ? fmt(st.protected) : fmt(st.would_protect) + ' <span class="muted small">would</span>'}</td><td class="num mono">${fmt(st.held_pending)}</td><td class="kit-row"><button class="btn ghost sm" data-rt-use="${esc(r.id)}"><span>Copy URL</span></button><button class="btn secondary sm" data-rt-flip="${esc(r.id)}" data-to="${enf ? 'monitor' : 'enforce'}"><span>${enf ? 'Set monitor' : 'Enforce'}</span></button><button class="btn ghost sm" data-rt-del="${esc(r.id)}" aria-label="Delete route ${esc(r.name)}"><span>Delete</span></button></td></tr>`;
+        }).join('')}</tbody></table>` : noData('No routes yet. Add one below.'));
+        const sel = rs.find((r) => r.id === S.rtSel); const box = $('#rt-curl-box');
+        if (box) { box.hidden = !sel; if (sel) set('rt-curl', `<p class="small muted">Send traffic to this URL with your Aran key. Aran cleans it and forwards it to <span class="mono">${esc(sel.upstream_url)}</span>.</p><div class="kit-key"><code>${esc(routeUrl(sel))}</code><button class="btn secondary sm" data-copy="${esc(routeUrl(sel))}"><span>Copy</span></button></div><pre class="logline out kit-gap-s">curl -X POST ${esc(routeUrl(sel))}ingest \\\n  -H "X-API-Key: &lt;your key&gt;" -H "Content-Type: application/json" \\\n  -d '{"customer": "9876543210"}'</pre>`); }
+      }
+      if (S.rtEvents) set('rt-events', S.rtEvents.length ? `<table class="tbl dense"><thead><tr><th>Time</th><th>Route</th><th>Request</th><th>Status</th><th>Outcome</th><th class="num">Protected</th><th class="num">Would protect</th><th class="num">Added</th></tr></thead><tbody>${S.rtEvents.map((e) => { const o = OUTCOME[e.outcome] || [e.outcome, '']; return `<tr><td class="mono">${K.time(e.at)}</td><td class="mono">${esc(e.route_name || '–')}</td><td class="mono small">${esc(e.method)} ${esc(e.path)}</td><td class="mono">${e.status_code == null ? '–' : e.status_code}</td><td>${U.pill(o[0], o[1])}</td><td class="num mono">${fmt(e.protected_count)}</td><td class="num mono">${fmt(e.would_protect_count)}</td><td class="num mono">${ms(e.fw_ms)}</td></tr>`; }).join('')}</tbody></table>` : noData('No calls through a route yet'));
+    },
+    once: false,
+  };
+
   /* ---- Keys and team ---- */
   V.keys = {
     shell: () => `<section class="card"><h2 class="h3">Workspace keys</h2><div class="kit-scroll kit-gap-s" id="keys">${U.skeleton(140)}</div></section>
-      <section class="card kit-gap-s"><h2 class="h3">Mint a scoped key</h2><div class="kit-cols-4" style="grid-template-columns:1.2fr 2fr auto"><label class="field">Label<input id="mk-l" value="Application service key"></label><div class="field">Scopes<div class="kit-row" id="mk-s" style="margin:0">${['protect', 'gateway', 'trace', 'detokenise', 'erase', 'verify', 'dashboard', 'admin'].map((s) => `<label class="chip dx-chk"><input type="checkbox" value="${s}" ${s === 'protect' || s === 'dashboard' ? 'checked' : ''}> ${s}</label>`).join('')}</div></div><button class="btn" data-act="mint"><span>Mint key</span></button></div><div id="mk-out"></div></section>
+      <section class="card kit-gap-s"><h2 class="h3">Mint a scoped key</h2><div class="kit-cols-4" style="grid-template-columns:1.2fr 2fr auto"><label class="field">Label<input id="mk-l" value="Application service key"></label><div class="field">Scopes<div class="kit-row" id="mk-s" style="margin:0">${['protect', 'gateway', 'trace', 'detokenise', 'erase', 'verify', 'dashboard', 'route', 'admin'].map((s) => `<label class="chip dx-chk"><input type="checkbox" value="${s}" ${s === 'protect' || s === 'dashboard' ? 'checked' : ''}> ${s}</label>`).join('')}</div></div><button class="btn" data-act="mint"><span>Mint key</span></button></div><div id="mk-out"></div></section>
       <section class="card kit-gap-s"><h2 class="h3">Team</h2><p class="small muted">Roles decide the scopes of the key issued to a person: admin (everything), security (dashboard, trace, detokenise, erase, verify), auditor (dashboard, verify), developer (protect, gateway, dashboard). Reading the team needs an admin key.</p><div id="team-box"><div id="team">${U.skeleton(100)}</div></div>
         <form class="dx-team-add" id="team-form"><label class="field">Email<input id="tm-email" type="email" required placeholder="name@bank.example" autocomplete="off"></label><label class="field">Role<select id="tm-role"><option>admin</option><option>security</option><option>auditor</option><option selected>developer</option></select></label><label class="chip dx-chk"><input id="tm-key" type="checkbox"> issue a key</label><button class="btn" type="submit"><span>Add person</span></button></form><div id="tm-out"></div></section>`,
     load: () => [loadKeys()],
@@ -459,6 +486,13 @@
       try { const r = await call('/v1/erase', { body: { customer_ref: ref, purpose } }, out); out.innerHTML = U.verdict(true, 'Purpose key shredded. Receipt signed and added to the log.') + `<pre class="logline out kit-gap-s">${esc(JSON.stringify(r, null, 2))}</pre>`; refresh(); }
       catch (err) { out.innerHTML = U.note('err', esc(err.message)); }
     });
+    if (f.id === 'rt-form') return K.busy(btn, async () => {
+      const out = $('#rt-form-out');
+      try {
+        const r = await call('/v1/routes', { body: { name: $('#rt-name').value.trim(), upstream_url: $('#rt-url').value.trim(), purpose: $('#rt-purpose').value, fail_mode: $('#rt-fail').value } }, out);
+        out.innerHTML = U.pill('✓ added in monitor mode', 'ok'); S.rtSel = r.id; f.reset(); refresh();
+      } catch (err) { out.innerHTML = U.pill('✗ ' + esc(err.message), 'danger'); }
+    });
     if (f.id === 'team-form') return K.busy(btn, async () => {
       const out = $('#tm-out');
       try {
@@ -481,6 +515,18 @@
     const win = t.closest('[data-win]'); if (win) { S.win = win.dataset.win; S.mwin = null; $$('[data-win]').forEach((b) => { b.classList.toggle('on', b.dataset.win === S.win); b.setAttribute('aria-pressed', b.dataset.win === S.win); }); refresh(); return; }
     const open = t.closest('[data-open]'); if (open) { if (view() === 'overview') return; e.preventDefault(); S.sel = Number(open.dataset.open); V.transactions.paint(); const d = $('#tx-detail'); d && d.scrollIntoView({ block: 'nearest' }); return; }
     const cp = t.closest('[data-copy]'); if (cp) { K.copy(cp.dataset.copy, cp); return; }
+    const ru = t.closest('[data-rt-use]'); if (ru) { S.rtSel = ru.dataset.rtUse; const r = (S.routes || []).find((x) => x.id === S.rtSel); if (r) K.copy(routeUrl(r), ru); V.routes.paint(); return; }
+    const rf = t.closest('[data-rt-flip]'); if (rf) {
+      const to = rf.dataset.to;
+      if (to === 'enforce' && !(await U.confirm({ title: 'Switch this route to enforce?', body: 'From now on the upstream receives the cleaned request, not the original.', confirmLabel: 'Enforce' }))) return;
+      try { await call('/v1/routes/' + rf.dataset.rtFlip, { method: 'PATCH', body: { mode: to } }, $('#rt-out')); U.toast('Route is now in ' + to + ' mode'); refresh(); } catch (err) { $('#rt-out').innerHTML = U.note('err', esc(err.message)); }
+      return;
+    }
+    const rd = t.closest('[data-rt-del]'); if (rd) {
+      if (!(await U.confirm({ title: 'Delete this route?', body: 'Callers get a 404 at once. Held requests for it are dropped.', confirmLabel: 'Delete route' }))) return;
+      try { await call('/v1/routes/' + rd.dataset.rtDel, { method: 'DELETE' }, $('#rt-out')); U.toast('Route deleted'); S.rtSel = null; refresh(); } catch (err) { $('#rt-out').innerHTML = U.note('err', esc(err.message)); }
+      return;
+    }
     const rm = t.closest('[data-rm]'); if (rm) {
       if (!(await U.confirm({ title: 'Remove this person?', body: 'Their key, if one was issued, is revoked at once.', confirmLabel: 'Remove' }))) return;
       try { await call('/v1/team/' + rm.dataset.rm, { method: 'DELETE' }, $('#tm-out')); U.toast('Person removed'); loadTeam(); loadKeys().then(() => V.keys.paint()); } catch (err) { $('#tm-out').innerHTML = U.note('err', esc(err.message)); }
