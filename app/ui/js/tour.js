@@ -263,7 +263,7 @@ window.ARAN = window.ARAN || {};
 
     /* ---------------------------------------------------------------- 9 */
     { name: 'Immune system', title: 'An immune system for data flows', tag: 'It learns what normal traffic looks like, then flags anything outside it, with no list of known attacks.',
-      view: () => `<section class="scene" id="im" data-api="GET /api/tour/immune-radar (poll 2 s) · POST /api/immune/learn · POST /api/drills/{kind}"></section><div id="im-alerts"></div><a class="btn secondary" href="#immune"><span>Open the full immune console</span><span class="arr">→</span></a>`,
+      view: () => `<section class="scene" id="im" data-api="GET /api/tour/immune-radar (poll 4 s) · POST /api/immune/learn · POST /api/drills/{kind}"></section><div id="im-alerts"></div><a class="btn secondary" href="#immune"><span>Open the full immune console</span><span class="arr">→</span></a>`,
       hood: () => (typeof hoodTxt[10] === 'function' ? hoodTxt[10]() : hoodTxt[10]),
       mount(root) { return A.mountImmune(root, 'im', 'im-alerts'); } },
 

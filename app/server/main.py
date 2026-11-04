@@ -319,6 +319,18 @@ def immune():
                     open_windows=len(e.immune.cur), closed_windows=len(e.immune.closed))
 
 
+@app.get("/api/live")
+def live(parts: str = "stats,events,immune"):
+    """Everything the console's background poll needs in one request (stats, events, immune,
+    merkle, customers), so an open tab sends one call every few seconds instead of five."""
+    makers = {"stats": stats, "events": lambda: events(40), "immune": immune, "merkle": merkle, "customers": customers}
+    want = [p.strip() for p in parts.split(",") if p.strip()]
+    bad = [p for p in want if p not in makers]
+    if bad:
+        raise HTTPException(400, f"unknown part(s): {', '.join(bad)}; use {', '.join(makers)}")
+    return {p: makers[p]() for p in dict.fromkeys(want)}
+
+
 @app.post("/api/immune/learn")
 def learn(body: LearnIn):
     e = eng()

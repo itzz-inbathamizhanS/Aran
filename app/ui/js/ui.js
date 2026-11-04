@@ -13,6 +13,17 @@ window.ARAN = window.ARAN || {};
   U.$$ = (s, r) => [...(r || document).querySelectorAll(s)];
   U.reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   U.sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  /* polling etiquette for the hosted links: a page is "active" while its tab is visible and
+     someone touched it in the last 10 minutes. Polls skip when it is not, so a tab left open
+     all day stops sending requests; the first touch after that refreshes at once (U.onWake). */
+  U.IDLE_MS = 10 * 60 * 1000;
+  let lastTouch = Date.now();
+  const wakeFns = [];
+  U.idle = () => Date.now() - lastTouch > U.IDLE_MS;
+  U.active = () => !document.hidden && !U.idle();
+  U.onWake = (fn) => { wakeFns.push(fn); return () => { const i = wakeFns.indexOf(fn); if (i >= 0) wakeFns.splice(i, 1); }; };
+  const touched = () => { const was = U.idle(); lastTouch = Date.now(); if (was) wakeFns.forEach((f) => { try { f(); } catch (e) {} }); };
+  ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach((ev) => addEventListener(ev, touched, { passive: true, capture: true }));
   /* set innerHTML only when it changed, so a live list that polls does not replace buttons under the mouse */
   U.patch = (el, html) => { if (el && el.__h !== html) { el.__h = html; el.innerHTML = html; } };
   /* generated names are sometimes ALL CAPS (as they appear in real bank records); show them in title case in lists */

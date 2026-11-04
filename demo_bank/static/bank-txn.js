@@ -292,8 +292,8 @@
     await loadAccounts(); booted = true;
     route(true);
     window.addEventListener('hashchange', () => route(false));
-    setInterval(() => { if (!document.hidden && booted && view !== 'send' && view !== 'kyc') refresh(); }, 4000);
-    setInterval(() => { if (!document.hidden && !cust) loadAccounts().then(refresh).catch(() => {}); }, 3000);
+    setInterval(() => { if ((window.ARAN.ui && window.ARAN.ui.active ? window.ARAN.ui.active() : !document.hidden) && booted && view !== 'send' && view !== 'kyc') refresh(); }, 8000);
+    setInterval(() => { if ((window.ARAN.ui && window.ARAN.ui.active ? window.ARAN.ui.active() : !document.hidden) && !cust) loadAccounts().catch(() => {}); }, 15000);
     api('/api/fraud/queue').then((q) => { const n = $('#bk-fraud-n'); n.textContent = q.count; n.classList.toggle('hidden', !q.count); }).catch(() => {});
   }
   boot().catch((err) => { $('#bank-msg').textContent = 'Could not reach this bank: ' + err.message; });

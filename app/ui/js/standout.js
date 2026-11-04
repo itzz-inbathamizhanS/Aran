@@ -54,7 +54,7 @@ window.ARAN = window.ARAN || {};
         rec.onend = () => { rec = null; mic.setAttribute('aria-pressed', 'false'); mic.firstElementChild.textContent = '🎤 Speak'; if (note.textContent === 'Listening…') note.textContent = ''; };
         rec.start();
       };
-      load(); const poll = setInterval(async () => { try { const c = await A.api('/arena/challenge'); if (!ch || c.id !== ch.id) { ch = c; showCh(); } } catch (e) {} }, 5000);
+      load(); const poll = setInterval(async () => { if (!U.active()) return; try { const c = await A.api('/arena/challenge'); if (!ch || c.id !== ch.id) { ch = c; showCh(); } } catch (e) {} }, 5000);
       return () => { clearInterval(poll); rec && rec.abort(); };
     },
   };
@@ -63,7 +63,7 @@ window.ARAN = window.ARAN || {};
   P['arena-live'] = {
     eyebrow: 'BEAT THE FIREWALL · LIVE BOARD', title: 'Scan the code and try to sneak a number past Aran.', lede: 'Every try from a phone runs through the real firewall. Caught means the log platform stored a token; slipped means the number got through.',
     view: () => `<div class="grid g-side arena-live"><section class="card plus stack" data-api="GET /api/arena/join · GET /api/qr"><div id="al-qr" class="qr">${U.skeleton(260)}</div><div id="al-url" class="mono small"></div><div id="al-hint"></div><div class="row"><a class="btn secondary sm" href="#arena">Try on this screen</a><button class="btn ghost sm" id="al-new">New number</button><button class="btn ghost sm" id="al-reset">Reset board</button></div></section>
-      <section class="stack" data-api="GET /api/arena/board (poll 1.5 s)"><div class="grid g4" id="al-stats"></div><div class="card plus"><div class="between"><h2 class="h3">Latest tries</h2><span class="small muted" id="al-ch"></span></div><div id="al-feed" class="arena-feed"></div></div></section></div>`,
+      <section class="stack" data-api="GET /api/arena/board (poll 3 s)"><div class="grid g4" id="al-stats"></div><div class="card plus"><div class="between"><h2 class="h3">Latest tries</h2><span class="small muted" id="al-ch"></span></div><div id="al-feed" class="arena-feed"></div></div></section></div>`,
     mount(root) {
       let seen = new Set(), first = true, alive = true;
       (async () => { try { const j = await A.api('/arena/join');
@@ -78,10 +78,10 @@ window.ARAN = window.ARAN || {};
         $('#al-feed', root).innerHTML = b.attempts.length ? b.attempts.map((a) => { const [i, h] = VERDICT[a.verdict], fresh = !seen.has(a.id) && !first; return `<div class="arena-row ${a.verdict} ${fresh ? 'fresh' : ''}"><span class="v">${i}</span><div><div class="between"><b>${esc(a.nick)}</b><span class="small muted">${a.via === 'voice' ? '🎤 ' : ''}${h} · ${U.ago(a.at)}</span></div><div class="mono small trunc">${esc(a.before)}</div><div class="mono small trunc t-token">→ ${esc(a.after)}</div></div></div>`; }).join('') : '<p class="muted">No tries yet. Scan the code with a phone.</p>';
         b.attempts.forEach((a) => { if (!seen.has(a.id)) { if (!first) a.verdict === 'caught' ? A.sound.chime() : A.sound.error(); seen.add(a.id); } }); first = false;
       };
-      const tick = async () => { try { const b = await A.api('/arena/board'); alive && draw(b); } catch (e) {} };
+      const tick = async () => { if (!U.active()) return; try { const b = await A.api('/arena/board'); alive && draw(b); } catch (e) {} };
       $('#al-new', root).onclick = async () => { await A.api('/arena/challenge', {}); tick(); };
       $('#al-reset', root).onclick = async () => { if (await U.confirm({ title: 'Reset the board?', body: 'All tries and scores are cleared and a new number is issued.', confirmLabel: 'Reset' })) { await A.api('/arena/reset', {}); seen = new Set(); first = true; tick(); } };
-      tick(); const t = setInterval(tick, 1500); return () => { alive = false; clearInterval(t); };
+      tick(); const t = setInterval(tick, 3000); return () => { alive = false; clearInterval(t); };
     },
   };
 

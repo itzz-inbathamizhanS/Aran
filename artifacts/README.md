@@ -81,6 +81,8 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Fix the weak spots | Aran - Weak Spot Fixes (what was fixed, test results, what is still open; Markdown and PDF) | https://github.com/itzz-inbathamizhanS/Aran/blob/main/artifacts/Weak%20spot%20fixes/Aran%20-%20Weak%20Spot%20Fixes.md |
 | Fix the weak spots | Aran Learn 31 - Name Registries, Field Evidence and Security Headers (Markdown and PDF) | https://github.com/itzz-inbathamizhanS/Aran/blob/main/docs/learning/31-name-registries-and-security-headers.md |
 | Fix the weak spots | Aran Roadmap, refreshed with a status table for all 14 items | https://github.com/itzz-inbathamizhanS/Aran/blob/main/docs/research/aran-roadmap.md |
+| Fewer requests | Aran - Too Many Requests Fix | https://github.com/itzz-inbathamizhanS/Aran/blob/aran-ui-banks-cloud/artifacts/Fewer%20requests/Aran%20-%20Too%20Many%20Requests%20Fix.md |
+| Fewer requests | Aran Learn 31 - Polling and Rate Limits | https://github.com/itzz-inbathamizhanS/Aran/blob/aran-ui-banks-cloud/artifacts/Fewer%20requests/Aran%20Learn%2031%20-%20Polling%20and%20Rate%20Limits.md |
 
 Note: the Markdown copy replaces the embedded architecture diagram with a text placeholder; the PDF keeps it.
 
