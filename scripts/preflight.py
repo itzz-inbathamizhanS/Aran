@@ -4,15 +4,12 @@ scripts/preflight.py: Automated 10-point health and integrity verification.
 Prints a PASS/FAIL table and exits non-zero on any failure.
 """
 
-import hashlib
-import json
 import os
 import re
 import shutil
 import socket
 import sqlite3
 import stat
-import subprocess
 import sys
 import time
 import requests
@@ -105,7 +102,7 @@ def check_3_persistence_and_key(env: dict) -> tuple[bool, str]:
     if not os.path.exists(aran_db) or not os.path.exists(keys_db):
         return False, f"Persistent database files missing in {REPO_ROOT}/data/"
 
-    return True, f".env.local mode 600 verified; KEK 256-bit set; SQLite stores active"
+    return True, ".env.local mode 600 verified; KEK 256-bit set; SQLite stores active"
 
 
 def check_4_local_fonts_only() -> tuple[bool, str]:

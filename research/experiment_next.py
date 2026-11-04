@@ -32,8 +32,6 @@ import numpy as np
 import experiment_ai as X
 import experiment_registry as XR
 import synth
-from ai.detector import Detector
-from aran_core import luhn_check_digit, verhoeff_check_digit
 from firewall.aran_firewall import AranFirewall
 from firewall.ledger import LeakageLedger, bits_left, positions, smaller_masks
 from firewall.normalise import Normaliser, b64_encode, canonical_view, collapse_separators

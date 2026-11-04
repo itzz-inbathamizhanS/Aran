@@ -84,7 +84,6 @@ html[lang="ta"] body { font-family: var(--font-tamil), var(--font-body); }
 .present-bar .dotsm { display: flex; gap: 4px; }
 .present-bar .dotsm i { width: 6px; height: 6px; border-radius: 50%; background: var(--glass-line-color); }
 .present-bar .dotsm i.on { background: var(--text-color); }
-.replay-banner { position: fixed; top: 72px; left: 50%; transform: translateX(-50%); z-index: 91; padding: 6px 14px; border-radius: var(--radius-pill); background: var(--warning-color); color: var(--background-color); font: 600 .75rem/1.4 var(--font-body); }
 @media (max-width: 760px) { .present-bar .ttl, .present-bar .dotsm { display: none; } .phone-frame { border-width: 6px; border-radius: 32px; } }
 html[lang="hi"] body { font-family: "Noto Sans Devanagari", var(--font-body); }
 [hidden] { display: none !important; }

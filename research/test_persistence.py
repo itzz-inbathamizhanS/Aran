@@ -19,12 +19,10 @@ import sqlite3
 import stat
 import tempfile
 import threading
-import time
 import pytest
 
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from firewall.store import AranStore, SCHEMA_VERSION, BACKUP_POLICY_STATEMENT
-from firewall.shredder import PurposeVault, verify_inclusion, verify_receipt
+from firewall.store import AranStore
+from firewall.shredder import verify_inclusion
 import engine as E
 
 MASTER_KEY = "0123456789abcdef" * 4

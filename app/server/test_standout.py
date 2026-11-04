@@ -110,3 +110,31 @@ def test_health_and_stats_carry_the_same_boot_id(eng, monkeypatch):
     monkeypatch.setattr(main, "eng", lambda: eng)
     h, s = main.health(), main.stats()
     assert h["boot"] == s["boot"] == main.BOOT_ID and len(main.BOOT_ID) == 12
+
+
+def test_known_customer_names_are_caught_in_any_case(eng):
+    # a name the bank holds is caught even in capitals, where the NER model scores it low
+    name = next(c["name"] for c in eng.customers.values() if len(c["name"].split()) == 2)
+    for shown in (name, name.upper()):
+        ev = eng.process(f"ticket closed by agent, {shown} confirmed the refund", "core-banking", "log-platform")
+        assert shown not in ev["after"], ev["after"]
+
+
+def test_name_and_address_fields_are_protected_whole(eng):
+    text = ('{"applicant": "Kiran Joshi", "address": "110, Kamarajar Salai, Civil Lines, Mumbai 630727", '
+            '"amount": 506000}')
+    ev = eng.process(text, "loan-origination", "loan-vendor")
+    assert "Kiran Joshi" not in ev["after"] and "Civil Lines" not in ev["after"] and "630727" not in ev["after"]
+    assert all(f["protected"] for f in ev["findings"])
+    kv = 'POST /kyc/v2/verify status=200 customer=Kiran Joshi doc=aadhaar addr="256, Park Avenue, Bhopal 218092"'
+    ev = eng.process(kv, "kyc-service", "log-platform")
+    assert "Kiran Joshi" not in ev["after"] and "Park Avenue" not in ev["after"]
+    assert "customer=" in ev["after"] and "doc=aadhaar" in ev["after"]
+
+
+def test_versus_has_no_raw_name_or_address_over_many_runs(eng):
+    # used to fail about 3 runs in 10 when a name or address fragment scored under the threshold
+    S._eng = lambda: eng  # an earlier test imports main, which points standout at the app's engine
+    for _ in range(25):
+        d = S.versus_run(S.VersusIn(n=6))
+        assert d["with_"]["raw_left"] == 0, [(i["before"], [f for f in i["exposed"]]) for i in d["items"]]

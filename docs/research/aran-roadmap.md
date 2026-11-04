@@ -1,12 +1,29 @@
 # Aran: what to research and build next
 
-This is a prioritised list of what Aran still needs, based on a read of the current code (`research/`), the two research documents, and recent outside work. **Update (16 Oct):** items 2 and 5 are built and measured ([Normaliser, registries and typo repair](normaliser-and-registries.md)); items 1 and 4 are built as the live console in `app/` and `firewall/shredder.py`; items 3, 6, 9 and the M4 ledger are built and measured, with a first step on 7 and 12 ([Ledger, AI gateway and red team](ledger-gateway-redteam.md)). Items 8, 10, 11 and 13 are not started. Per the team rule, each item names the learning docs to read before anyone starts on it.
+This is a prioritised list of what Aran still needs, based on a read of the current code (`research/`), the two research documents, and recent outside work. **Status on 4 November 2026:** items 1 to 6, 9 and 14 are done and running on the hosted site; items 7 and 12 have a first step done (the NER cascade gate, and 274 to 654 lines per second); items 8, 10, 11 and 13 are not started. On top of the list, Aran now runs as a SaaS (Aran Cloud, with workspaces, API keys and a live dashboard) in front of two demo banks, and the bank's own customer names are a registry too, so a name the bank holds is caught in any letter case. Per the team rule, each item names the learning docs to read before anyone starts on it.
+
+| # | Item | Status on 4 Nov |
+| --- | --- | --- |
+| 1 | Live gateway and dashboard | **Done**: console, Aran Cloud dashboard, two demo banks |
+| 2 | Own-customer and OTP registries | **Done**; names added on 4 Nov |
+| 3 | Mobile and OTP model fixes | **Done** (E9, E13b) |
+| 4 | Crypto-shredding with erasure receipts | **Done** |
+| 5 | Normaliser and typo repair | **Done** |
+| 6 | AI gateway for LLM prompts | **Done** (E14); the real-provider path is not yet tested |
+| 7 | Transformer NER (GLiNER) in a cascade | **Partly**: the cheap gate is done (E16), the transformer is not |
+| 8 | Tamil and other Indic NER | **Not started** (the site is translated, detection is not) |
+| 9 | Red-team evaluation | **Done** (E15): 22 of 26 tricks fully caught |
+| 10 | KYC document images (OCR) | **Not started** in the detector; the console has a card-scan demo |
+| 11 | Immune layer on Drain templates | **Not started** |
+| 12 | Speed port (Rust or NumPy) | **Partly**: 654 lines per second against a 10,000 target |
+| 13 | Paper and legal review | **Not started** |
+| 14 | Post-quantum upgrade | **Done** (E17 to E19) |
 
 ## Where Aran stands today
 
 Built and tested: checksum-complement tokens (M1), per-sink tokens and leak attribution on token dumps (M3), the calibrated detector with NER and the OTP/UPI classifier (M2, partly), the immune flow monitor, and a firewall that runs as a Python script over log files.
 
-Designed in the [research document](aran-research.md) but not yet in code:
+Promised in the [research document](aran-research.md), and where each piece is now:
 
 | Promised in the research doc | Status in `research/` |
 | --- | --- |

@@ -144,6 +144,7 @@ class Engine:
                         self.customers[ref] = dict(ref=ref, name=prof["name"], upi=prof["upi"], created=prof["created"], **ids)
                         for t, v in ids.items():
                             self.registry.add(t, v)
+                        self._add_name(prof["name"])
                     except Exception:
                         masked = json.loads(prof["masked_json"])
                         self.customers[ref] = dict(ref=ref, name=prof["name"], upi=prof["upi"], created=prof["created"], **masked)
@@ -166,6 +167,17 @@ class Engine:
             logging.warning("Log data missing in %s; skipping immune auto-learning", LOGS_DIR)
 
     # ------------------------------------------------------------ customers
+    @staticmethod
+    def _name_ok(name):
+        """A real two-or-more-word name, not a placeholder such as a customer ref."""
+        return bool(name) and len(name.split()) >= 2 and not re.search(r"\d", name)
+
+    def _add_name(self, name):
+        # the bank already holds its customers' names: a keyed hash of each lets the detector
+        # catch them in any letter case even when the NER model misses them
+        if self._name_ok(name):
+            self.registry.add("PER", name)
+
     def add_customer(self, name=None):
         r = self.rand
         with self.lock:
@@ -178,6 +190,7 @@ class Engine:
             for t, v in ids.items():
                 self.registry.add(t, v)
             name = name or synth.gen_name(r, "test")
+            self._add_name(name)
             upi = name.split()[0].lower() + str(r.randint(10, 99)) + "@" + r.choice(synth.SPLITS["upi"]["test"])
             # KYC records are kept for 5 years after the relationship ends (PMLA rules)
             self.vault.enroll(ref, dict(ids, UPI=upi), retain={"KYC": time.time() + 5 * 365 * 86400})
@@ -396,6 +409,8 @@ class Engine:
                     for t in ("AADHAAR", "CARD", "MOBILE", "PAN"):
                         if t in self.customers[ref]:
                             self.registry.remove(t, self.customers[ref][t])
+                    if self._name_ok(self.customers[ref].get("name")):
+                        self.registry.remove("PER", self.customers[ref]["name"])
                 if self.store is not None:
                     self.store.delete_customer_profile(ref)
                     self.store.checkpoint_and_truncate()
@@ -637,8 +652,7 @@ class Immune:
 # ---------------------------------------------------------------- replay of real logs
 class Replay:
     """Streams real production log lines (Loghub, 16 systems) through the firewall as the
-    bank's normal traffic. About one line in ten carries a bank event for an enrolled
-    customer, as in experiment E9."""
+    bank's normal traffic, exactly as logged: no made-up customer events are mixed in."""
 
     def __init__(self, eng):
         self.eng = eng
@@ -673,12 +687,6 @@ class Replay:
         r = self.eng.rand
         sysname = r.choice([s for s in systems if s in self.logs] or sorted(self.logs))
         ln = r.choice(self.logs[sysname])
-        if r.random() < 0.1:
-            text = synth.make_line(r, *r.choice(synth.TEMPLATES["test"]), "test")[0]
-            if r.random() < 0.7 and self.eng.customers:
-                c = self.eng.customers[r.choice(sorted(self.eng.customers))]
-                text += f" aadhaar={c['AADHAAR']} mobile={c['MOBILE']}"
-            ln = ln + " | " + text
         return ln
 
     def _run(self):
@@ -687,8 +695,11 @@ class Replay:
             for src, sink, systems in REPLAY_PAIRS:
                 k = np.random.poisson(self.rate)
                 for _ in range(k):
-                    self.eng.process(self._line(systems), src, sink, record=True)
-                    self.sent += 1
+                    try:
+                        self.eng.process(self._line(systems), src, sink, record=True)
+                        self.sent += 1
+                    except Exception as err:  # one bad line must not stop the replay for good
+                        print(f"replay: skipped a line ({err.__class__.__name__}: {err})", flush=True)
             nxt += 1.0
             time.sleep(max(0.0, nxt - time.time()))
 

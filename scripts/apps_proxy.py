@@ -28,7 +28,7 @@ font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}@media (prefers-color-
 main{max-width:460px;padding:24px;text-align:center}.s{width:28px;height:28px;margin:0 auto 20px;border:3px solid currentColor;
 border-right-color:transparent;border-radius:50%;animation:r 1s linear infinite}@keyframes r{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.s{animation:none}}h1{font-size:22px;font-weight:600;margin:0 0 8px}p{opacity:.75;margin:0}</style></head>
-<body><main><div class="s" role="status" aria-label="Loading"></div><h1>Waking {app}</h1><p>Free hosting puts the demo to sleep after
+<body><main><div class="s" role="status" aria-label="Loading"></div><h1>Waking {app}</h1><p>Free hosting puts the apps to sleep after
 15 minutes without visitors. Starting takes 30 to 90 seconds; this page reloads by itself.</p></main></body></html>""")
 
 

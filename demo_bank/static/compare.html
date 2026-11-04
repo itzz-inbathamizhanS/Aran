@@ -30,7 +30,7 @@
   <p class="small muted" id="tiles-note" style="margin-top:8px"></p>
 
   <section class="card kit-gap-s">
-    <div class="between"><h2 class="h3">Sign the same customer up at both banks</h2><button class="btn ghost sm" id="sample"><span>Fill a valid sample</span></button></div>
+    <div class="between"><h2 class="h3">Sign the same customer up at both banks</h2><button class="btn ghost sm" id="sample"><span>Fill a test identity</span></button></div>
     <form class="kit-cols-4 kit-gap-s" id="both">
       <label class="field">Name<input id="s-name" required placeholder="e.g. Sunita Rao"></label>
       <label class="field">Mobile<input id="s-mobile" class="mono" required placeholder="e.g. 98765 43210"></label>
@@ -38,7 +38,7 @@
       <label class="field">Card<input id="s-card" class="mono" required placeholder="16 digits"></label>
       <button class="btn" type="submit" id="send"><span>Send to both</span><span class="arr">→</span></button>
     </form>
-    <div id="both-out"><p class="small muted" style="margin-top:12px">Sample data only. Press <b>Fill a valid sample</b>, then <b>Send to both</b> to see what each bank stores.</p></div>
+    <div id="both-out"><p class="small muted" style="margin-top:12px">Use test values only, never a real Aadhaar or card. Press <b>Fill a test identity</b>, then <b>Send to both</b> to open the same customer at each bank and see what each one stores.</p></div>
   </section>
 
 
@@ -54,9 +54,9 @@
       <label class="field">Remarks<input id="c-remarks" autocomplete="off" maxlength="200"></label>
       <div class="kit-row"><label class="bk-check"><input type="checkbox" id="c-chat" checked><span>Also post the remarks to the support chat</span></label>
       <button class="btn" type="submit" id="c-go"><span>Pay from both banks</span><span class="arr">→</span></button>
-      <button class="btn ghost" type="button" id="c-new"><span>New sample payee</span></button></div>
+      <button class="btn ghost" type="button" id="c-new"><span>Fill a test payee</span></button></div>
     </form>
-    <div id="pay2-out" role="status" aria-live="polite"><p class="small muted" style="margin-top:12px">Sample data only. The first customer of each bank pays the same payee the same amount. Bank A&rsquo;s copies hold the real numbers; Bank B&rsquo;s hold tokens.</p></div>
+    <div id="pay2-out" role="status" aria-live="polite"><p class="small muted" style="margin-top:12px">The customer you signed up above pays the same payee the same amount at each bank. Bank A&rsquo;s copies hold the real numbers; Bank B&rsquo;s hold tokens.</p></div>
   </section>
 
   <div class="kit-split kit-gap-s">

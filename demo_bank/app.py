@@ -1,6 +1,7 @@
-"""demo_bank/app.py: Mock Bank Instance for Aran Demonstrations.
+"""demo_bank/app.py: one bank, run twice so the two can be compared.
 
-Runs in one of two modes depending on BANK_MODE env var:
+Customers, accounts and payments only exist once someone opens an account and uses it; the bank
+creates nothing on its own. Runs in one of two modes depending on BANK_MODE env var:
 - BANK_MODE=legacy: Legacy banking app (unprotected PII, raw storage, unredacted logs/chat).
 - BANK_MODE=aran: Modern Aran-protected banking app (vault tokens, redacted logs, AI gateway, crypto-shredding).
 """
@@ -13,11 +14,11 @@ import sqlite3
 import sys
 import time
 from typing import Optional
-from fastapi import FastAPI, HTTPException, Header, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import requests
 
 # Add aran_sdk to path for standard-library Python SDK
@@ -26,7 +27,7 @@ SDK_DIR = os.path.join(HERE_DIR, "..", "aran_sdk")
 if SDK_DIR not in sys.path:
     sys.path.insert(0, SDK_DIR)
 
-from aran import Aran, AranError, AranAuthError, AranScopeError, AranRateLimit
+from aran import Aran
 
 if HERE_DIR not in sys.path:
     sys.path.insert(0, HERE_DIR)
@@ -58,7 +59,7 @@ def _auto_workspace():
         with open(key_file) as f:
             return f.read().strip() or None
     import urllib.request
-    body = json.dumps({"name": "Bank B (demo)", "email": "security@bank-b.example"}).encode()
+    body = json.dumps({"name": "Bank B", "email": "security@bank-b.example"}).encode()
     for _ in range(30):
         try:
             req = urllib.request.Request(f"{ARAN_URL}/v1/workspaces", data=body, method="POST",
@@ -80,7 +81,7 @@ def _auto_workspace():
 if BANK_MODE == "aran" and not ARAN_API_KEY and os.environ.get("ARAN_AUTO_WORKSPACE") in ("1", "true", "True"):
     ARAN_API_KEY = _auto_workspace()
 
-# In-memory token mapping for demo authorized officer view (Spec 3a)
+# In-memory token mapping for the authorised officer view (Spec 3a)
 TOKEN_MAP = {}
 
 # Scoped SDK clients for Bank B (Item 4)
@@ -133,17 +134,47 @@ def get_sdk_clients():
     return _sdk_clients.get("app"), _sdk_clients.get("compliance"), _sdk_clients.get("admin")
 
 app = FastAPI(
-    title=f"Demo Bank ({'Aran Protected' if BANK_MODE == 'aran' else 'Legacy'})",
-    description="Side-by-side judge demonstration mock bank",
+    title=f"{'Bank B (protected by Aran)' if BANK_MODE == 'aran' else 'Bank A (legacy)'}",
+    description="The same bank with and without Aran, side by side",
 )
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,  # the demo bank uses no cookies
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Security headers, the same policy as the console. Pages load scripts only from this server
+# and fonts from Google Fonts. The compare page calls both banks, so connect-src also lists the
+# other bank, Aran Cloud and the console (hosted, or on localhost ports when run locally), and it
+# shows both banks side by side in frames, so the same origins may frame and be framed; add more
+# origins with ARAN_CONNECT_SRC (space separated) if the apps run elsewhere.
+CONNECT_SRC = " ".join(["'self'", "https://aran-console.vercel.app", "https://aran-cloud.vercel.app",
+                        "https://aran-bank-a.vercel.app", "https://aran-bank-b.vercel.app",
+                        "http://localhost:*", "http://127.0.0.1:*", os.environ.get("ARAN_CONNECT_SRC", "")]).strip()
+CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+       "font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; "
+       f"connect-src {CONNECT_SRC}; frame-src {CONNECT_SRC}; frame-ancestors {CONNECT_SRC}; base-uri 'self'; form-action 'self'; object-src 'none'")
+SECURITY_HEADERS = {
+    "Content-Security-Policy": CSP,
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+    "Cross-Origin-Opener-Policy": "same-origin",
+}
+
+
+@app.middleware("http")
+async def basic_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    for k, v in SECURITY_HEADERS.items():
+        if k == "Content-Security-Policy" and request.url.path in ("/docs", "/redoc"):
+            continue  # FastAPI's API docs load their scripts from a CDN
+        response.headers.setdefault(k, v)
+    return response
 
 
 # ---------------------------------------------------------------- database
@@ -197,12 +228,20 @@ txn_bank.ensure_accounts()  # customers from before accounts existed get one
 
 
 # ---------------------------------------------------------------- Aran HTTP client
-def aran_headers(admin: bool = False) -> dict:
+def _is_cloud(url: str) -> bool:
+    """True when the URL is Aran Cloud (the SaaS API), False when it is the Aran core itself."""
+    return "8100" in url or "/v1" in url
+
+
+def aran_headers(admin: bool = False, to_cloud: Optional[bool] = None) -> dict:
+    """Headers for a call to Aran. The core's internal secret goes only to the core, never to Aran Cloud
+    (the cloud adds its own), and the workspace API key goes only to the cloud."""
+    to_cloud = _is_cloud(ARAN_URL) if to_cloud is None else to_cloud
     h = {"Content-Type": "application/json"}
     internal_secret = os.environ.get("ARAN_INTERNAL_SECRET")
-    if internal_secret:
+    if internal_secret and not to_cloud:
         h["X-Aran-Internal"] = internal_secret
-    if ARAN_API_KEY:
+    if ARAN_API_KEY and to_cloud:
         h["X-API-Key"] = ARAN_API_KEY
     if admin and ARAN_ADMIN_TOKEN:
         h["X-Admin-Token"] = ARAN_ADMIN_TOKEN
@@ -212,7 +251,7 @@ def aran_headers(admin: bool = False) -> dict:
 def call_aran(method: str, endpoint: str, json_data: dict = None, admin: bool = False, timeout: float = 10.0):
     # Compatibility switch: map core endpoints to Aran Cloud (/v1) when pointing to port 8100
     actual_endpoint = endpoint
-    if "8100" in ARAN_URL or "/v1" in ARAN_URL:
+    if _is_cloud(ARAN_URL):
         cloud_map = {
             "/api/process": "/v1/protect",
             "/api/tour/gateway": "/v1/gateway",
@@ -239,7 +278,9 @@ def call_aran(method: str, endpoint: str, json_data: dict = None, admin: bool = 
                 err_msg = err.response.json().get("detail", err.response.text)
             except Exception:
                 err_msg = err.response.text
-        raise HTTPException(status_code=502, detail=f"Aran call {actual_endpoint} failed: {err_msg}")
+        status = getattr(getattr(err, "response", None), "status_code", None)
+        code = status if status in (400, 404, 409, 422, 423) else 502  # Aran's answer to a bad request keeps its status
+        raise HTTPException(status_code=code, detail=f"Aran call {actual_endpoint} failed: {err_msg}")
 
 
 # ---------------------------------------------------------------- models
@@ -249,6 +290,8 @@ class CustomerIn(BaseModel):
     aadhaar: str
     card: str
     customer_ref: Optional[str] = None
+    # what the customer pays in when the account is opened (paise); Rs 1,00,000 when left out
+    opening_deposit_paise: Optional[int] = Field(default=None, ge=0, le=1_000_000_000)
 
 
 class ChatIn(BaseModel):
@@ -260,19 +303,11 @@ class TraceIn(BaseModel):
     dump: Optional[str] = None
 
 
-# Sample Indian names for sign-up generator
-SAMPLE_NAMES = [
-    "Aarav Sharma",
-    "Priya Patel",
-    "Vikram Malhotra",
-    "Ananya Deshmukh",
-    "Rajesh Iyer",
-    "Meera Nair",
-    "Amitabh Verma",
-    "Sunita Rao",
-    "Kavita Reddy",
-    "Rohan Gupta",
-]
+# First and last names for a test identity on the sign-up form
+TEST_FIRST = ["Aarav", "Priya", "Vikram", "Ananya", "Rajesh", "Meera", "Amitabh", "Sunita", "Kavita", "Rohan", "Lakshmi", "Farhan",
+              "Divya", "Karthik", "Pooja", "Imran", "Arjun", "Naveen", "Revathi", "Selvi"]
+TEST_LAST = ["Sharma", "Patel", "Malhotra", "Deshmukh", "Iyer", "Nair", "Verma", "Rao", "Reddy", "Gupta", "Menon", "Qureshi",
+             "Murugan", "Pillai", "Khan", "Singh", "Das", "Bose"]
 
 
 # ---------------------------------------------------------------- routes
@@ -289,34 +324,17 @@ def get_config():
 
 @app.get("/api/sample-customer")
 def get_sample_customer():
-    """Fetches checksum-valid sample credentials from Aran tour endpoint and adds a typical Indian name."""
-    sample = None
-    try:
-        sample = call_aran("GET", "/api/tour/generate")
-        if not isinstance(sample, dict) or "mobile" not in sample:
-            sample = None
-    except Exception:
-        pass
-
-    if not sample:
-        try:
-            r = requests.get("http://127.0.0.1:8000/api/tour/generate", headers=aran_headers(), timeout=3)
-            r.raise_for_status()
-            res_json = r.json()
-            if isinstance(res_json, dict) and "mobile" in res_json:
-                sample = res_json
-        except Exception:
-            pass
-
-    if not sample or not isinstance(sample, dict) or "mobile" not in sample:
-        sample = {
-            "aadhaar": "895760490870",
-            "card": "4532015112830366",
-            "mobile": "9876543210",
-        }
-    sample["name"] = secrets.choice(SAMPLE_NAMES)
-    sample["note"] = "Use sample data only. Never submit real financial credentials."
-    return sample
+    """A test identity for the sign-up form: checksum-valid numbers (Verhoeff Aadhaar, Luhn card, Indian
+    mobile) made fresh on every call, so they belong to no one. Nobody should type a real Aadhaar here."""
+    aad = str(2 + secrets.randbelow(8)) + "".join(str(secrets.randbelow(10)) for _ in range(10))
+    aad += str(bank_txn.verhoeff_digit(aad))
+    # a real Visa (4) or Mastercard (51 to 55) prefix: "58..." passes Luhn but is no card network's
+    # range, so Aran rightly left it alone and Bank B stored it raw about one sign-up in four
+    iin = secrets.choice(["4", "51", "52", "53", "54", "55"])
+    card = bank_txn.luhn_complete(iin + "".join(str(secrets.randbelow(10)) for _ in range(15 - len(iin))))
+    mobile = str(6 + secrets.randbelow(4)) + "".join(str(secrets.randbelow(10)) for _ in range(9))
+    return {"name": f"{secrets.choice(TEST_FIRST)} {secrets.choice(TEST_LAST)}", "aadhaar": aad, "card": card, "mobile": mobile,
+            "note": "A test identity: the numbers pass their checksums but belong to no one."}
 
 
 @app.get("/api/customers")
@@ -395,7 +413,7 @@ def register_customer(body: CustomerIn):
                 """,
                 (cust_ref, stored_name, stored_mobile, stored_aadhaar, stored_card, now_str),
             )
-            account = txn_bank.open_account(conn, cust_ref)   # every customer gets a savings account
+            account = txn_bank.open_account(conn, cust_ref, body.opening_deposit_paise)   # every customer gets a savings account
     except sqlite3.IntegrityError:
         conn.close()
         raise HTTPException(status_code=409, detail=f"Customer ref {cust_ref} already exists")
@@ -542,7 +560,7 @@ def officer_view(customer_ref: str, role: str = Query("teller")):
     result = {
         "customer_ref": customer_ref,
         "role": role,
-        "disclaimer": "Demo role switch, not real authentication.",
+        "disclaimer": "A role switch for trying each view, not real sign-in.",
         "fields": {},
     }
 
@@ -767,7 +785,7 @@ def aran_summary():
     The browser never sees the bank's API key; the bank asks Aran Cloud and passes the metrics on."""
     if BANK_MODE != "aran" or not ARAN_API_KEY:
         return {"available": False, "reason": "only Bank B (Aran mode with an API key) has a workspace"}
-    if not ("8100" in ARAN_URL or "/v1" in ARAN_URL):
+    if not _is_cloud(ARAN_URL):
         return {"available": False, "reason": "Bank B is wired straight to the core, not to Aran Cloud"}
     try:
         r = requests.get(f"{ARAN_URL}/v1/dashboard", headers=aran_headers(), timeout=5)
@@ -779,13 +797,8 @@ def aran_summary():
     return {"available": True, "tenant": {"id": t.get("id"), "name": t.get("name")}, "metrics": d.get("metrics", {})}
 
 
-def _register_dict(d: dict):
-    """Used by the seeder: the same sign-up as a customer would do."""
-    return register_customer(CustomerIn(**d))
-
-
-bank_txn.install(app, txn_bank, register=_register_dict)   # /api/accounts, /api/transactions, /api/fraud, /api/sinks ...
-bank_txn.start_background(app, txn_bank, _register_dict)    # seed customers, optional traffic, outbox retry
+bank_txn.install(app, txn_bank)            # /api/accounts, /api/transactions, /api/fraud, /api/sinks ...
+bank_txn.start_background(app, txn_bank)   # Bank B: retry copies Aran Cloud could not take yet
 
 
 # Serve static files and templates
@@ -794,7 +807,7 @@ def serve_index():
     index_path = os.path.join(STATIC_DIR, "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
-    return HTMLResponse(f"<h1>Demo Bank ({BANK_MODE.upper()})</h1><p>Static UI not yet loaded.</p>")
+    return HTMLResponse(f"<h1>Bank {'B' if BANK_MODE == 'aran' else 'A'}</h1><p>Static UI not yet loaded.</p>")
 
 
 @app.get("/compare")

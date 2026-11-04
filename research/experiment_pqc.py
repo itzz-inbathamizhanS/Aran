@@ -34,7 +34,7 @@ from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from aran_core import FF1, cc_token_aadhaar, luhn_check_digit, verhoeff_check_digit
-from firewall.shredder import PURPOSES, PurposeVault, verify_receipt
+from firewall.shredder import PurposeVault, verify_receipt
 from pqc import cbom
 from pqc.hybrid import ClassicalKEM, HybridKEM, _combine, blob_header, mosca, unb64, unwrap_keys, wrap_keys
 

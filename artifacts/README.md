@@ -55,6 +55,12 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Explainer video | Aran Learn 21 - How the Explainer Video Is Made (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/21-making-the-explainer-video.md |
 | Cybersecurity concepts | Aran Learn 22 - Cybersecurity Concepts in Aran (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/22-cybersecurity-concepts-in-aran.md |
 | Branch audits | Aran - BanksAndCloud Branch Audit (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Branch%20audits/Aran%20-%20BanksAndCloud%20Branch%20Audit.md |
+| Code audit | Audit report: issue register, totals, production readiness | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Code%20audit/AUDIT_REPORT.md |
+| Code audit | Bug fixes: reproduced, fixed and re-tested | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Code%20audit/BUG_FIXES.md |
+| Code audit | Security audit (OWASP Top 10) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Code%20audit/SECURITY_AUDIT.md |
+| Code audit | Test report: every suite, build and browser check | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Code%20audit/TEST_REPORT.md |
+| Code audit | Architecture overview | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Code%20audit/ARCHITECTURE.md |
+| Code audit | Aran Learn 29 - Code Audits and Testing (Markdown) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/29-code-audits-and-testing.md |
 | Aran UI integration | Aran Learn 23 - One UI for the Console, Aran Cloud and the Demo Banks (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/aran-ui-banks-cloud/docs/learning/23-one-ui-for-cloud-and-banks.md |
 | Aran UI integration | Screenshots: Aran Cloud landing, Quick connect, dashboard (overview, keys, audit), Bank A, Bank B, side by side, phone and light | https://github.com/itzz-inbathamizhans/aran/tree/aran-ui-banks-cloud/artifacts/Aran%20UI%20integration |
 | Aran UI integration | Shared design kit for the other Aran apps (kit.js, kit.css) | https://github.com/itzz-inbathamizhans/aran/tree/aran-ui-banks-cloud/app/ui/kit |
@@ -69,6 +75,12 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Learning | Aran Learn 27 - Bank Transactions for Beginners (Markdown and PDF) | https://github.com/itzz-inbathamizhanS/Aran/blob/main/docs/learning/27-bank-transactions-basics.md |
 | Learning | Aran Learn 28 - Dashboards and Metrics (Markdown and PDF) | https://github.com/itzz-inbathamizhanS/Aran/blob/main/docs/learning/28-dashboards-and-metrics.md |
 | Site improvements | Screenshots: customer list and Bank A on a phone, workspace summary in light mode, erase buttons, results | https://github.com/itzz-inbathamizhans/aran/tree/aran-ui-banks-cloud/artifacts/Site%20improvements |
+| Make every Aran site feature work for real | Aran - Every Feature Works for Real (Markdown and PDF, with screenshots) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Real%20data%2C%20no%20demo/Aran%20-%20Every%20Feature%20Works%20for%20Real.md |
+| Make every Aran site feature work for real | Aran Learn 29 - Real Data Paths, Not Demo Data (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/29-real-data-paths-not-demo-data.md |
+| Live check and weak spots | Aran - Live Link Check and Weak Spots (every hosted link tested on 4 Nov 2026, and the weak or unfinished parts in priority order; Markdown and PDF) | https://github.com/itzz-inbathamizhanS/Aran/blob/main/artifacts/Live%20check%20and%20weak%20spots/Aran%20-%20Live%20Link%20Check%20and%20Weak%20Spots.md |
+| Fix the weak spots | Aran - Weak Spot Fixes (what was fixed, test results, what is still open; Markdown and PDF) | https://github.com/itzz-inbathamizhanS/Aran/blob/main/artifacts/Weak%20spot%20fixes/Aran%20-%20Weak%20Spot%20Fixes.md |
+| Fix the weak spots | Aran Learn 31 - Name Registries, Field Evidence and Security Headers (Markdown and PDF) | https://github.com/itzz-inbathamizhanS/Aran/blob/main/docs/learning/31-name-registries-and-security-headers.md |
+| Fix the weak spots | Aran Roadmap, refreshed with a status table for all 14 items | https://github.com/itzz-inbathamizhanS/Aran/blob/main/docs/research/aran-roadmap.md |
 
 Note: the Markdown copy replaces the embedded architecture diagram with a text placeholder; the PDF keeps it.
 

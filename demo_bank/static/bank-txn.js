@@ -1,4 +1,5 @@
-/* Bank pages: Home, Send money, Transactions, Fraud desk, Back office, and "Run the day".
+/* Bank pages: Home (with branch deposits), Send money, Transactions, Fraud desk, Back office.
+   Nothing here makes payments up: every row comes from someone using the bank.
    Loaded by index.html after the shared Aran UI kit. No inline handlers (the site CSP is script-src 'self'). */
 (function (A) {
   'use strict';
@@ -67,14 +68,20 @@
   /* ---------------------------------------------------------------- 1 Home */
   async function home() {
     const a = mine();
-    if (!a) { U.patch($('#home-acct'), '<p class="muted small">This bank is still creating its demo customers. This page fills in on its own.</p>'); return; }
+    if (!a) {
+      U.patch($('#home-acct'), '<span class="label">No account yet</span><h3 class="h3" style="margin:8px 0">Open the first account</h3><p class="muted small">This bank only has the customers people open. Sign one up with a test identity and an opening deposit; it appears here at once.</p><a class="btn" href="#kyc"><span>Open an account</span><span class="arr">→</span></a>');
+      U.patch($('#home-recent'), empty('No payments yet. Open an account, then press <b>Send money</b>.'));
+      try { const st = await api('/api/txn-stats'); U.patch($('#home-stats'), `<div><b>${U.fmt(st.transactions)}</b><span>payments in this bank</span></div><div><b>${U.fmt(st.held)}</b><span>held for fraud</span></div><div><b>${st.ledger.balanced ? '0 ✓' : '≠ 0'}</b><span>ledger debits minus credits</span></div>`); } catch (e) { /* shown on the next refresh */ }
+      return;
+    }
     const [one, recent, st] = await Promise.all([api('/api/accounts?customer_ref=' + encodeURIComponent(cust)), api('/api/transactions?limit=6&customer_ref=' + encodeURIComponent(cust)), api('/api/txn-stats')]);
     const ac = one[0];
     U.patch($('#home-acct'), `<span class="label">Savings account${aran ? '' : ' · ' + esc(ac.name || '')}</span><div class="bk-money" aria-label="Balance">${inr(ac.balance_paise)}</div>
-      <dl class="bk-kv"><dt>Account</dt><dd class="mono">${esc(groupAcct(ac.number))}</dd><dt>IFSC</dt><dd class="mono">${esc(ac.ifsc)}</dd><dt>Customer</dt><dd class="mono">${esc(ac.customer_ref)}</dd></dl>`);
+      <dl class="bk-kv"><dt>Account</dt><dd class="mono">${esc(groupAcct(ac.number))}</dd><dt>IFSC</dt><dd class="mono">${esc(ac.ifsc)}</dd><dt>Customer</dt><dd class="mono">${esc(ac.customer_ref)}</dd></dl>
+      ${String(ac.number).startsWith('ERASED') ? '<p class="small muted">This customer’s data was erased, so the account is closed.</p>' : `<form class="kit-inline kit-gap-s" id="dep-form"><label class="field">Pay in at the branch (₹)<input id="dep-amt" class="mono" inputmode="decimal" autocomplete="off" placeholder="e.g. 5000"></label><button class="btn secondary sm" type="submit"><span>Deposit</span></button></form>`}`);
     $('#home-hint').textContent = aran ? 'Every copy of a payment (log line, fraud-desk row, analytics row, SMS) goes through Aran Cloud before it is stored. The money moves first.' : 'Every copy of a payment (log line, fraud-desk row, analytics row, SMS) is written with the real numbers.';
     U.patch($('#home-stats'), `<div><b>${U.fmt(st.transactions)}</b><span>payments in this bank</span></div><div><b>${U.fmt(st.held)}</b><span>held for fraud</span></div><div><b>${st.ledger.balanced ? '0 ✓' : '≠ 0'}</b><span>ledger debits minus credits</span></div>`);
-    U.patch($('#home-recent'), recent.items.length ? txTable(recent.items) : empty('No payments yet. Press <b>Send money</b>, or <b>Run the day</b> above.'));
+    U.patch($('#home-recent'), recent.items.length ? txTable(recent.items) : empty('No payments yet. Press <b>Send money</b> to make the first one.'));
   }
 
   /* ---------------------------------------------------------------- 2 Send money */
@@ -97,7 +104,8 @@
     $('#payee-block').innerHTML = PAYEE[sendRail === 'UPI' ? 'UPI' : sendRail === 'CARD' ? 'CARD' : 'ACC'];
     if (old.p && $('#p-payee')) $('#p-payee').value = old.p;
     if (old.i && $('#p-ifsc')) $('#p-ifsc').value = old.i;
-    $('#rail-hint').textContent = lim(sendRail) + '.';
+    const own = (accts.find((x) => x.customer_ref !== cust) || accts[0] || {}).ifsc;
+    $('#rail-hint').textContent = lim(sendRail) + '.' + (/IMPS|NEFT|RTGS/.test(sendRail) && own ? ` To pay another customer of this bank, use their account number and IFSC ${own}; the money lands in their account.` : '');
   }
   let sendReady = false;
   async function sendInit() {
@@ -170,7 +178,7 @@
     }
     const d = await api('/api/transactions?' + txQuery());
     txTotal = d.total;
-    U.patch($('#tx-table'), d.items.length ? txTable(d.items) : empty('No payments match. Change the filters, or press <b>Run the day</b>.'));
+    U.patch($('#tx-table'), d.items.length ? txTable(d.items) : empty('No payments match. Change the filters, or make a payment in <b>Send money</b>.'));
     $('#tx-count').textContent = `Showing ${d.items.length} of ${U.fmt(d.total)} payments`;
     $('#tx-more').hidden = d.items.length >= d.total;
     $('#tx-fresh').textContent = 'updated ' + new Date().toLocaleTimeString();
@@ -212,7 +220,7 @@
       <div class="kit-row">${(r.risk_reasons || []).map((x) => `<span class="pill real">${esc(x)}</span>`).join('')}</div>
       <dl class="bk-kv kit-gap-s"><dt>Payer</dt><dd>${fv(r.desk_payer)}</dd><dt>Payee</dt><dd>${fv(r.desk_payee)} <span class="pill ${r.payee_seen > 1 ? 'leak' : ''}">seen ${r.payee_seen}×</span></dd><dt>Customer</dt><dd class="mono">${esc(r.customer_ref)}</dd></dl>
       <div class="bk-actions"><button class="btn" type="button" data-fraud="approve" data-id="${esc(r.txn_id)}"><span>Approve</span></button><button class="btn danger" type="button" data-fraud="decline" data-id="${esc(r.txn_id)}"><span>Decline</span></button></div></article>`).join('')
-      : `<div class="card kit-empty"><h3 class="h3">Nothing is held</h3><p class="muted">Payments with a fraud score below ${q.threshold} go straight through. Press <b>Run the day</b> to create some traffic.</p></div>`);
+      : `<div class="card kit-empty"><h3 class="h3">Nothing is held</h3><p class="muted">Payments with a fraud score below ${q.threshold} go straight through. A payment is held when it looks risky: a large amount, a new payee, a burst of payments or a night-time transfer.</p></div>`);
     U.patch($('#fraud-done'), q.decided.length ? `<table class="tbl dense"><thead><tr><th>Transaction</th><th>Payee on the desk</th><th class="num">Amount</th><th>Outcome</th></tr></thead><tbody>${q.decided.map((r) => `<tr><td class="mono">${esc(r.txn_id)}</td><td>${fv(r.desk_payee)}</td><td class="num mono">${inr(r.amount_paise)}</td><td>${stPill(r.status)}</td></tr>`).join('')}</tbody></table>` : empty('No decisions yet.'));
   }
   $('#fraud-list').addEventListener('click', (e) => {
@@ -263,14 +271,18 @@
     U.patch($('#bo-sinks'), `<table class="tbl dense"><thead><tr><th>Where</th><th>Stored as</th><th>What is in it</th></tr></thead><tbody>${d.items.map((c) => `<tr><td>${esc(c.label)}<div class="small muted mono">${esc(c.at)}</div></td><td>${statePill(c.state)}</td><td>${copyFields(c.fields)}</td></tr>`).join('')}</tbody></table>`);
   }
 
-  /* ---------------------------------------------------------------- Run the day */
-  $('#run-day').addEventListener('click', (e) => K.busy(e.currentTarget, async () => {
-    const out = $('#run-day-out'); out.textContent = 'Running 20 payments…';
-    try { const r = await api('/api/simulate', { body: { n: 20 } });
-      out.textContent = `Ran the day: ${r.created} payments in ${r.seconds} s · ${r.success} succeeded · ${r.held} held for fraud · ${r.failed} failed.`;
-      await loadAccounts(); refresh();
-    } catch (er) { out.textContent = 'Could not run the day: ' + er.message; }
-  }));
+  /* ---------------------------------------------------------------- branch deposit (Home) */
+  document.addEventListener('submit', (e) => {
+    if (!e.target.matches || !e.target.matches('#dep-form')) return;
+    e.preventDefault();
+    const btn = $('button', e.target), paise = toPaise($('#dep-amt').value);
+    if (paise === null || paise <= 0) { toast('Type the amount in rupees, for example 5000.'); return; }
+    K.busy(btn, async () => {
+      try { const a = await api('/api/accounts/' + encodeURIComponent(cust) + '/deposit', { body: { amount_paise: paise } }); toast(`${inr(paise)} paid in · balance ${inr(a.balance_paise)}`); await loadAccounts(); refresh(); }
+      catch (er) { toast('Could not deposit: ' + er.message); }
+    });
+  });
+  A.bank = { reload: (ref) => { if (ref) { cust = ref; store.set('bank-cust-' + (aran ? 'b' : 'a'), ref); } return loadAccounts().then(refresh).catch(() => {}); } };
   $('#bk-cust').addEventListener('change', (e) => { cust = e.target.value; store.set('bank-cust-' + (aran ? 'b' : 'a'), cust); refresh(); });
 
   /* ---------------------------------------------------------------- start */
@@ -284,5 +296,5 @@
     setInterval(() => { if (!document.hidden && !cust) loadAccounts().then(refresh).catch(() => {}); }, 3000);
     api('/api/fraud/queue').then((q) => { const n = $('#bk-fraud-n'); n.textContent = q.count; n.classList.toggle('hidden', !q.count); }).catch(() => {});
   }
-  boot().catch((err) => { $('#run-day-out').textContent = 'Could not reach this bank: ' + err.message; });
+  boot().catch((err) => { $('#bank-msg').textContent = 'Could not reach this bank: ' + err.message; });
 })(window.ARAN);

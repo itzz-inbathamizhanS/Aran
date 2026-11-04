@@ -14,7 +14,7 @@ SDK_DIR = os.path.dirname(os.path.abspath(__file__))
 if SDK_DIR not in sys.path:
     sys.path.insert(0, SDK_DIR)
 
-from aran import Aran, AranAuthError, AranScopeError, AranRateLimit, AranError
+from aran import Aran, AranAuthError, AranScopeError, AranError
 
 
 CLOUD_URL = os.environ.get("ARAN_CLOUD_URL", "http://127.0.0.1:8100")

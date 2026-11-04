@@ -26,7 +26,6 @@ staff tools and any model provider and speaks the OpenAI-compatible chat format:
 OTPs are never stored: an OTP becomes <OTP_n> with no value behind it.
 """
 import hashlib
-import hmac
 import json
 import re
 import secrets

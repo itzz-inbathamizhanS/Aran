@@ -30,7 +30,7 @@ source "$ENV_LOCAL"
 export ARAN_MASTER_KEY
 export ARAN_INTERNAL_SECRET
 export ARAN_STORE="$REPO_ROOT/data/aran.db"
-export ARAN_DEMO_MODE=1
+export ARAN_LOCAL_SIGNUPS=1
 export ARAN_SIGNUP_LIMIT="${ARAN_SIGNUP_LIMIT:-5}"
 
 echo "=========================================================="
@@ -59,7 +59,7 @@ if lsof -Pi :8100 -sTCP:LISTEN -t >/dev/null ; then
     echo "✔ Aran Cloud already running on port 8100"
 else
     echo "▶ Starting Aran Cloud SaaS on port 8100..."
-    (cd "$REPO_ROOT/aran_cloud" && PORT=8100 ARAN_DEMO_MODE=1 ARAN_SIGNUP_LIMIT="$ARAN_SIGNUP_LIMIT" ARAN_INTERNAL_SECRET="$ARAN_INTERNAL_SECRET" "$VENV_PYTHON" -m uvicorn main:app --port 8100 --no-proxy-headers > /tmp/aran_cloud.log 2>&1 &)
+    (cd "$REPO_ROOT/aran_cloud" && PORT=8100 ARAN_LOCAL_SIGNUPS=1 ARAN_SIGNUP_LIMIT="$ARAN_SIGNUP_LIMIT" ARAN_INTERNAL_SECRET="$ARAN_INTERNAL_SECRET" "$VENV_PYTHON" -m uvicorn main:app --port 8100 --no-proxy-headers > /tmp/aran_cloud.log 2>&1 &)
 fi
 
 # Wait for core health
@@ -93,9 +93,11 @@ fi
 DEMO_DASHBOARD_KEY=$(echo "$WS_JSON" | grep -o '"dashboard_key":"[^"]*"' | cut -d':' -f2 | tr -d '"')
 
 if [ -z "$DEMO_ADMIN_KEY" ]; then
-    echo "Notice: Workspace already created or key exists in cloud.db"
-    DEMO_ADMIN_KEY="aran_live_c245f4a39a4ad27b2cfe1d0fd4a57f20"
-    DEMO_DASHBOARD_KEY="$DEMO_ADMIN_KEY"
+    # No key was returned (signup limit reached or the cloud refused). Keys are shown once and stored
+    # only as hashes, so reuse one from the environment (ARAN_API_KEY) instead of a key written into this script.
+    echo "Notice: no new workspace key was returned. Set ARAN_API_KEY to an existing admin key to connect Bank B."
+    DEMO_ADMIN_KEY="${ARAN_API_KEY:-}"
+    DEMO_DASHBOARD_KEY="${ARAN_DASHBOARD_KEY:-$DEMO_ADMIN_KEY}"
 else
     echo "✔ Created workspace with Admin Key: $DEMO_ADMIN_KEY"
     echo "✔ Created Dashboard Key: $DEMO_DASHBOARD_KEY"

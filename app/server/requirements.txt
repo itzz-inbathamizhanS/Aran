@@ -15,4 +15,4 @@ requests==2.34.2
 anthropic==2.3.0
 # optional, for the card photo scan (also needs the Tesseract program, see Learn 10)
 pytesseract==0.3.13
-pillow==12.3.0
+pillow==13.0.0
