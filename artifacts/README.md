@@ -78,6 +78,9 @@ Each thread that made an artifact gets its own folder, named after the thread's 
 | Make every Aran site feature work for real | Aran - Every Feature Works for Real (Markdown and PDF, with screenshots) | https://github.com/itzz-inbathamizhans/aran/blob/main/artifacts/Real%20data%2C%20no%20demo/Aran%20-%20Every%20Feature%20Works%20for%20Real.md |
 | Make every Aran site feature work for real | Aran Learn 29 - Real Data Paths, Not Demo Data (Markdown and PDF) | https://github.com/itzz-inbathamizhans/aran/blob/main/docs/learning/29-real-data-paths-not-demo-data.md |
 | Live check and weak spots | Aran - Live Link Check and Weak Spots (every hosted link tested on 4 Nov 2026, and the weak or unfinished parts in priority order; Markdown and PDF) | https://github.com/itzz-inbathamizhanS/Aran/blob/main/artifacts/Live%20check%20and%20weak%20spots/Aran%20-%20Live%20Link%20Check%20and%20Weak%20Spots.md |
+| Fix the weak spots | Aran - Weak Spot Fixes (what was fixed, test results, what is still open; Markdown and PDF) | https://github.com/itzz-inbathamizhanS/Aran/blob/main/artifacts/Weak%20spot%20fixes/Aran%20-%20Weak%20Spot%20Fixes.md |
+| Fix the weak spots | Aran Learn 31 - Name Registries, Field Evidence and Security Headers (Markdown and PDF) | https://github.com/itzz-inbathamizhanS/Aran/blob/main/docs/learning/31-name-registries-and-security-headers.md |
+| Fix the weak spots | Aran Roadmap, refreshed with a status table for all 14 items | https://github.com/itzz-inbathamizhanS/Aran/blob/main/docs/research/aran-roadmap.md |
 
 Note: the Markdown copy replaces the embedded architecture diagram with a text placeholder; the PDF keeps it.
 
