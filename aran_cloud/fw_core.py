@@ -216,7 +216,8 @@ def clean_units(units: List[Tuple[str, str]], protect_fn: Callable[[str], dict],
     """Cleans every unit with protect_fn(text) -> {"after", "findings", "protected", "unprotected", "ignored",
     "by_type", "latency_ms"}. Units are joined into as few calls as fit; if a joined answer does not split back
     cleanly each piece gets its own call. mapper lets the caller run the calls in parallel.
-    postprocess(original, cleaned, findings) -> text is the hook a policy plugs into (not used yet)."""
+    postprocess(original, cleaned, findings) -> text is the hook a policy plugs into. It runs once per piece
+    (a value is one piece unless it is very long); finding offsets are relative to that piece's original text."""
     out = CleanOut(len(units))
     pieces: List[Tuple[int, str, str]] = []            # (unit index, label, value piece)
     pieces_of: Dict[int, List[int]] = {}
@@ -255,7 +256,14 @@ def clean_units(units: List[Tuple[str, str]], protect_fn: Callable[[str], dict],
         after = r.get("after", "")
         p = pre(pi)
         val = after[len(p):] if p and after.startswith(p) else after
-        return [(pi, val, r.get("findings", []), len(p))], r
+        fnd = []
+        for f in r.get("findings", []):
+            g = dict(f)
+            if g.get("start") is not None:          # offsets are relative to the value, without the label prefix
+                g["start"] = max(0, g["start"] - len(p))
+                g["end"] = max(g["start"], (g.get("end") or g["start"]) - len(p))
+            fnd.append(g)
+        return [(pi, val, fnd, len(p))], r
 
     def run(group: List[int]):
         if len(group) == 1:
@@ -296,6 +304,8 @@ def clean_units(units: List[Tuple[str, str]], protect_fn: Callable[[str], dict],
                 out.by_type[k] = out.by_type.get(k, 0) + n
             out.findings.extend(r.get("findings", []))
             for pi, val, fnd, _ in res:
+                if postprocess:
+                    val = postprocess(pieces[pi][2], val, fnd)
                 piece_val[pi] = val
                 piece_fnd[pi] = fnd
 
@@ -303,10 +313,92 @@ def clean_units(units: List[Tuple[str, str]], protect_fn: Callable[[str], dict],
         out.values[i] = "".join(piece_val.get(pi, pieces[pi][2]) for pi in idxs)
         for pi in idxs:
             out.unit_findings[i].extend(piece_fnd.get(pi, []))
-        if postprocess:
-            out.values[i] = postprocess(units[i][1], out.values[i], out.unit_findings[i])
     out.latency_ms = round(out.latency_ms, 2)
     return out
+
+
+# ---------------------------------------------------------------- policies (pure rule matching and applying)
+# the finding types the core reports; "*" matches any type
+KNOWN_TYPES = ("AADHAAR", "CARD", "MOBILE", "PAN", "UPI")
+ACTIONS = ("tokenise", "mask", "block", "allow", "alert")
+DEFAULT_ACTION = "tokenise"
+MAX_RULES = 50
+
+
+def normalize_rules(rules: Any) -> List[Dict[str, str]]:
+    """Checks a rule list ([{"type", "action"}], first match wins) and returns it cleaned. Raises ValueError."""
+    if not isinstance(rules, list):
+        raise ValueError("rules must be a list")
+    if len(rules) > MAX_RULES:
+        raise ValueError(f"at most {MAX_RULES} rules")
+    out = []
+    for i, r in enumerate(rules):
+        if not isinstance(r, dict):
+            raise ValueError(f"rule {i + 1} must be an object with 'type' and 'action'")
+        t = str(r.get("type", "")).strip().upper()
+        a = str(r.get("action", "")).strip().lower()
+        if t != "*" and t not in KNOWN_TYPES:
+            raise ValueError(f"rule {i + 1}: type must be one of {list(KNOWN_TYPES)} or '*'")
+        if a not in ACTIONS:
+            raise ValueError(f"rule {i + 1}: action must be one of {list(ACTIONS)}")
+        out.append({"type": t, "action": a})
+    return out
+
+
+def action_for(rules: Optional[List[Dict[str, str]]], ftype: str) -> str:
+    """The action of the first rule that matches this finding type (tokenise when none does)."""
+    for r in rules or []:
+        if r["type"] == "*" or r["type"] == ftype:
+            return r["action"]
+    return DEFAULT_ACTION
+
+
+def mask_span(s: str) -> str:
+    """Keep the last 4 letters or digits and hide the rest (separators stay): 6510 0737 -> XXXX 0737."""
+    keep = 4
+    n = sum(1 for c in s if c.isalnum())
+    seen = 0
+    out = []
+    for c in s:
+        if c.isalnum():
+            seen += 1
+            out.append(c if seen > n - keep else "X")
+        else:
+            out.append(c)
+    return "".join(out)
+
+
+def apply_policy(original: str, findings: list, rules: Optional[List[Dict[str, str]]]) -> Tuple[str, List[dict]]:
+    """Rebuilds `original` with each protected finding handled by its rule. findings carry start, end, type, token
+    (offsets are relative to `original`). Returns (text, decisions); a decision is {type, action, start, end}.
+    tokenise and alert put the core's token in; mask keeps the last 4; allow leaves the original; block puts the
+    token in too (the caller refuses the request, so the text is never forwarded). Findings the core did not protect
+    are left alone. Nothing here stores or logs a value."""
+    spans = []
+    for f in findings or []:
+        a, b = f.get("start"), f.get("end")
+        if not f.get("protected") or a is None or b is None or not (0 <= a < b <= len(original)):
+            continue
+        spans.append((a, b, f))
+    spans.sort(key=lambda x: x[0])
+    out, pos, decisions = [], 0, []
+    for a, b, f in spans:
+        if a < pos:                                   # overlapping span: skip
+            continue
+        action = action_for(rules, f.get("type", ""))
+        token = f.get("token")
+        if action == "allow":
+            rep = original[a:b]
+        elif action == "mask" or not token:
+            rep = mask_span(original[a:b])
+        else:
+            rep = token
+        out.append(original[pos:a])
+        out.append(rep)
+        pos = b
+        decisions.append({"type": f.get("type", ""), "action": action, "start": a, "end": b})
+    out.append(original[pos:])
+    return "".join(out), decisions
 
 
 # ---------------------------------------------------------------- the plain masker (core unreachable)

@@ -1,4 +1,5 @@
-"""aran_cloud/faas.py: firewall as a service, phase 1 (routes: a reverse proxy that cleans what passes through).
+"""aran_cloud/faas.py: firewall as a service, phases 1 and 2 (routes: a reverse proxy that cleans what passes through;
+policies: what to do with each kind of identifier, with monitor mode and a hash-chained config audit).
 
 A route is a named upstream. A caller sends its request to  <cloud>/fw/<route>/<path>  with its Aran key;
 Aran cleans the path, query and body, forwards the cleaned request to the upstream and returns the answer.
@@ -8,10 +9,11 @@ This module never imports main. main.py builds a Ctx with the helpers it needs a
 build_router(ctx) and init_schema(conn). Pure helpers (body walking, masking, SSRF checks) are in fw_core.py.
 
 Later phases plug in here:
-- clean_body() is the one place a request is cleaned; a policy will be applied through its `policy` argument.
+- clean_body() is the one place a request is cleaned; a policy (a rule list) is applied through its `policy` argument.
 - emit_event() is the one place an alert is raised; webhooks will be delivered from it.
 """
 
+import hashlib
 import json
 import os
 import re
@@ -118,6 +120,79 @@ def init_schema(conn: sqlite3.Connection):
         );
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_route_outbox_due ON route_outbox(state, next_at);")
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(route_events);").fetchall()}
+    if "would_block" not in cols:
+        try:
+            conn.execute("ALTER TABLE route_events ADD COLUMN would_block INTEGER NOT NULL DEFAULT 0;")
+        except sqlite3.OperationalError:
+            pass
+    # a policy version is one row; the active row of a name is the one in force
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS policies (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            version INTEGER NOT NULL,
+            rules_json TEXT NOT NULL,
+            created_at REAL NOT NULL,
+            active INTEGER NOT NULL DEFAULT 1,
+            UNIQUE (tenant_id, name, version)
+        );
+    """)
+    # every change of policies and routes, hash-chained per tenant like detokenise_audit
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS config_audit (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tenant_id TEXT NOT NULL,
+            at REAL NOT NULL,
+            actor TEXT,
+            action TEXT NOT NULL,
+            target_type TEXT NOT NULL,
+            target_id TEXT NOT NULL,
+            detail_json TEXT NOT NULL,
+            prev_hash TEXT NOT NULL,
+            entry_hash TEXT NOT NULL
+        );
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_config_audit_tenant ON config_audit(tenant_id, id);")
+
+
+# ---------------------------------------------------------------- config audit (hash chain)
+_audit_lock = threading.Lock()
+ZERO_HASH = "0" * 64
+
+
+def _audit_hash(prev: str, tenant_id: str, actor: str, action: str, ttype: str, tid: str, detail: str, at: float) -> str:
+    return hashlib.sha256(f"{prev}|{tenant_id}|{actor}|{action}|{ttype}|{tid}|{detail}|{at:.4f}".encode("utf-8")).hexdigest()
+
+
+def audit_config(conn: sqlite3.Connection, tenant: dict, action: str, target_type: str, target_id: str, detail: dict):
+    """Appends one entry to the tenant's config audit chain. Call it inside the same transaction as the change.
+    `detail` holds names, versions and counts, never request data."""
+    actor = f"{tenant.get('key_label') or 'key'} ({tenant.get('key_id') or '-'})"
+    d = json.dumps(detail, sort_keys=True, separators=(",", ":"))
+    with _audit_lock:
+        row = conn.execute("SELECT entry_hash FROM config_audit WHERE tenant_id=? ORDER BY id DESC LIMIT 1", (tenant["id"],)).fetchone()
+        prev = row[0] if row else ZERO_HASH
+        at = time.time()
+        conn.execute(
+            """INSERT INTO config_audit (tenant_id, at, actor, action, target_type, target_id, detail_json, prev_hash, entry_hash)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (tenant["id"], at, actor, action, target_type, target_id, d, prev,
+             _audit_hash(prev, tenant["id"], actor, action, target_type, target_id, d, at)))
+
+
+def verify_audit(conn: sqlite3.Connection, tenant_id: str) -> dict:
+    rows = conn.execute("SELECT * FROM config_audit WHERE tenant_id=? ORDER BY id", (tenant_id,)).fetchall()
+    prev = ZERO_HASH
+    for r in rows:
+        if r["prev_hash"] != prev:
+            return {"valid": False, "error": f"broken chain pointer at entry {r['id']}", "failed_at_id": r["id"], "total_rows": len(rows)}
+        want = _audit_hash(prev, r["tenant_id"], r["actor"] or "", r["action"], r["target_type"], r["target_id"], r["detail_json"], r["at"])
+        if want != r["entry_hash"]:
+            return {"valid": False, "error": f"entry {r['id']} was changed", "failed_at_id": r["id"], "total_rows": len(rows)}
+        prev = r["entry_hash"]
+    return {"valid": True, "total_rows": len(rows), "latest_hash": prev, "verified_at": time.strftime("%Y-%m-%d %H:%M:%S")}
 
 
 # ---------------------------------------------------------------- events (hook for alerts)
@@ -142,6 +217,9 @@ class CleanResult:
         self.findings: list = []
         self.latency_ms = 0.0
         self.supported = True       # False for a content type that cannot be cleaned
+        self.actions: Dict[str, int] = {}     # policy decisions: action -> findings handled that way
+        self.block_types: List[str] = []      # finding types whose rule is "block"
+        self.alert_types: List[str] = []      # finding types whose rule is "alert"
 
 
 class CleanFailed(Exception):
@@ -164,7 +242,8 @@ def clean_body(ctx: Ctx, tenant_id: str, route: dict, content_type: str, body: b
                parsed: Optional[tuple] = None) -> CleanResult:
     """Cleans the path, query and body of one request with the core. Raises fw_core.BodyError for a body that does
     not match its content type and CleanFailed when the core fails or is too slow. Writes nothing.
-    `policy` is the hook for phase 2 (it will turn findings into tokenise / mask / block / allow)."""
+    `policy` is a normalised rule list (or None for the default, tokenise everything): each finding becomes a token,
+    a mask, the original (allow), or flags the request to be blocked or alerted."""
     res = CleanResult()
     if parsed is None:
         parsed = (fw_core.parse_body(content_type, body), fw_core.parse_path(path), fw_core.parse_query(query))
@@ -187,7 +266,22 @@ def clean_body(ctx: Ctx, tenant_id: str, route: dict, content_type: str, body: b
 
     groups = max(1, sum(len(v) for _, v in units) // fw_core.MAX_JOIN_CHARS + 1)
     budget = (core_budget_ms() + 25.0 * (groups - 1)) / 1000.0
-    postprocess = None  # a policy will be applied here in phase 2
+    actions: Dict[str, int] = {}
+    block_types: set = set()
+    alert_types: set = set()
+
+    def postprocess(original: str, cleaned: str, findings: list) -> str:
+        text, decisions = fw_core.apply_policy(original, findings, policy)
+        for d in decisions:
+            actions[d["action"]] = actions.get(d["action"], 0) + 1
+            if d["action"] == "block":
+                block_types.add(d["type"])
+            elif d["action"] == "alert":
+                alert_types.add(d["type"])
+        return text
+
+    if policy is None:
+        postprocess = None
     fut = _pool.submit(fw_core.clean_units, units, protect_fn, _core_pool.map, fw_core.MAX_JOIN_CHARS, postprocess)
     try:
         out = fut.result(timeout=budget)
@@ -208,6 +302,11 @@ def clean_body(ctx: Ctx, tenant_id: str, route: dict, content_type: str, body: b
     res.path, res.query, res.body = rebuilt
     res.protected, res.unprotected, res.ignored = out.protected, out.unprotected, out.ignored
     res.by_type, res.findings, res.latency_ms = out.by_type, out.findings, out.latency_ms
+    if policy is not None:
+        res.actions = actions
+        res.block_types, res.alert_types = sorted(block_types), sorted(alert_types)
+        # "protected" is what the policy changed in the request: allowed findings stay as they were
+        res.protected = sum(n for a, n in actions.items() if a != "allow")
     return res
 
 
@@ -339,6 +438,22 @@ class RouteIn(BaseModel):
     purpose: str = "Service"
     fail_mode: str = "hold"
     mode: str = "monitor"
+    policy_id: Optional[str] = None
+
+
+class PolicyIn(BaseModel):
+    name: str
+    rules: list = []
+
+
+class PolicyTest(BaseModel):
+    text: str
+    policy_id: Optional[str] = None
+    rules: Optional[list] = None
+
+
+class RollbackIn(BaseModel):
+    to_version: Optional[int] = None
 
 
 class RoutePatch(BaseModel):
@@ -347,6 +462,7 @@ class RoutePatch(BaseModel):
     purpose: Optional[str] = None
     fail_mode: Optional[str] = None
     mode: Optional[str] = None
+    policy_id: Optional[str] = None      # "" detaches the policy
     disabled: Optional[bool] = None
 
 
@@ -373,11 +489,30 @@ def build_router(ctx: Ctx) -> APIRouter:
             raise HTTPException(404, "route not found")
         return row
 
+    def own_policy(conn, tenant_id: str, policy_id: str):
+        row = conn.execute("SELECT * FROM policies WHERE id=? AND tenant_id=?", (policy_id, tenant_id)).fetchone()
+        if not row:
+            raise HTTPException(404, "policy not found")
+        return row
+
+    def rules_of(conn, tenant_id: str, policy_id: Optional[str]) -> Optional[list]:
+        """The rules in force for a route: the active version of the policy it points at."""
+        if not policy_id:
+            return None
+        row = conn.execute("SELECT * FROM policies WHERE id=? AND tenant_id=?", (policy_id, tenant_id)).fetchone()
+        if not row:
+            return None
+        act = conn.execute("SELECT rules_json FROM policies WHERE tenant_id=? AND name=? AND active=1", (tenant_id, row["name"])).fetchone()
+        return json.loads((act or row)["rules_json"])
+
+    def host_of(url: str) -> str:
+        return urlsplit(url).netloc
+
     def view(row, stats: Optional[dict] = None) -> dict:
         d = {k: row[k] for k in ("id", "name", "upstream_url", "sink", "purpose", "fail_mode", "mode", "policy_id", "created_at")}
         d["disabled"] = bool(row["disabled"])
         d["path"] = f"/fw/{row['name']}/"
-        d["stats_24h"] = stats or {"calls": 0, "protected": 0, "would_protect": 0, "blocked": 0, "failed": 0, "held_pending": 0}
+        d["stats_24h"] = stats or {"calls": 0, "protected": 0, "would_protect": 0, "blocked": 0, "would_block": 0, "failed": 0, "held_pending": 0}
         return d
 
     def stats_for(conn, tenant_id: str) -> Dict[str, dict]:
@@ -385,12 +520,12 @@ def build_router(ctx: Ctx) -> APIRouter:
         out: Dict[str, dict] = {}
         for r in conn.execute(
             """SELECT route_id, COUNT(*) calls, SUM(protected_count) p, SUM(would_protect_count) w, SUM(blocked) b,
-                      SUM(CASE WHEN outcome IN ('failed_open','failed_closed') THEN 1 ELSE 0 END) f
+                      SUM(CASE WHEN outcome IN ('failed_open','failed_closed') THEN 1 ELSE 0 END) f, SUM(would_block) wb
                FROM route_events WHERE tenant_id=? AND at>=? GROUP BY route_id""", (tenant_id, since)):
             out[r["route_id"]] = {"calls": r["calls"], "protected": r["p"] or 0, "would_protect": r["w"] or 0,
-                                  "blocked": r["b"] or 0, "failed": r["f"] or 0, "held_pending": 0}
+                                  "blocked": r["b"] or 0, "would_block": r["wb"] or 0, "failed": r["f"] or 0, "held_pending": 0}
         for r in conn.execute("SELECT route_id, COUNT(*) n FROM route_outbox WHERE tenant_id=? AND state='pending' GROUP BY route_id", (tenant_id,)):
-            out.setdefault(r["route_id"], {"calls": 0, "protected": 0, "would_protect": 0, "blocked": 0, "failed": 0, "held_pending": 0})["held_pending"] = r["n"]
+            out.setdefault(r["route_id"], {"calls": 0, "protected": 0, "would_protect": 0, "blocked": 0, "would_block": 0, "failed": 0, "held_pending": 0})["held_pending"] = r["n"]
         return out
 
     def check_fields(purpose=None, fail_mode=None, mode=None, url=None, sink=None):
@@ -417,15 +552,20 @@ def build_router(ctx: Ctx) -> APIRouter:
         rid = "rt_" + secrets.token_hex(8)
         conn = ctx.get_db()
         try:
+            if body.policy_id:
+                own_policy(conn, tenant["id"], body.policy_id)      # 404 for a policy of another tenant
             with conn:
                 try:
                     conn.execute(
-                        """INSERT INTO routes (id, tenant_id, name, upstream_url, sink, purpose, fail_mode, mode, created_at, disabled)
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)""",
+                        """INSERT INTO routes (id, tenant_id, name, upstream_url, sink, purpose, fail_mode, mode, policy_id, created_at, disabled)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)""",
                         (rid, tenant["id"], body.name, body.upstream_url.strip(), body.sink or body.name, body.purpose,
-                         body.fail_mode, body.mode, time.time()))
+                         body.fail_mode, body.mode, body.policy_id or None, time.time()))
                 except sqlite3.IntegrityError:
                     raise HTTPException(409, f"a route named '{body.name}' already exists")
+                audit_config(conn, tenant, "route.create", "route", rid,
+                             {"name": body.name, "mode": body.mode, "fail_mode": body.fail_mode, "purpose": body.purpose,
+                              "upstream_host": host_of(body.upstream_url.strip()), "policy_id": body.policy_id or None})
             row = own_route(conn, tenant["id"], rid)
         finally:
             conn.close()
@@ -481,10 +621,26 @@ def build_router(ctx: Ctx) -> APIRouter:
             args.append(1 if body.disabled else 0)
         conn = ctx.get_db()
         try:
-            own_route(conn, tenant["id"], route_id)
+            before = own_route(conn, tenant["id"], route_id)
+            if "policy_id" in body.model_fields_set and body.policy_id is not None:
+                if body.policy_id:
+                    own_policy(conn, tenant["id"], body.policy_id)       # 404 for a policy of another tenant
+                sets.append("policy_id=?")
+                args.append(body.policy_id or None)
             if sets:
+                changes = {}
+                for col in ("sink", "purpose", "fail_mode", "mode", "policy_id"):
+                    v = getattr(body, col)
+                    if v is not None and (v or None) != before[col]:
+                        changes[col] = {"from": before[col], "to": v or None}
+                if body.upstream_url is not None and body.upstream_url.strip() != before["upstream_url"]:
+                    changes["upstream_host"] = {"from": host_of(before["upstream_url"]), "to": host_of(body.upstream_url.strip())}
+                if body.disabled is not None and bool(body.disabled) != bool(before["disabled"]):
+                    changes["disabled"] = {"from": bool(before["disabled"]), "to": bool(body.disabled)}
                 with conn:
                     conn.execute(f"UPDATE routes SET {', '.join(sets)} WHERE id=? AND tenant_id=?", [*args, route_id, tenant["id"]])
+                    if changes:
+                        audit_config(conn, tenant, "route.update", "route", route_id, {"name": before["name"], "changes": changes})
             return view(own_route(conn, tenant["id"], route_id))
         finally:
             conn.close()
@@ -493,11 +649,158 @@ def build_router(ctx: Ctx) -> APIRouter:
     def delete_route(route_id: str, tenant: dict = Depends(manage)):
         conn = ctx.get_db()
         try:
-            own_route(conn, tenant["id"], route_id)
+            old = own_route(conn, tenant["id"], route_id)
             with conn:
+                audit_config(conn, tenant, "route.delete", "route", route_id, {"name": old["name"]})
                 conn.execute("DELETE FROM routes WHERE id=? AND tenant_id=?", (route_id, tenant["id"]))
                 conn.execute("UPDATE route_outbox SET state='dead', last_error='route deleted' WHERE route_id=? AND state='pending'", (route_id,))
             return {"deleted": True, "id": route_id}
+        finally:
+            conn.close()
+
+    # ---- policies
+    policy_manage = ctx.require_scope("policy")
+
+    def policy_reader(tenant: dict = Depends(ctx.get_tenant)) -> dict:
+        if not ({"admin", "policy", "dashboard", "route"} & set(tenant.get("scopes", []))):
+            raise HTTPException(403, "this key lacks the 'policy' or 'dashboard' scope")
+        return tenant
+
+    def policy_view(row, routes: Optional[list] = None) -> dict:
+        d = {"id": row["id"], "name": row["name"], "version": row["version"], "rules": json.loads(row["rules_json"]),
+             "created_at": row["created_at"], "active": bool(row["active"])}
+        if routes is not None:
+            d["routes"] = routes
+        return d
+
+    def clean_rules(rules) -> list:
+        try:
+            return fw_core.normalize_rules(rules)
+        except ValueError as err:
+            raise HTTPException(422, str(err))
+
+    @router.post("/v1/policies", status_code=201)
+    def create_policy(body: PolicyIn, tenant: dict = Depends(policy_manage)):
+        if not ROUTE_NAME_RE.match(body.name):
+            raise HTTPException(422, "name must be 1 to 40 characters: lowercase letters, digits, dash, underscore")
+        rules = clean_rules(body.rules)
+        pid = "pol_" + secrets.token_hex(8)
+        conn = ctx.get_db()
+        try:
+            with conn:
+                top = conn.execute("SELECT MAX(version) FROM policies WHERE tenant_id=? AND name=?", (tenant["id"], body.name)).fetchone()[0] or 0
+                conn.execute("UPDATE policies SET active=0 WHERE tenant_id=? AND name=?", (tenant["id"], body.name))
+                conn.execute("INSERT INTO policies (id, tenant_id, name, version, rules_json, created_at, active) VALUES (?, ?, ?, ?, ?, ?, 1)",
+                             (pid, tenant["id"], body.name, top + 1, json.dumps(rules), time.time()))
+                audit_config(conn, tenant, "policy.create", "policy", pid, {"name": body.name, "version": top + 1, "rules": rules})
+            return policy_view(own_policy(conn, tenant["id"], pid))
+        finally:
+            conn.close()
+
+    @router.get("/v1/policies")
+    def list_policies(all_versions: bool = False, tenant: dict = Depends(policy_reader)):
+        conn = ctx.get_db()
+        try:
+            sql = "SELECT * FROM policies WHERE tenant_id=?" + ("" if all_versions else " AND active=1") + " ORDER BY name, version DESC"
+            rows = conn.execute(sql, (tenant["id"],)).fetchall()
+            counts = {r["name"]: r["n"] for r in conn.execute("SELECT name, COUNT(*) n FROM policies WHERE tenant_id=? GROUP BY name", (tenant["id"],))}
+            used: Dict[str, list] = {}
+            for r in conn.execute("""SELECT r.name AS route, p.name AS pname FROM routes r JOIN policies p ON p.id=r.policy_id
+                                     WHERE r.tenant_id=?""", (tenant["id"],)):
+                used.setdefault(r["pname"], []).append(r["route"])
+            out = []
+            for r in rows:
+                d = policy_view(r, used.get(r["name"], []))
+                d["versions"] = counts.get(r["name"], 1)
+                out.append(d)
+            return {"policies": out, "types": list(fw_core.KNOWN_TYPES), "actions": list(fw_core.ACTIONS)}
+        finally:
+            conn.close()
+
+    @router.post("/v1/policies/test")
+    def test_policy(body: PolicyTest, tenant: dict = Depends(policy_reader)):
+        """Shows what a policy would do to a text: per finding, its action, and the resulting text. Nothing is stored."""
+        if len(body.text) > 20000:
+            raise HTTPException(413, "text is limited to 20,000 characters")
+        conn = ctx.get_db()
+        try:
+            if body.rules is not None:
+                rules = clean_rules(body.rules)
+            elif body.policy_id:
+                rules = json.loads(own_policy(conn, tenant["id"], body.policy_id)["rules_json"])
+            else:
+                rules = []
+        finally:
+            conn.close()
+        out = ctx.protect_text(tenant["id"], body.text, None, "Service", "policy-test")
+        findings = out["res"].get("findings", [])
+        text, decisions = fw_core.apply_policy(body.text, findings, rules)
+        counts: Dict[str, int] = {}
+        for d in decisions:
+            counts[d["action"]] = counts.get(d["action"], 0) + 1
+        return {"output": text, "findings": decisions, "counts": counts,
+                "blocked": any(d["action"] == "block" for d in decisions),
+                "alert": any(d["action"] == "alert" for d in decisions)}
+
+    @router.get("/v1/policies/{policy_id}")
+    def get_policy(policy_id: str, tenant: dict = Depends(policy_reader)):
+        conn = ctx.get_db()
+        try:
+            row = own_policy(conn, tenant["id"], policy_id)
+            hist = conn.execute("SELECT * FROM policies WHERE tenant_id=? AND name=? ORDER BY version DESC", (tenant["id"], row["name"])).fetchall()
+            d = policy_view(row)
+            d["history"] = [policy_view(h) for h in hist]
+            d["routes"] = [r["name"] for r in conn.execute(
+                "SELECT r.name FROM routes r JOIN policies p ON p.id=r.policy_id WHERE r.tenant_id=? AND p.name=?", (tenant["id"], row["name"]))]
+            return d
+        finally:
+            conn.close()
+
+    @router.post("/v1/policies/{name}/rollback")
+    def rollback_policy(name: str, body: Optional[RollbackIn] = None, tenant: dict = Depends(policy_manage)):
+        """Makes an earlier version the active one (the one before the active version unless to_version is given)."""
+        conn = ctx.get_db()
+        try:
+            act = conn.execute("SELECT * FROM policies WHERE tenant_id=? AND name=? AND active=1", (tenant["id"], name)).fetchone()
+            if not act:
+                raise HTTPException(404, "policy not found")
+            to = body.to_version if body and body.to_version is not None else None
+            if to is None:
+                target = conn.execute("SELECT * FROM policies WHERE tenant_id=? AND name=? AND version<? ORDER BY version DESC LIMIT 1",
+                                      (tenant["id"], name, act["version"])).fetchone()
+            else:
+                target = conn.execute("SELECT * FROM policies WHERE tenant_id=? AND name=? AND version=?", (tenant["id"], name, to)).fetchone()
+            if not target:
+                raise HTTPException(409 if to is None else 404, "there is no earlier version to roll back to" if to is None else f"version {to} does not exist")
+            if target["id"] == act["id"]:
+                raise HTTPException(409, "that version is already active")
+            with conn:
+                conn.execute("UPDATE policies SET active=0 WHERE tenant_id=? AND name=?", (tenant["id"], name))
+                conn.execute("UPDATE policies SET active=1 WHERE id=?", (target["id"],))
+                audit_config(conn, tenant, "policy.rollback", "policy", target["id"],
+                             {"name": name, "from_version": act["version"], "to_version": target["version"]})
+            return policy_view(own_policy(conn, tenant["id"], target["id"]))
+        finally:
+            conn.close()
+
+    # ---- config audit
+    @router.get("/v1/config-audit")
+    def config_audit_list(limit: int = 50, tenant: dict = Depends(policy_reader)):
+        limit = max(1, min(200, limit))
+        conn = ctx.get_db()
+        try:
+            rows = conn.execute("SELECT * FROM config_audit WHERE tenant_id=? ORDER BY id DESC LIMIT ?", (tenant["id"], limit)).fetchall()
+            return {"audit": [{"id": r["id"], "at": r["at"], "actor": r["actor"], "action": r["action"], "target_type": r["target_type"],
+                               "target_id": r["target_id"], "detail": json.loads(r["detail_json"]), "prev_hash": r["prev_hash"],
+                               "entry_hash": r["entry_hash"]} for r in rows]}
+        finally:
+            conn.close()
+
+    @router.get("/v1/config-audit/verify")
+    def config_audit_verify(tenant: dict = Depends(policy_reader)):
+        conn = ctx.get_db()
+        try:
+            return verify_audit(conn, tenant["id"])
         finally:
             conn.close()
 
@@ -507,10 +810,11 @@ def build_router(ctx: Ctx) -> APIRouter:
         with conn:
             conn.execute(
                 """INSERT INTO route_events (tenant_id, route_id, at, method, path, status_code, upstream_status, protected_count,
-                                             would_protect_count, blocked, latency_ms, fw_ms, outcome)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                                             would_protect_count, blocked, latency_ms, fw_ms, outcome, would_block)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (tenant_id, route["id"], now, ev["method"], ev["path"], ev["status"], ev.get("upstream_status"),
-                 ev.get("protected", 0), ev.get("would", 0), ev.get("blocked", 0), ev.get("latency_ms"), ev.get("fw_ms"), ev["outcome"]))
+                 ev.get("protected", 0), ev.get("would", 0), ev.get("blocked", 0), ev.get("latency_ms"), ev.get("fw_ms"), ev["outcome"],
+                 ev.get("would_block", 0)))
             if usage is not None:
                 conn.execute(
                     """INSERT INTO usage_events (tenant_id, at, endpoint, sink, purpose, protected_count, unprotected_count, ignored_count,
@@ -573,13 +877,13 @@ def build_router(ctx: Ctx) -> APIRouter:
         failed = False
         if parsed[0] is not None:
             try:
-                res = clean_body(ctx, tenant_id, route, ct, body, path, query, cust, None, fault, parsed)
+                res = clean_body(ctx, tenant_id, route, ct, body, path, query, cust, rules_of(conn, tenant_id, route.get("policy_id")), fault, parsed)
             except CleanFailed:
                 failed = True
         fw_ms = round((time.perf_counter() - t0) * 1000, 2)
         ev["fw_ms"] = fw_ms
         if res is not None and res.supported:
-            ev["path"] = "/" + res.path
+            ev["path"] = "/" + fw_core.mask_text(res.path)      # the log never keeps what the policy let through
         usage = None
         if res is not None and res.supported:
             usage = {"protected": res.protected, "unprotected": res.unprotected, "ignored": res.ignored, "by_type": res.by_type,
@@ -587,6 +891,17 @@ def build_router(ctx: Ctx) -> APIRouter:
 
         fwd_headers = fw_core.forward_headers(headers)
         fwd_headers["X-Aran-Route"] = route["name"]
+
+        if res is not None and res.alert_types:
+            emit_event(tenant_id, "alert", {"route": route["name"], "mode": route["mode"], "types": res.alert_types})
+        if res is not None and res.block_types:
+            emit_event(tenant_id, "block" if enforce else "would_block", {"route": route["name"], "types": res.block_types})
+            if enforce:
+                ev["outcome"] = "blocked"
+                ev["blocked"] = 1
+                return done(jerr(403, {"blocked": True, "types": res.block_types,
+                                       "detail": "a rule of this route's policy refuses requests that carry these identifiers"}), usage)
+            ev["would_block"] = 1       # monitor: forward the original, but say it would have been refused
 
         if failed:
             emit_event(tenant_id, "route_failure", {"route": route["name"], "fail_mode": route["fail_mode"]})
@@ -639,6 +954,8 @@ def build_router(ctx: Ctx) -> APIRouter:
         resp.headers["X-Aran-Protected"] = str(ev.get("protected", 0))
         if not enforce:
             resp.headers["X-Aran-Would-Protect"] = str(ev.get("would", 0))
+            if ev.get("would_block"):
+                resp.headers["X-Aran-Would-Block"] = "1"
         if ev["outcome"] == "failed_open":
             resp.headers["X-Aran-Fail"] = "open"
         return done(resp, usage)

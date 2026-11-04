@@ -14,6 +14,7 @@
     ['overview', 'Overview', 'Is Aran working, is it protecting us, is it slowing payments? This workspace only.'],
     ['transactions', 'Transactions', 'Every payment copy sent through Aran, newest first. The cloud keeps the protected text and the counts, never the original values.'],
     ['routes', 'Routes', 'Point a system at an Aran route and everything it sends passes through the firewall first. Monitor mode only counts; enforce mode forwards the cleaned request.'],
+    ['policies', 'Policies', 'What to do with each kind of identifier that passes through a route: tokenise, mask, allow, alert or block. Every change is versioned and written to a tamper-evident log.'],
     ['datamap', 'Data map', 'Where identifiers go: the systems that call Aran, Aran itself, and the destinations that receive tokens.'],
     ['performance', 'Performance', 'How much time Aran adds to a payment, against the latency budget and the service objective.'],
     ['compliance', 'Compliance', 'Erasure receipts, who read real values back, and proof that the audit log was not edited.'],
@@ -35,7 +36,7 @@
   const S = {
     counters: null, m1h: null, mwin: null, win: '1h', txns: [], ftx: null, maxId: 0, keys: null, slo: null, settings: null, usage: null,
     team: null, dash: null, audit: null, lastOk: 0, err: '', stream: 'off', filters: { q: '', rail: '', sink: '' }, sel: null, paused: false,
-    fresh: {}, txLimit: 50, tick: 0, sinks: [], routes: null, rtEvents: null, rtSel: null,
+    fresh: {}, txLimit: 50, tick: 0, sinks: [], routes: null, rtEvents: null, rtSel: null, pols: null, polMeta: null, polAudit: null, polSel: null, polRules: null,
   };
   let timer = null, es = null, esTimer = null, esRetry = 0, painted = null, wsName = '';
 
@@ -375,10 +376,36 @@
     once: false,
   };
 
+  /* ---- Policies (what to do with each identifier type) ---- */
+  const ACTION_HELP = { tokenise: 'replace with a token', mask: 'keep the last 4 characters', allow: 'send as is', alert: 'tokenise and raise an alert', block: 'refuse the whole request (enforce)' };
+  const ruleRow = (r, i, meta) => `<tr><td class="num mono">${i + 1}</td><td><select data-pr-type="${i}" aria-label="Type of rule ${i + 1}">${['*'].concat(meta.types).map((t) => `<option ${t === r.type ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></td><td><select data-pr-action="${i}" aria-label="Action of rule ${i + 1}">${meta.actions.map((a) => `<option ${a === r.action ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select></td><td class="small muted">${esc(ACTION_HELP[r.action] || '')}</td><td><button class="btn ghost sm" data-pr-del="${i}" aria-label="Remove rule ${i + 1}"><span>Remove</span></button></td></tr>`;
+  V.policies = {
+    shell: () => `<section class="card"><h2 class="h3">Your policies</h2><p class="small muted">Rules are checked top to bottom and the first match wins. Anything no rule matches is tokenised. A route uses a policy once you pick it in the Routes tab or below.</p><div class="kit-scroll kit-gap-s" id="pl-list">${U.skeleton(100)}</div><div id="pl-out"></div></section>
+      <section class="card kit-gap-s"><h2 class="h3" id="pl-edit-h">New policy</h2><p class="small muted">Saving makes a new version; older versions stay and can be rolled back to.</p>
+        <form class="kit-form" id="pl-form"><label class="field">Name<input id="pl-name" required pattern="[a-z0-9][a-z0-9_-]{0,39}" placeholder="vendor-analytics" autocomplete="off"></label>
+        <div class="kit-scroll" id="pl-rules"></div><div class="kit-row"><button class="btn ghost sm" type="button" data-act="pl-add"><span>Add rule</span></button><button class="btn" type="submit"><span>Save as new version</span></button><span id="pl-form-out" role="status"></span></div></form></section>
+      <section class="card kit-gap-s"><h2 class="h3">Try the rules</h2><p class="small muted">Runs the rules above on a text you paste and shows what each finding would become. Nothing is stored. Use generated or demo identifiers.</p>
+        <label class="field">Text<textarea id="pl-text" rows="3" class="mono" placeholder="Aadhaar: 2345 6789 0123 and mobile 9876543210"></textarea></label>
+        <div class="kit-row"><button class="btn secondary" data-act="pl-test"><span>Test</span></button></div><div id="pl-test-out"></div></section>
+      <section class="card kit-gap-s"><h2 class="h3">Configuration log</h2><p class="small muted">Every policy and route change, each entry chained to the one before it.</p><div class="kit-row"><button class="btn secondary sm" data-act="pl-verify"><span>Verify chain</span></button><span id="pl-verify-out" role="status"></span></div><div class="kit-scroll" id="pl-audit">${U.skeleton(100)}</div></section>`,
+    load: () => [get('/v1/policies').then((d) => { S.pols = d.policies; S.polMeta = { types: d.types, actions: d.actions }; if (!S.polRules) S.polRules = [{ type: '*', action: 'tokenise' }]; }), get('/v1/routes').then((d) => { S.routes = d.routes; }).catch(() => {}), get('/v1/config-audit?limit=25').then((d) => { S.polAudit = d.audit; })],
+    paint: () => {
+      const meta = S.polMeta;
+      if (S.pols && meta) {
+        const rts = S.routes || [];
+        set('pl-list', S.pols.length ? `<table class="tbl dense"><thead><tr><th>Name</th><th class="num">Version</th><th>Rules</th><th>Used by</th><th></th></tr></thead><tbody>${S.pols.map((p) => `<tr><td class="mono">${esc(p.name)}</td><td class="num mono">v${p.version} <span class="muted small">of ${p.versions}</span></td><td class="small">${p.rules.length ? p.rules.map((r) => `<span class="pill tok">${esc(r.type)} ${esc(r.action)}</span>`).join(' ') : '<span class="muted">tokenise everything</span>'}</td><td class="small mono">${p.routes.length ? p.routes.map(esc).join(', ') : '–'}</td><td class="kit-row"><button class="btn ghost sm" data-pl-edit="${esc(p.id)}"><span>Edit</span></button><button class="btn ghost sm" data-pl-roll="${esc(p.name)}" ${p.versions > 1 && p.version > 1 ? '' : 'disabled'}><span>Roll back</span></button>${rts.length ? `<select data-pl-attach="${esc(p.id)}" aria-label="Attach ${esc(p.name)} to a route"><option value="">Attach to route…</option>${rts.map((r) => `<option value="${esc(r.id)}">${esc(r.name)}${r.policy_id === p.id ? ' (attached)' : ''}</option>`).join('')}</select>` : ''}</td></tr>`).join('')}</tbody></table>` : noData('No policies yet. Write one below.'));
+        const rules = S.polRules || [];
+        set('pl-rules', rules.length ? `<table class="tbl dense"><thead><tr><th class="num">#</th><th>Identifier type</th><th>Action</th><th></th><th></th></tr></thead><tbody>${rules.map((r, i) => ruleRow(r, i, meta)).join('')}</tbody></table>` : noData('No rules: every identifier is tokenised.'));
+      }
+      if (S.polAudit) set('pl-audit', S.polAudit.length ? `<table class="tbl dense"><thead><tr><th>Time</th><th>Who</th><th>Change</th><th>Target</th><th>Entry hash</th></tr></thead><tbody>${S.polAudit.map((a) => `<tr><td class="mono">${K.time(a.at)}</td><td class="small">${esc(a.actor || '–')}</td><td>${esc(a.action)}</td><td class="mono small">${esc(a.detail.name || a.target_id)}${a.detail.version ? ' v' + a.detail.version : ''}${a.detail.to_version ? ' → v' + a.detail.to_version : ''}</td><td class="mono small">${esc((a.entry_hash || '').slice(0, 12))}…</td></tr>`).join('')}</tbody></table>` : noData('No configuration changes yet'));
+    },
+    once: true,
+  };
+
   /* ---- Keys and team ---- */
   V.keys = {
     shell: () => `<section class="card"><h2 class="h3">Workspace keys</h2><div class="kit-scroll kit-gap-s" id="keys">${U.skeleton(140)}</div></section>
-      <section class="card kit-gap-s"><h2 class="h3">Mint a scoped key</h2><div class="kit-cols-4" style="grid-template-columns:1.2fr 2fr auto"><label class="field">Label<input id="mk-l" value="Application service key"></label><div class="field">Scopes<div class="kit-row" id="mk-s" style="margin:0">${['protect', 'gateway', 'trace', 'detokenise', 'erase', 'verify', 'dashboard', 'route', 'admin'].map((s) => `<label class="chip dx-chk"><input type="checkbox" value="${s}" ${s === 'protect' || s === 'dashboard' ? 'checked' : ''}> ${s}</label>`).join('')}</div></div><button class="btn" data-act="mint"><span>Mint key</span></button></div><div id="mk-out"></div></section>
+      <section class="card kit-gap-s"><h2 class="h3">Mint a scoped key</h2><div class="kit-cols-4" style="grid-template-columns:1.2fr 2fr auto"><label class="field">Label<input id="mk-l" value="Application service key"></label><div class="field">Scopes<div class="kit-row" id="mk-s" style="margin:0">${['protect', 'gateway', 'trace', 'detokenise', 'erase', 'verify', 'dashboard', 'route', 'policy', 'admin'].map((s) => `<label class="chip dx-chk"><input type="checkbox" value="${s}" ${s === 'protect' || s === 'dashboard' ? 'checked' : ''}> ${s}</label>`).join('')}</div></div><button class="btn" data-act="mint"><span>Mint key</span></button></div><div id="mk-out"></div></section>
       <section class="card kit-gap-s"><h2 class="h3">Team</h2><p class="small muted">Roles decide the scopes of the key issued to a person: admin (everything), security (dashboard, trace, detokenise, erase, verify), auditor (dashboard, verify), developer (protect, gateway, dashboard). Reading the team needs an admin key.</p><div id="team-box"><div id="team">${U.skeleton(100)}</div></div>
         <form class="dx-team-add" id="team-form"><label class="field">Email<input id="tm-email" type="email" required placeholder="name@bank.example" autocomplete="off"></label><label class="field">Role<select id="tm-role"><option>admin</option><option>security</option><option>auditor</option><option selected>developer</option></select></label><label class="chip dx-chk"><input id="tm-key" type="checkbox"> issue a key</label><button class="btn" type="submit"><span>Add person</span></button></form><div id="tm-out"></div></section>`,
     load: () => [loadKeys()],
@@ -474,7 +501,15 @@
   let ftimer = 0;
   const readFilters = () => { S.filters = { q: ($('#f-q') || {}).value.trim(), rail: ($('#f-rail') || {}).value, sink: ($('#f-sink') || {}).value }; clearTimeout(ftimer); ftimer = setTimeout(() => { loadTxns().then(() => V.transactions.paint()).catch(() => {}); }, 250); };
   body.addEventListener('input', (e) => { if (e.target.closest('#tx-filters')) readFilters(); });
-  body.addEventListener('change', (e) => { if (e.target.closest('#tx-filters')) readFilters(); });
+  body.addEventListener('change', async (e) => {
+    const t = e.target;
+    if (t.closest('#tx-filters')) readFilters();
+    if (t.dataset.prType != null) { S.polRules[Number(t.dataset.prType)].type = t.value; V.policies.paint(); return; }
+    if (t.dataset.prAction != null) { S.polRules[Number(t.dataset.prAction)].action = t.value; V.policies.paint(); return; }
+    if (t.dataset.plAttach && t.value) {
+      try { await call('/v1/routes/' + t.value, { method: 'PATCH', body: { policy_id: t.dataset.plAttach } }, $('#pl-out')); U.toast('Policy attached to the route'); refresh(); } catch (err) { $('#pl-out').innerHTML = U.note('err', esc(err.message)); }
+    }
+  });
   body.addEventListener('submit', async (e) => {
     const f = e.target; e.preventDefault();
     if (f.id === 'tx-filters') return;
@@ -491,6 +526,13 @@
       try {
         const r = await call('/v1/routes', { body: { name: $('#rt-name').value.trim(), upstream_url: $('#rt-url').value.trim(), purpose: $('#rt-purpose').value, fail_mode: $('#rt-fail').value } }, out);
         out.innerHTML = U.pill('✓ added in monitor mode', 'ok'); S.rtSel = r.id; f.reset(); refresh();
+      } catch (err) { out.innerHTML = U.pill('✗ ' + esc(err.message), 'danger'); }
+    });
+    if (f.id === 'pl-form') return K.busy(btn, async () => {
+      const out = $('#pl-form-out');
+      try {
+        const r = await call('/v1/policies', { body: { name: $('#pl-name').value.trim(), rules: S.polRules || [] } }, out);
+        out.innerHTML = U.pill('✓ saved as v' + r.version, 'ok'); U.toast('Policy saved'); refresh();
       } catch (err) { out.innerHTML = U.pill('✗ ' + esc(err.message), 'danger'); }
     });
     if (f.id === 'team-form') return K.busy(btn, async () => {
@@ -527,6 +569,13 @@
       try { await call('/v1/routes/' + rd.dataset.rtDel, { method: 'DELETE' }, $('#rt-out')); U.toast('Route deleted'); S.rtSel = null; refresh(); } catch (err) { $('#rt-out').innerHTML = U.note('err', esc(err.message)); }
       return;
     }
+    const pe = t.closest('[data-pl-edit]'); if (pe) { const p = (S.pols || []).find((x) => x.id === pe.dataset.plEdit); if (p) { S.polRules = p.rules.map((r) => Object.assign({}, r)); $('#pl-name').value = p.name; $('#pl-edit-h').textContent = 'New version of ' + p.name; V.policies.paint(); $('#pl-form').scrollIntoView({ block: 'nearest' }); } return; }
+    const pd = t.closest('[data-pr-del]'); if (pd) { S.polRules.splice(Number(pd.dataset.prDel), 1); V.policies.paint(); return; }
+    const pr = t.closest('[data-pl-roll]'); if (pr) {
+      if (!(await U.confirm({ title: 'Roll back ' + pr.dataset.plRoll + '?', body: 'The version before the current one becomes active at once for every route that uses this policy.', confirmLabel: 'Roll back' }))) return;
+      try { await call('/v1/policies/' + encodeURIComponent(pr.dataset.plRoll) + '/rollback', { body: {} }, $('#pl-out')); U.toast('Rolled back'); refresh(); } catch (err) { $('#pl-out').innerHTML = U.note('err', esc(err.message)); }
+      return;
+    }
     const rm = t.closest('[data-rm]'); if (rm) {
       if (!(await U.confirm({ title: 'Remove this person?', body: 'Their key, if one was issued, is revoked at once.', confirmLabel: 'Remove' }))) return;
       try { await call('/v1/team/' + rm.dataset.rm, { method: 'DELETE' }, $('#tm-out')); U.toast('Person removed'); loadTeam(); loadKeys().then(() => V.keys.paint()); } catch (err) { $('#tm-out').innerHTML = U.note('err', esc(err.message)); }
@@ -548,6 +597,16 @@
       try { const r = await call('/v1/demo/seed', { method: 'POST', body: {} }, out); U.toast(r.demo_transactions ? `${r.demo_transactions} demo transactions added` : 'Demo mode is off on this server: no demo transactions'); S.maxId = 0; S.txns = []; refresh(); }
       catch (err) { out && (out.innerHTML = U.note('err', esc(err.message))); }
     });
+    if (a === 'pl-add') { S.polRules = (S.polRules || []).concat([{ type: '*', action: 'tokenise' }]); V.policies.paint(); return; }
+    if (a === 'pl-test') return K.busy(act, async () => {
+      const out = $('#pl-test-out'), text = $('#pl-text').value;
+      if (!text.trim()) { out.innerHTML = U.note('err', 'Paste a text first.'); return; }
+      try {
+        const r = await call('/v1/policies/test', { body: { text, rules: S.polRules || [] } }, out);
+        out.innerHTML = (r.blocked ? U.verdict(false, 'A block rule matched: in enforce mode this request is refused.') : U.verdict(true, 'The request would pass.')) + `<div class="kit-row kit-gap-s">${r.findings.length ? r.findings.map((f) => `<span class="pill tok">${esc(f.type)} → ${esc(f.action)}</span>`).join(' ') : '<span class="muted small">No identifiers found.</span>'}</div><pre class="logline out kit-gap-s">${esc(r.output)}</pre>`;
+      } catch (err) { out.innerHTML = U.note('err', esc(err.message)); }
+    });
+    if (a === 'pl-verify') return K.busy(act, async () => { try { const r = await get('/v1/config-audit/verify'); set('pl-verify-out', r.valid ? U.verdict(true, `Chain valid · ${fmt(r.total_rows)} entries checked`) : U.verdict(false, 'Tampered: ' + esc(r.error || ''))); } catch (err) { set('pl-verify-out', U.note('err', esc(err.message))); } });
     if (a === 'more') { S.txLimit += 50; V.transactions.paint(); return; }
     if (a === 'pause') { S.paused = !S.paused; if (!S.paused) { const p = S.pending || []; S.pending = []; mergeTx(p); } V.transactions.paint(); return; }
     if (a === 'clear') { S.filters = { q: '', rail: '', sink: '' }; ['f-q', 'f-rail', 'f-sink'].forEach((id) => { const el = $('#' + id); if (el) el.value = ''; }); S.ftx = null; V.transactions.paint(); return; }

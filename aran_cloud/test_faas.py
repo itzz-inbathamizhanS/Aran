@@ -1,5 +1,5 @@
 """
-Tests for firewall as a service, phase 1: routes (CRUD) and the /fw/<route>/... proxy.
+Tests for firewall as a service: routes (CRUD), the /fw/<route>/... proxy, policies, monitor mode and the config audit.
 
 They run against a live Aran Cloud (ARAN_CLOUD_URL, default http://127.0.0.1:8100) in front of a live core, started the
 way scripts/run_demo.sh starts them (ARAN_DEMO_MODE=1, ARAN_FAAS_ALLOW_PRIVATE_UPSTREAMS=1, ARAN_FAAS_TEST_HOOKS=1).
@@ -113,7 +113,7 @@ def db_text(tenant_id):
     """Every stored text of this tenant's FaaS tables, in one string."""
     conn = sqlite3.connect(CLOUD_DB)
     parts = []
-    for table in ("routes", "route_events", "route_outbox", "usage_events", "tenant_tokens"):
+    for table in ("routes", "route_events", "route_outbox", "usage_events", "tenant_tokens", "policies", "config_audit"):
         for row in conn.execute(f"SELECT * FROM {table} WHERE tenant_id = ?", (tenant_id,)).fetchall():
             parts.append(json.dumps(row, default=str))
     conn.close()
@@ -512,3 +512,228 @@ def test_bank_b_analytics_vendor_gets_no_raw_identifiers():
     assert mine[0]["body"]["payee"].startswith("<UPI:") or mine[0]["body"]["payee"] != vpa
     copy = requests.get(f"{BANK_B_URL}/api/sinks", params={"txn_id": txn["txn_id"], "sink": "analytics"}, timeout=5).json()["items"][0]
     assert copy["meta"]["via"] == "route" and vpa not in json.dumps(copy) and acct["number"] not in json.dumps(copy)
+
+
+# ================================================================ phase 2: policies and monitor mode
+def make_policy(key, name, rules):
+    r = requests.post(f"{CLOUD_URL}/v1/policies", headers=H(key), json={"name": name, "rules": rules}, timeout=10)
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+def pname():
+    return f"pol{random.randint(10**6, 10**7)}"
+
+
+def test_policy_versions_list_and_validation(alpha):
+    key = alpha["admin_key"]
+    name = pname()
+    p1 = make_policy(key, name, [{"type": "mobile", "action": "mask"}])
+    assert p1["version"] == 1 and p1["active"] and p1["rules"] == [{"type": "MOBILE", "action": "mask"}] and p1["id"].startswith("pol_")
+    p2 = make_policy(key, name, [{"type": "*", "action": "allow"}])
+    assert p2["version"] == 2 and p2["id"] != p1["id"]
+    listed = requests.get(f"{CLOUD_URL}/v1/policies", headers=H(key), timeout=10).json()["policies"]
+    mine = [p for p in listed if p["name"] == name]
+    assert len(mine) == 1 and mine[0]["version"] == 2 and mine[0]["versions"] == 2           # only the active version is listed
+    got = requests.get(f"{CLOUD_URL}/v1/policies/{p1['id']}", headers=H(key), timeout=10).json()
+    assert [h["version"] for h in got["history"]] == [2, 1]
+    for bad in ([{"type": "NOPE", "action": "mask"}], [{"type": "CARD", "action": "shred"}], "x", [1]):
+        r = requests.post(f"{CLOUD_URL}/v1/policies", headers=H(key), json={"name": pname(), "rules": bad}, timeout=10)
+        assert r.status_code == 422, bad
+    r = requests.post(f"{CLOUD_URL}/v1/policies", headers=H(key), json={"name": "Bad Name", "rules": []}, timeout=10)
+    assert r.status_code == 422
+
+
+def test_policy_scope_and_tenant_isolation(alpha, beta):
+    ka, kb = alpha["admin_key"], beta["admin_key"]
+    p = make_policy(ka, pname(), [{"type": "*", "action": "mask"}])
+    protect_only = mint(ka, "protect only", ["protect"])
+    r = requests.post(f"{CLOUD_URL}/v1/policies", headers=H(protect_only), json={"name": pname(), "rules": []}, timeout=10)
+    assert r.status_code == 403
+    assert requests.get(f"{CLOUD_URL}/v1/policies/{p['id']}", headers=H(kb), timeout=10).status_code == 404
+    assert p["id"] not in requests.get(f"{CLOUD_URL}/v1/policies", headers=H(kb), timeout=10).text
+    assert requests.post(f"{CLOUD_URL}/v1/policies/{p['name']}/rollback", headers=H(kb), timeout=10).status_code == 404
+
+
+def test_cross_tenant_policy_attach_refused(alpha, beta, up):
+    foreign = make_policy(beta["admin_key"], pname(), [{"type": "*", "action": "block"}])
+    key = alpha["admin_key"]
+    route = make_route(key, up.url)
+    r = requests.patch(f"{CLOUD_URL}/v1/routes/{route['id']}", headers=H(key), json={"policy_id": foreign["id"]}, timeout=10)
+    assert r.status_code == 404
+    r = requests.post(f"{CLOUD_URL}/v1/routes", headers=H(key), json={"name": f"x{random.randint(10**6, 10**7)}", "upstream_url": up.url,
+                                                                    "policy_id": foreign["id"]}, timeout=10)
+    assert r.status_code == 404
+    got = requests.get(f"{CLOUD_URL}/v1/routes/{route['id']}", headers=H(key), timeout=10).json()
+    assert got["policy_id"] is None
+    # an own policy attaches, and "" detaches
+    own = make_policy(key, pname(), [])
+    r = requests.patch(f"{CLOUD_URL}/v1/routes/{route['id']}", headers=H(key), json={"policy_id": own["id"]}, timeout=10)
+    assert r.status_code == 200 and r.json()["policy_id"] == own["id"]
+    r = requests.patch(f"{CLOUD_URL}/v1/routes/{route['id']}", headers=H(key), json={"policy_id": ""}, timeout=10)
+    assert r.json()["policy_id"] is None
+
+
+def test_policy_test_endpoint_each_action(alpha):
+    ids = sample_ids()
+    key = alpha["admin_key"]
+    text = f"Aadhaar: {ids['aadhaar']} and mobile {ids['mobile']}"
+    url = f"{CLOUD_URL}/v1/policies/test"
+    # default (no rules): everything is tokenised
+    r = requests.post(url, headers=H(key), json={"text": text, "rules": []}, timeout=20).json()
+    assert {f["action"] for f in r["findings"]} == {"tokenise"} and len(r["findings"]) == 2
+    assert ids["aadhaar"] not in r["output"] and ids["mobile"] not in r["output"] and not r["blocked"]
+    # mask keeps the last 4
+    r = requests.post(url, headers=H(key), json={"text": text, "rules": [{"type": "MOBILE", "action": "mask"}]}, timeout=20).json()
+    assert "XXXXXX" + ids["mobile"][-4:] in r["output"] and ids["mobile"] not in r["output"]
+    assert ids["aadhaar"] not in r["output"]                                   # the other type fell to the default
+    # allow puts the original back
+    r = requests.post(url, headers=H(key), json={"text": text, "rules": [{"type": "AADHAAR", "action": "allow"}]}, timeout=20).json()
+    assert ids["aadhaar"] in r["output"] and ids["mobile"] not in r["output"]
+    # first match wins
+    r = requests.post(url, headers=H(key), json={"text": text, "rules": [{"type": "MOBILE", "action": "allow"}, {"type": "*", "action": "mask"}]}, timeout=20).json()
+    assert ids["mobile"] in r["output"] and ids["aadhaar"] not in r["output"] and "XXXXXXXX" + ids["aadhaar"][-4:] in r["output"]
+    # block and alert
+    r = requests.post(url, headers=H(key), json={"text": text, "rules": [{"type": "AADHAAR", "action": "block"}]}, timeout=20).json()
+    assert r["blocked"] is True and r["counts"]["block"] == 1
+    r = requests.post(url, headers=H(key), json={"text": text, "rules": [{"type": "MOBILE", "action": "alert"}]}, timeout=20).json()
+    assert r["alert"] is True and ids["mobile"] not in r["output"]
+    # by policy id
+    p = make_policy(key, pname(), [{"type": "*", "action": "allow"}])
+    r = requests.post(url, headers=H(key), json={"text": text, "policy_id": p["id"]}, timeout=20).json()
+    assert r["output"] == text
+    assert requests.post(url, headers=H(key), json={"text": text, "rules": [{"type": "X", "action": "mask"}]}, timeout=20).status_code == 422
+
+
+def test_enforce_applies_each_action(alpha, up):
+    ids = sample_ids()
+    key = alpha["admin_key"]
+    pol = make_policy(key, pname(), [{"type": "MOBILE", "action": "mask"}, {"type": "CARD", "action": "allow"},
+                                     {"type": "AADHAAR", "action": "tokenise"}])
+    route = make_route(key, up.url, mode="enforce", policy_id=pol["id"])
+    body = {"mobile": ids["mobile"], "card": ids["card"], "aadhaar": ids["aadhaar"]}
+    r = fw(key, route, "ingest", json=body)
+    assert r.status_code == 200, r.text
+    sent = json.loads(up.wait_for(1)[0]["body"])
+    assert sent["mobile"] == "XXXXXX" + ids["mobile"][-4:]          # mask
+    assert sent["card"] == ids["card"]                              # allow
+    assert sent["aadhaar"] != ids["aadhaar"] and len(sent["aadhaar"]) == 12   # tokenise
+    assert int(r.headers["X-Aran-Protected"]) == 2                  # allow is not counted as protected
+
+
+def test_enforce_block_returns_403_and_forwards_nothing(alpha, up):
+    ids = sample_ids()
+    key = alpha["admin_key"]
+    pol = make_policy(key, pname(), [{"type": "AADHAAR", "action": "block"}])
+    route = make_route(key, up.url, mode="enforce", policy_id=pol["id"])
+    r = fw(key, route, "ingest", json={"note": "ok", "aadhaar": ids["aadhaar"]})
+    assert r.status_code == 403
+    assert r.json()["blocked"] is True and r.json()["types"] == ["AADHAAR"]
+    assert ids["aadhaar"] not in r.text
+    time.sleep(0.5)
+    assert not up.received
+    ev = requests.get(f"{CLOUD_URL}/v1/route-events", headers=H(key), params={"route_id": route["id"]}, timeout=10).json()["events"][0]
+    assert ev["blocked"] == 1 and ev["outcome"] == "blocked" and ev["status_code"] == 403
+    # a request without the blocked type passes
+    assert fw(key, route, "ingest", json={"note": "hello"}).status_code == 200
+
+
+def test_monitor_mode_computes_but_forwards_original(alpha, up):
+    ids = sample_ids()
+    key = alpha["admin_key"]
+    pol = make_policy(key, pname(), [{"type": "AADHAAR", "action": "block"}, {"type": "MOBILE", "action": "mask"}])
+    route = make_route(key, up.url, policy_id=pol["id"])                         # monitor by default
+    r = fw(key, route, "ingest", json={"mobile": ids["mobile"], "aadhaar": ids["aadhaar"]})
+    assert r.status_code == 200, r.text                                           # a block rule never refuses in monitor mode
+    sent = json.loads(up.wait_for(1)[0]["body"])
+    assert sent == {"mobile": ids["mobile"], "aadhaar": ids["aadhaar"]}           # the original went through
+    assert r.headers["X-Aran-Would-Block"] == "1" and int(r.headers["X-Aran-Would-Protect"]) == 2
+    ev = requests.get(f"{CLOUD_URL}/v1/route-events", headers=H(key), params={"route_id": route["id"]}, timeout=10).json()["events"][0]
+    assert ev["protected_count"] == 0 and ev["would_protect_count"] == 2 and ev["blocked"] == 0
+    st = requests.get(f"{CLOUD_URL}/v1/routes/{route['id']}", headers=H(key), timeout=10).json()["stats_24h"]
+    assert st["would_block"] == 1
+    # flipping to enforce turns the same rules on
+    requests.patch(f"{CLOUD_URL}/v1/routes/{route['id']}", headers=H(key), json={"mode": "enforce"}, timeout=10)
+    assert fw(key, route, "ingest", json={"aadhaar": ids["aadhaar"]}).status_code == 403
+
+
+def test_alert_action_tokenises_and_raises_event(alpha, up):
+    ids = sample_ids()
+    key = alpha["admin_key"]
+    pol = make_policy(key, pname(), [{"type": "MOBILE", "action": "alert"}])
+    route = make_route(key, up.url, mode="enforce", policy_id=pol["id"])
+    r = fw(key, route, "ingest", json={"mobile": ids["mobile"]})
+    assert r.status_code == 200
+    assert ids["mobile"] not in up.wait_for(1)[0]["body"]
+
+
+def test_policy_rollback_changes_live_behaviour(alpha, up):
+    ids = sample_ids()
+    key = alpha["admin_key"]
+    name = pname()
+    v1 = make_policy(key, name, [{"type": "MOBILE", "action": "mask"}])
+    make_policy(key, name, [{"type": "MOBILE", "action": "block"}])
+    route = make_route(key, up.url, mode="enforce", policy_id=v1["id"])           # attached by any version id of the name
+    assert fw(key, route, "x", json={"mobile": ids["mobile"]}).status_code == 403
+    r = requests.post(f"{CLOUD_URL}/v1/policies/{name}/rollback", headers=H(key), timeout=10)
+    assert r.status_code == 200 and r.json()["version"] == 1 and r.json()["active"]
+    r = fw(key, route, "x", json={"mobile": ids["mobile"]})
+    assert r.status_code == 200 and json.loads(up.wait_for(1)[-1]["body"])["mobile"] == "XXXXXX" + ids["mobile"][-4:]
+    # nothing earlier than version 1; unknown version; unknown name
+    assert requests.post(f"{CLOUD_URL}/v1/policies/{name}/rollback", headers=H(key), timeout=10).status_code == 409
+    assert requests.post(f"{CLOUD_URL}/v1/policies/{name}/rollback", headers=H(key), json={"to_version": 9}, timeout=10).status_code == 404
+    assert requests.post(f"{CLOUD_URL}/v1/policies/nosuch/rollback", headers=H(key), timeout=10).status_code == 404
+    # to_version moves forward again
+    r = requests.post(f"{CLOUD_URL}/v1/policies/{name}/rollback", headers=H(key), json={"to_version": 2}, timeout=10)
+    assert r.status_code == 200 and r.json()["version"] == 2
+
+
+def test_config_audit_chain_and_verify(alpha, up):
+    ws = new_workspace("Faas Audit")
+    key = ws["admin_key"]
+    name = pname()
+    make_policy(key, name, [{"type": "*", "action": "mask"}])
+    p2 = make_policy(key, name, [{"type": "*", "action": "tokenise"}])
+    route = make_route(key, up.url)
+    requests.patch(f"{CLOUD_URL}/v1/routes/{route['id']}", headers=H(key), json={"policy_id": p2["id"], "mode": "enforce"}, timeout=10)
+    requests.post(f"{CLOUD_URL}/v1/policies/{name}/rollback", headers=H(key), timeout=10)
+    requests.delete(f"{CLOUD_URL}/v1/routes/{route['id']}", headers=H(key), timeout=10)
+    audit = requests.get(f"{CLOUD_URL}/v1/config-audit", headers=H(key), timeout=10).json()["audit"]
+    assert [a["action"] for a in reversed(audit)] == ["policy.create", "policy.create", "route.create", "route.update", "policy.rollback", "route.delete"]
+    upd = [a for a in audit if a["action"] == "route.update"][0]
+    assert upd["detail"]["changes"]["mode"] == {"from": "monitor", "to": "enforce"}
+    v = requests.get(f"{CLOUD_URL}/v1/config-audit/verify", headers=H(key), timeout=10).json()
+    assert v["valid"] is True and v["total_rows"] == 6
+    # another tenant has its own chain
+    other = requests.get(f"{CLOUD_URL}/v1/config-audit", headers=H(alpha["admin_key"]), timeout=10).json()["audit"]
+    assert all(a["id"] not in {x["id"] for x in audit} for a in other)
+    # tampering is detected (edit a row directly in the database, then restore it)
+    conn = sqlite3.connect(CLOUD_DB)
+    row = conn.execute("SELECT id, detail_json FROM config_audit WHERE tenant_id=? AND action='route.create'", (ws["tenant_id"],)).fetchone()
+    try:
+        conn.execute("UPDATE config_audit SET detail_json=? WHERE id=?", (row[1].replace('"monitor"', '"enforce"'), row[0]))
+        conn.commit()
+        bad = requests.get(f"{CLOUD_URL}/v1/config-audit/verify", headers=H(key), timeout=10).json()
+        assert bad["valid"] is False and bad["failed_at_id"] == row[0]
+    finally:
+        conn.execute("UPDATE config_audit SET detail_json=? WHERE id=?", (row[1], row[0]))
+        conn.commit()
+        conn.close()
+    assert requests.get(f"{CLOUD_URL}/v1/config-audit/verify", headers=H(key), timeout=10).json()["valid"] is True
+    # a dashboard-only key can read the audit; a protect-only key cannot
+    assert requests.get(f"{CLOUD_URL}/v1/config-audit", headers=H(mint(key, "dash", ["dashboard"])), timeout=10).status_code == 200
+    assert requests.get(f"{CLOUD_URL}/v1/config-audit", headers=H(mint(key, "prot", ["protect"])), timeout=10).status_code == 403
+
+
+def test_no_raw_identifier_stored_with_policies(alpha, up):
+    ids = sample_ids()
+    key = alpha["admin_key"]
+    pol = make_policy(key, pname(), [{"type": "AADHAAR", "action": "block"}, {"type": "MOBILE", "action": "mask"},
+                                     {"type": "CARD", "action": "allow"}])
+    for mode in ("monitor", "enforce"):
+        route = make_route(key, up.url, mode=mode, policy_id=pol["id"])
+        fw(key, route, f"look/{ids['mobile']}", json={"aadhaar": ids["aadhaar"], "mobile": ids["mobile"], "card": ids["card"]})
+    requests.post(f"{CLOUD_URL}/v1/policies/test", headers=H(key), json={"text": f"{ids['card']} {ids['mobile']}", "rules": []}, timeout=20)
+    blob = db_text(alpha["tenant_id"])
+    for raw in (ids["mobile"], ids["card"], ids["aadhaar"]):
+        assert raw not in blob, raw
