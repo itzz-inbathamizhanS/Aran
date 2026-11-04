@@ -86,6 +86,8 @@ def _json_body(raw: str) -> Body:
         holder = [json.loads(raw)]
     except ValueError:
         raise BodyError("body is not valid JSON")
+    except RecursionError:              # thousands of [ or { : refuse it instead of failing with a 500
+        raise BodyError("JSON is nested too deeply")
     units, slots = _walk_json(holder)
 
     def rebuild(values: List[str]) -> str:
@@ -104,7 +106,10 @@ def _ndjson_body(raw: str) -> Body:
             parts.append(("blank", None))
             continue
         try:
-            holder = [json.loads(ln)]
+            try:
+                holder = [json.loads(ln)]
+            except RecursionError:
+                raise BodyError("JSON is nested too deeply")
             u, slots = _walk_json(holder)
             parts.append(("json", (holder, slots, len(u))))
             units.extend(u)
@@ -488,22 +493,71 @@ def check_upstream_url(url: str, allow_private: bool = False, own: Iterable[Tupl
     return [str(i) for i in ips]
 
 
+# ---------------------------------------------------------------- pinned connections (DNS rebinding)
+def pinned_request(method: str, url: str, ip: str, **kw):
+    """requests.request(method, url, **kw), but the TCP connection goes to `ip`, the address check_upstream_url
+    just approved, instead of resolving the name again (a DNS answer that changes between the check and the
+    connection must not reach an internal address). The Host header, TLS SNI and certificate check still use the
+    name in the URL. Proxy settings and .netrc from the environment are ignored for the same reason."""
+    import requests
+    from requests.adapters import HTTPAdapter
+    from urllib3.connection import HTTPConnection, HTTPSConnection
+    from urllib3.connectionpool import HTTPConnectionPool, HTTPSConnectionPool
+
+    def pin(base):
+        class Pinned(base):
+            def _new_conn(self):
+                self._dns_host = ip          # connect here; self.host (the name) stays for Host, SNI and the cert
+                return super()._new_conn()
+        return Pinned
+
+    class Adapter(HTTPAdapter):
+        def init_poolmanager(self, *a, **k):
+            super().init_poolmanager(*a, **k)
+            self.poolmanager.pool_classes_by_scheme = {
+                "http": type("PinnedPool", (HTTPConnectionPool,), {"ConnectionCls": pin(HTTPConnection)}),
+                "https": type("PinnedTLSPool", (HTTPSConnectionPool,), {"ConnectionCls": pin(HTTPSConnection)}),
+            }
+
+    s = requests.Session()
+    s.trust_env = False
+    s.mount("http://", Adapter())
+    s.mount("https://", Adapter())
+    try:
+        return s.request(method, url, **kw)
+    finally:
+        if not kw.get("stream"):
+            s.close()
+
+
 # ---------------------------------------------------------------- headers
 def forward_headers(headers: Dict[str, str]) -> Dict[str, str]:
     """The request headers to send upstream: everything but hop-by-hop headers, the Aran key and Aran's own."""
+    # headers named in Connection are hop-by-hop too (RFC 9110 7.6.1)
+    listed = set()
+    for k, v in headers.items():
+        if k.lower() == "connection":
+            listed |= {t.strip().lower() for t in v.split(",") if t.strip()}
     out = {}
     for k, v in headers.items():
         lk = k.lower()
-        if lk in HOP_BY_HOP or lk.startswith("x-aran-"):
+        if lk in HOP_BY_HOP or lk in listed or lk == "proxy-connection" or lk.startswith("x-aran-"):
             continue
         out[k] = v
     return out
 
 
 def queue_headers(headers: Dict[str, str]) -> Dict[str, str]:
-    """The few headers worth keeping with a queued body."""
-    return {k: v for k, v in headers.items() if k.lower() in QUEUE_HEADERS or
-            (k.lower().startswith("x-") and not k.lower().startswith("x-aran-") and k.lower() != "x-api-key")}
+    """The few headers worth keeping with a queued body. Headers are not cleaned by the core, so the values of
+    custom x- headers are masked before they are stored (an identifier in a header must not land in the outbox)."""
+    out = {}
+    for k, v in headers.items():
+        lk = k.lower()
+        if lk in QUEUE_HEADERS:
+            out[k] = v
+        elif lk.startswith("x-") and not lk.startswith("x-aran-") and lk not in ("x-api-key", "x-client-cert-fingerprint"):
+            out[k] = mask_text(v)
+    return out
 
 
 def safe_path(path: str) -> bool:

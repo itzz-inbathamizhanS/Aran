@@ -1205,3 +1205,118 @@ def test_ai_gateway_never_forwards_keys(aiws):
     src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "faas.py")).read()
     part = src[src.index("def _ai_upstream"):src.index("def _build_ai")]
     assert 'up = {"x-api-key": key' in part and "headers.get(\"x-api-key\")" not in part and "authorization\")" not in part
+
+
+# ================================================================ security review regressions
+def _fake_rebinding_dns(monkeypatch, name, first, later):
+    """getaddrinfo for `name` answers `first` once, then `later` (a DNS rebinding attack). Other names resolve normally."""
+    real = socket.getaddrinfo
+    calls = {"n": 0}
+
+    def fake(host, *a, **kw):
+        if host == name:
+            calls["n"] += 1
+            ip = first if calls["n"] == 1 else later
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (ip, 0))]
+        return real(host, *a, **kw)
+    monkeypatch.setattr(socket, "getaddrinfo", fake)
+    return calls
+
+
+@pytest.fixture(scope="module")
+def sec():
+    # own workspace: the per-key rate limit is shared by every call made with one key
+    return new_workspace("Faas Sec")
+
+
+class _FakeCtx:
+    core_url = "http://127.0.0.1:8000"
+    port = 8100
+
+
+def test_forward_connects_to_the_checked_address_not_a_second_dns_answer(monkeypatch, up):
+    """The upstream name is checked, then the connection goes to that same address with the name as Host.
+    A second DNS answer (here an unroutable address standing in for an internal one) is never used."""
+    import faas
+    monkeypatch.setenv("ARAN_FAAS_ALLOW_PRIVATE_UPSTREAMS", "1")
+    calls = _fake_rebinding_dns(monkeypatch, "rebind.test", "127.0.0.1", "10.255.255.1")
+    route = {"name": "r", "upstream_url": f"http://rebind.test:{up.port}"}
+    status, _, content = faas.forward(_FakeCtx(), route, "GET", "x", "", {}, b"")
+    assert status == 200 and calls["n"] == 1
+    got = up.wait_for(1)
+    assert got[0]["headers"]["host"] == f"rebind.test:{up.port}"
+
+
+def test_webhook_connects_to_the_checked_address(monkeypatch):
+    import faas
+    monkeypatch.setenv("ARAN_FAAS_ALLOW_PRIVATE_UPSTREAMS", "1")
+    rcv = Receiver()
+    try:
+        port = rcv.server.server_address[1]
+        calls = _fake_rebinding_dns(monkeypatch, "hook.rebind.test", "127.0.0.1", "10.255.255.1")
+        code, err = faas.send_webhook(_FakeCtx(), f"http://hook.rebind.test:{port}/h", "whsec_x", "test", "dl_1", b"{}")
+        assert code == 200 and not err and calls["n"] == 1
+    finally:
+        rcv.close()
+
+
+def test_pinned_request_ignores_proxy_environment(monkeypatch, up):
+    """A proxy from the environment would resolve the name itself and undo the check, so it is not used."""
+    import fw_core
+    monkeypatch.setenv("HTTP_PROXY", "http://127.0.0.1:9")      # nothing listens there
+    monkeypatch.setenv("NO_PROXY", "")
+    r = fw_core.pinned_request("GET", f"http://pinned.invalid:{up.port}/p", "127.0.0.1", timeout=5)
+    assert r.status_code == 200
+
+
+def test_connection_listed_headers_are_not_forwarded():
+    import fw_core
+    out = fw_core.forward_headers({"Connection": "close, X-Internal-Token", "X-Internal-Token": "s", "Proxy-Connection": "k",
+                                   "X-Api-Key": "aran_k", "Accept": "*/*"})
+    assert out == {"Accept": "*/*"}
+
+
+def test_allow_rule_never_puts_raw_values_in_the_outbox(sec):
+    """An allow rule forwards the original value, but a held copy is stored, so it must be masked."""
+    ids = sample_ids()
+    key = sec["admin_key"]
+    pol = make_policy(key, pname(), [{"type": "CARD", "action": "allow"}])
+    port = free_port()                                       # the upstream is down
+    route = make_route(key, f"http://127.0.0.1:{port}", mode="enforce", fail_mode="closed", policy_id=pol["id"])
+    r = fw(key, route, f"c/{ids['card']}", json={"card": ids["card"], "mobile": ids["mobile"]})
+    assert r.status_code == 202 and r.json()["reason"] == "upstream_unavailable"
+    row = db_rows("SELECT * FROM route_outbox WHERE route_id=?", route["id"])[0]
+    stored = row["body_protected"] + row["path"]
+    assert ids["card"] not in stored and ids["mobile"] not in stored
+    assert ids["card"][-4:] in row["body_protected"]                # masked, last 4 kept
+    assert ids["card"] not in db_text(sec["tenant_id"])
+
+
+def test_queued_headers_do_not_keep_raw_identifiers(sec):
+    ids = sample_ids()
+    key = sec["admin_key"]
+    route = make_route(key, f"http://127.0.0.1:{free_port()}", mode="enforce", fail_mode="closed")
+    r = fw(key, route, "x", json={"a": "b"}, headers=H(key, **{"X-Customer-Mobile": ids["mobile"], "Accept": "application/json"}))
+    assert r.status_code == 202
+    row = db_rows("SELECT headers_json FROM route_outbox WHERE route_id=?", route["id"])[0]
+    assert ids["mobile"] not in row["headers_json"] and ids["mobile"][-4:] in row["headers_json"]
+    assert key not in row["headers_json"]
+
+
+def test_deeply_nested_json_is_refused_not_a_server_error(sec, up, aiws):
+    key = sec["admin_key"]
+    deep = "[" * 100000 + "]" * 100000
+    enf = make_route(key, up.url, mode="enforce")
+    r = fw(key, enf, "x", data=deep, headers=H(key, **{"Content-Type": "application/json"}))
+    assert r.status_code == 400 and "deep" in r.text
+    r = fw(key, enf, "x", data=deep + "\n", headers=H(key, **{"Content-Type": "application/x-ndjson"}))
+    assert r.status_code < 500                               # an unreadable NDJSON line is cleaned as text
+    mon = make_route(key, up.url)                            # monitor forwards what it cannot read, never a 500
+    assert fw(key, mon, "x", data=deep, headers=H(key, **{"Content-Type": "application/json"})).status_code == 200
+    r = requests.post(AI_MSG, headers={"x-api-key": aiws["admin_key"], "Content-Type": "application/json"}, data=deep, timeout=30)
+    assert r.status_code == 400
+    blk = {"type": "text", "text": "x"}
+    for _ in range(300):
+        blk = {"type": "tool_result", "content": [blk]}
+    r = ai_post(AI_MSG, aiws["admin_key"], {"model": "m", "max_tokens": 5, "messages": [{"role": "user", "content": [blk]}]})
+    assert r.status_code == 400 and "nested" in r.text

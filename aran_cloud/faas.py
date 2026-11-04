@@ -299,7 +299,7 @@ def sign_payload(secret: str, timestamp: str, body: bytes) -> str:
 def send_webhook(ctx: "Ctx", url: str, secret: str, event_type: str, delivery_id: str, body: bytes):
     """One signed POST. Returns (status_code or None, error text). 2xx is success; redirects are never followed."""
     try:
-        check_upstream(ctx, url)         # checked again now: DNS can change after the webhook was saved
+        ips = check_upstream(ctx, url)   # checked again now: DNS can change after the webhook was saved
     except fw_core.UpstreamBlocked as err:
         return None, f"refused: {err}"
     ts = str(int(time.time()))
@@ -307,7 +307,8 @@ def send_webhook(ctx: "Ctx", url: str, secret: str, event_type: str, delivery_id
                "X-Aran-Event": event_type, "X-Aran-Delivery": delivery_id, "X-Aran-Timestamp": ts,
                "X-Aran-Signature": sign_payload(secret, ts, body)}
     try:
-        r = requests.post(url, data=body, headers=headers, timeout=(3.0, 5.0), allow_redirects=False)
+        # connect to the address just checked, so a second DNS answer cannot point the delivery somewhere else
+        r = fw_core.pinned_request("POST", url, ips[0], data=body, headers=headers, timeout=(3.0, 5.0), allow_redirects=False)
         code = r.status_code
         r.close()
     except requests.exceptions.RequestException as err:
@@ -450,7 +451,7 @@ def forward(ctx: Ctx, route: dict, method: str, path: str, query: str, headers: 
     """Sends one request to the route's upstream. The URL is checked again here (DNS can change after the route
     was saved) and redirects are never followed. Returns (status, headers, content)."""
     try:
-        check_upstream(ctx, route["upstream_url"])
+        ips = check_upstream(ctx, route["upstream_url"])
     except fw_core.UpstreamBlocked as err:
         raise UpstreamError(f"upstream refused: {err}")
     base = route["upstream_url"].rstrip("/")
@@ -458,8 +459,9 @@ def forward(ctx: Ctx, route: dict, method: str, path: str, query: str, headers: 
     if query:
         url += "?" + query
     try:
-        r = requests.request(method, url, headers=headers, data=body or None, timeout=(3.0, upstream_timeout()),
-                             allow_redirects=False, stream=True)
+        # connect to the address just checked (not a fresh DNS answer), with the route's host name as Host and SNI
+        r = fw_core.pinned_request(method, url, ips[0], headers=headers, data=body or None, timeout=(3.0, upstream_timeout()),
+                                   allow_redirects=False, stream=True)
         content = r.raw.read(UPSTREAM_MAX_BYTES + 1, decode_content=True)
         r.close()
     except requests.exceptions.RequestException as err:
@@ -653,6 +655,7 @@ def parse_since(v: Optional[str]) -> float:
 # ---------------------------------------------------------------- drop-in AI gateway
 AI_SINK, AI_PURPOSE, AI_ROUTE = "llm-gateway", "Service", "ai-gateway"
 AI_MAX_BYTES = 1024 * 1024
+AI_MAX_DEPTH = 20              # tool_result blocks inside tool_result blocks
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 # which identifier types each role may see in clear in an answer (same roles as the core's gateway)
 AI_ROLES = {
@@ -672,8 +675,10 @@ class _Jobs:
         if isinstance(container[key], str) and container[key]:
             self.slots.append((container, key))
 
-    def blocks(self, container, key):
+    def blocks(self, container, key, depth: int = 0):
         """container[key] is a string, or a list of content blocks; only text is cleaned."""
+        if depth > AI_MAX_DEPTH:            # tool results nested thousands deep would exhaust the stack
+            raise HTTPException(400, "content blocks are nested too deeply")
         v = container[key]
         if isinstance(v, str):
             self.add(container, key)
@@ -684,7 +689,7 @@ class _Jobs:
                 if b.get("type") in (None, "text"):
                     self.add(b, "text")
                 elif b.get("type") == "tool_result" and "content" in b:
-                    self.blocks(b, "content")
+                    self.blocks(b, "content", depth + 1)
 
 
 def _ai_jobs(fmt: str, body: dict) -> _Jobs:
@@ -914,7 +919,7 @@ def _build_ai(ctx: Ctx, router: APIRouter):
             raise HTTPException(413, "request body too large (1 MB at most)")
         try:
             body = json.loads(raw or b"null")
-        except ValueError:
+        except (ValueError, RecursionError):     # RecursionError: nested thousands deep
             raise HTTPException(400, "the body is not valid JSON")
         headers = {k.lower(): v for k, v in request.headers.items()}
         return await run_in_threadpool(handle, fmt, tenant, body, headers)
@@ -1684,6 +1689,13 @@ def build_router(ctx: Ctx) -> APIRouter:
             if res is not None and res.protected:
                 emit_event(tenant_id, "would_protect", {"route": route["name"], "by_type": res.by_type})
 
+        # what goes in the outbox if the upstream cannot take it now. An "allow" rule leaves raw values in the
+        # cleaned body; those must not be stored, so a masked copy is kept instead (as for fail mode hold).
+        held = (send_path, send_query, send_body)
+        if res is not None and res.actions.get("allow") and parsed[0] is not None:
+            m = mask_request(parsed)
+            held = (m.path, m.query, m.body)
+
         # 2. forward
         t1 = time.perf_counter()
         try:
@@ -1692,7 +1704,7 @@ def build_router(ctx: Ctx) -> APIRouter:
             status, up_headers, content = forward(ctx, route, method, send_path, send_query, fwd_headers, send_body)
         except UpstreamError as err:
             if enforce and not (ev["outcome"] == "failed_open"):
-                qid = queue(conn, tenant_id, route, method, send_path, send_query, headers, send_body)
+                qid = queue(conn, tenant_id, route, method, *held[:2], headers, held[2])
                 ev["outcome"] = "held"
                 emit_event(tenant_id, "route_failure", {"route": route["name"], "reason": "upstream"})
                 return done(jerr(202, {"held": True, "reason": "upstream_unavailable", "id": qid}), usage)
@@ -1700,7 +1712,7 @@ def build_router(ctx: Ctx) -> APIRouter:
                 ev["outcome"] = "failed_closed"      # could not be delivered and nothing was queued
             return done(jerr(502, {"error": "upstream_unreachable", "detail": str(err)}), usage)
         if status >= 500 and enforce and ev["outcome"] != "failed_open":
-            qid = queue(conn, tenant_id, route, method, send_path, send_query, headers, send_body)
+            qid = queue(conn, tenant_id, route, method, *held[:2], headers, held[2])
             ev["outcome"] = "held"
             ev["upstream_status"] = status
             return done(jerr(202, {"held": True, "reason": "upstream_error", "upstream_status": status, "id": qid}), usage)

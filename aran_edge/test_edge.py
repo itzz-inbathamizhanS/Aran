@@ -507,3 +507,46 @@ def test_failed_report_keeps_counts(tmp_path, world):
     assert e.report()["failed"] == 1
     e.http = good
     assert e.report() == {"sent": 1, "failed": 0}
+
+
+# ---------------------------------------------------------------- security review regressions
+def _settings(tmp_path, edge_key, **kw):
+    return edge_mod.Settings(cloud_url=CLOUD_URL, edge_key=edge_key, core_url=CORE_URL, local_key=LOCAL_KEY,
+                             db_path=str(tmp_path / "tofu.db"), background=False, internal_secret=internal_secret(), **kw)
+
+
+def test_no_pinned_key_is_refused_by_default(tmp_path, world):
+    """Without ARAN_EDGE_PUBLIC_KEY the edge does not learn a key from the network, so it never trusts configs."""
+    rec = Recorder()
+    e = edge_mod.Edge(_settings(tmp_path, world["ekey"], public_key=""), rec)
+    with pytest.raises(fw_core.ConfigRejected, match="pinned"):
+        e.register()
+    assert e.public_raw is None and e._meta("public_key") is None and rec.sent == []
+    with pytest.raises(fw_core.ConfigRejected):
+        e.apply_envelope(get_envelope(world["ekey"]))
+
+
+def test_trust_on_first_use_only_when_opted_in(tmp_path, world, capsys):
+    e = edge_mod.Edge(_settings(tmp_path, world["ekey"], public_key="", trust_on_first_use=True), Recorder())
+    e.register()
+    assert e.public_raw == base64.b64decode(public_key())
+    assert "WARNING" in capsys.readouterr().out
+    assert e.apply_envelope(get_envelope(world["ekey"]))["version"] >= 1
+
+
+def test_edge_forward_connects_to_the_checked_address(monkeypatch, tmp_path, world, up):
+    """DNS rebinding: the edge connects to the address it checked, not to a second DNS answer."""
+    import socket
+    real = socket.getaddrinfo
+    calls = {"n": 0}
+
+    def fake(host, *a, **kw):
+        if host == "rebind.test":
+            calls["n"] += 1
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1" if calls["n"] == 1 else "10.255.255.1", 0))]
+        return real(host, *a, **kw)
+    monkeypatch.setattr(socket, "getaddrinfo", fake)
+    e = edge_mod.Edge(_settings(tmp_path, world["ekey"], public_key=public_key(), allow_private=True), Recorder())
+    port = up.server.server_address[1]
+    status, _, _ = e.forward({"upstream_url": f"http://rebind.test:{port}"}, "GET", "x", "", {}, b"")
+    assert status == 200 and calls["n"] == 1

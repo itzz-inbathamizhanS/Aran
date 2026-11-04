@@ -56,6 +56,9 @@ class Settings:
         self.edge_key = kw.get("edge_key") or e("ARAN_EDGE_KEY", "")
         self.core_url = (kw.get("core_url") or e("ARAN_CORE_URL", "http://127.0.0.1:8000")).rstrip("/")
         self.public_key = kw.get("public_key") if "public_key" in kw else e("ARAN_EDGE_PUBLIC_KEY", "")
+        # off by default: without a pinned key the edge refuses to start trusting configs. Turning this on makes the
+        # edge accept whatever key Cloud (or anyone in the middle of that first call) hands it at registration.
+        self.trust_on_first_use = kw["trust_on_first_use"] if "trust_on_first_use" in kw else _flag("ARAN_EDGE_TRUST_ON_FIRST_USE")
         self.local_key = kw.get("local_key") or e("ARAN_EDGE_LOCAL_KEY", "")
         self.db_path = kw.get("db_path") or e("ARAN_EDGE_DB", "edge.db")
         self.name = kw.get("name") or e("ARAN_EDGE_NAME", "edge")
@@ -139,7 +142,11 @@ class Edge:
         return getattr(self.http, method)(self.cfg.cloud_url + path, headers=h, timeout=10, **kw)
 
     def register(self):
-        """Tells Cloud this edge exists and learns its tenant and edge id (and, if none was pinned, the public key)."""
+        """Tells Cloud this edge exists and learns its tenant and edge id. The public key that checks configs must be
+        pinned (ARAN_EDGE_PUBLIC_KEY); learning it from Cloud is allowed only with ARAN_EDGE_TRUST_ON_FIRST_USE=1."""
+        if not self.cfg.public_key and not self.public_raw and not self.cfg.trust_on_first_use:
+            raise fw_core.ConfigRejected("no pinned Cloud public key: set ARAN_EDGE_PUBLIC_KEY (from GET /v1/edge/public-key), "
+                                         "or ARAN_EDGE_TRUST_ON_FIRST_USE=1 to trust the key Cloud sends on first start")
         r = self._cloud("post", "/v1/edge/register", json={"name": self.cfg.name})
         r.raise_for_status()
         d = r.json()
@@ -147,7 +154,9 @@ class Edge:
         self._set_meta("edge_id", self.edge_id)
         self._set_meta("tenant_id", self.tenant_id)
         if not self.cfg.public_key and not self.public_raw:
-            # no pinned key: trust the key Cloud gives on the very first registration, then keep it
+            # trust on first use (opted in): keep the key Cloud gives on the very first registration
+            print("aran_edge: WARNING: no pinned public key, trusting the key Cloud sent on first use "
+                  f"(key id {d.get('key_id', '?')}). Pin ARAN_EDGE_PUBLIC_KEY instead.", flush=True)
             self._set_meta("public_key", d["public_key"])
             self.public_raw = base64.b64decode(d["public_key"])
         return d
@@ -267,13 +276,14 @@ class Edge:
     def forward(self, route: dict, method: str, path: str, query: str, headers: Dict[str, str], body: bytes):
         """One request to the upstream. The URL is checked again now (DNS can change) and redirects are never followed."""
         try:
-            self.check_upstream(route["upstream_url"])
+            ips = self.check_upstream(route["upstream_url"])
         except fw_core.UpstreamBlocked as err:
             raise UpstreamError(f"upstream refused: {err}")
         url = route["upstream_url"].rstrip("/") + ("/" + path if path else "") + ("?" + query if query else "")
         try:
-            r = requests.request(method, url, headers=headers, data=body or None, timeout=(3.0, self.cfg.upstream_timeout_s),
-                                 allow_redirects=False, stream=True)
+            # connect to the address just checked, so a changed DNS answer cannot reach another host
+            r = fw_core.pinned_request(method, url, ips[0], headers=headers, data=body or None,
+                                       timeout=(3.0, self.cfg.upstream_timeout_s), allow_redirects=False, stream=True)
             content = r.raw.read(UPSTREAM_MAX_BYTES + 1, decode_content=True)
             r.close()
         except requests.exceptions.RequestException as err:
@@ -420,18 +430,24 @@ class Edge:
             send_path, send_query, send_body = path, query, body
             would = res.protected if res is not None else 0
 
+        # an "allow" rule leaves raw values in the cleaned body: the outbox keeps a masked copy instead
+        held = (send_path, send_query, send_body)
+        if res is not None and res.actions.get("allow") and parsed[0] is not None:
+            m = fw_core.mask_request(parsed)
+            held = (m.path, m.query, m.body)
+
         try:
             if not fw_core.safe_path(send_path):
                 raise UpstreamError("path not allowed")
             status, up_headers, content = self.forward(route, method, send_path, send_query, fwd_headers, send_body)
         except UpstreamError as err:
             if enforce and not failed_open:
-                qid = self.queue(route, method, send_path, send_query, headers, send_body)
+                qid = self.queue(route, method, *held[:2], headers, held[2])
                 stats["held"] += 1
                 return done(jerr(202, {"held": True, "reason": "upstream_unavailable", "id": qid}))
             return done(jerr(502, {"error": "upstream_unreachable", "detail": str(err)}))
         if status >= 500 and enforce and not failed_open:
-            qid = self.queue(route, method, send_path, send_query, headers, send_body)
+            qid = self.queue(route, method, *held[:2], headers, held[2])
             stats["held"] += 1
             return done(jerr(202, {"held": True, "reason": "upstream_error", "upstream_status": status, "id": qid}))
         out_headers = {k: v for k, v in up_headers.items() if k.lower() not in fw_core.HOP_BY_HOP | {"content-encoding", "set-cookie"}}

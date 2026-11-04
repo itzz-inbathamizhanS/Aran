@@ -39,8 +39,10 @@ route, but:
    curl http://127.0.0.1:8100/v1/edge/public-key
    ```
 
-   Copy the `public_key` value. (If you skip this, the edge trusts the key Cloud gives it on its very first start and
-   remembers it. Pinning is safer.)
+   Copy the `public_key` value. Pinning is required: without `ARAN_EDGE_PUBLIC_KEY` the edge refuses to register.
+   (For a quick local try only, `ARAN_EDGE_TRUST_ON_FIRST_USE=1` makes the edge trust the key Cloud sends on its very
+   first start and remember it. Anyone who can sit between the edge and Cloud on that first call could hand it their
+   own key, so do not use this in production.)
 
 3. **Set the environment.**
 
@@ -83,7 +85,7 @@ docker compose --profile edge up edge        # uses the main image, talks to the
 docker build -f aran_edge/Dockerfile -t aran-edge .   # a small stand-alone image, if you run only the edge
 ```
 
-Put `ARAN_EDGE_KEY` and `ARAN_EDGE_LOCAL_KEY` in `.env.local` (or export them) first.
+Put `ARAN_EDGE_KEY`, `ARAN_EDGE_PUBLIC_KEY` and `ARAN_EDGE_LOCAL_KEY` in `.env.local` (or export them) first.
 
 ## What the edge does and does not do
 
@@ -120,7 +122,8 @@ reachable at least every few minutes. After a restart the edge re-checks the sav
 | `ARAN_EDGE_KEY` | required | Cloud key with the `edge` scope |
 | `ARAN_CLOUD_URL` | `http://127.0.0.1:8100` | Aran Cloud |
 | `ARAN_CORE_URL` | `http://127.0.0.1:8000` | your local core |
-| `ARAN_EDGE_PUBLIC_KEY` | learned on first start | Cloud's Ed25519 public key (base64) |
+| `ARAN_EDGE_PUBLIC_KEY` | none (required) | Cloud's Ed25519 public key (base64), pinned |
+| `ARAN_EDGE_TRUST_ON_FIRST_USE` | `0` | `1` lets the edge learn the key from Cloud on first start (local tries only, not safe in production) |
 | `ARAN_EDGE_LOCAL_KEY` | made and printed on first start | what your apps send as `X-API-Key` |
 | `ARAN_EDGE_DB` | `edge.db` | SQLite file: identity, last good config, outbox |
 | `ARAN_EDGE_NAME` | `edge` | name shown in the dashboard |
