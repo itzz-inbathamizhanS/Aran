@@ -313,6 +313,7 @@ Every artifact, by topic, is listed in the [artifacts index](artifacts/README.md
 - [SaaS for bank transactions](artifacts/SaaS%20platform/Aran%20-%20SaaS%20for%20Bank%20Transactions%20(Design).md): the design of the banks' payments, ledger and fraud desk, and the Cloud transaction API and dashboard.
 - [Aran UI integration](artifacts/Aran%20UI%20integration/), [Site structure](artifacts/Site%20structure/) and [Site improvements](artifacts/Site%20improvements/Aran%20-%20Whole%20Site%20Improvements.md): one design for every app, one menu, and the accessibility, speed and phone fixes, with screenshots.
 - [UI design spec](artifacts/UI%20design%20spec/Aran%20-%20UI%20Design%20Spec.md), [Live console screenshots](artifacts/Live%20console%20(team%20design)/), [Animated tour](artifacts/Animated%20tour/), [3D tour](artifacts/3D%20tour/) and [Standout features](artifacts/Standout%20features/).
+- [Handoff pack](artifacts/Handoff%20pack/Aran%20-%20Handoff%20Pack.md) ([PDF](artifacts/Handoff%20pack/Aran%20-%20Handoff%20Pack.pdf)): everything a new teammate or Claude user needs to pick up Aran: state, branches, live links, rules, team, open items, plus copies of the Notion handoffs.
 - [Main branch cleanup](artifacts/Main%20branch%20cleanup/Aran%20-%20Main%20Branch%20Cleanup.md): what moved to `archive/`, what stayed and why, and the links fixed.
 - [BanksAndCloud branch audit](artifacts/Branch%20audits/Aran%20-%20BanksAndCloud%20Branch%20Audit.md).
 - [Learning docs as PDFs](artifacts/learning/) and [results reports as PDFs](artifacts/research/).

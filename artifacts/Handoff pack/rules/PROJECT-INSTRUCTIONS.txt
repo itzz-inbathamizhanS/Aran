@@ -1,0 +1,6 @@
+Repo: itzz-inbathamizhanS/Aran (lead's local copy D:\Aran, also an Obsidian vault).
+- On every user prompt, first invoke the skill model-router and follow it.
+- Every time an artifact is created or anything is updated, save the file into the repo (artifacts/ folder), update the main README.md with links to those files, and push to the repo.
+- All commits authored as "Inbathamizhan S"; no Claude/AI-assistant words anywhere (no Co-Authored-By, session links, or generated-by lines).
+- Before any new plan, first give beginner learning docs (one per topic) for the team, who are new to this tech.
+- Team: Inbathamizhan S (lead) and Aasif Ahmed A (cybersecurity); SN Arun Vijay and Bharadhwaj M (AI/ML); students at KARE.
